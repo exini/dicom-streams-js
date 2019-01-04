@@ -1,0 +1,22 @@
+{
+  "name": "dicom-streams-js",
+  "version": "0.0.1",
+  "description": "Streaming parsing and processing of dicom data",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "gen-src": "node generate-sources.js"
+  },
+  "keywords": [],
+  "author": "Karl Sjostrand",
+  "license": "",
+  "repository": {
+    "type": "git",
+    "url": "https://morran.exini/stash/..."
+  },
+  "bugs": {
+    "url": "https://morran.exini/jira/..."
+  },
+  "homepage": "",
+  "dependencies": {}
+}
