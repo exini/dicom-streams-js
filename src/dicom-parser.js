@@ -279,7 +279,7 @@ module.exports = {
     ParseFlow: class extends ByteParser {
         constructor(chunkSize, stopTag, inflate) {
             super();
-            this.chunkSize = chunkSize;
+            this.chunkSize = chunkSize || 1024 * 1024;
             this.stopTag = stopTag;
             this.inflate = inflate;
             this.startWith(new AtBeginning(this));

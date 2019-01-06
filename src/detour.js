@@ -1,4 +1,4 @@
-const {Transform} = require("stream");
+const {Transform} = require("readable-stream");
 
 class Detour extends Transform {
     constructor(options, detourFlow) {

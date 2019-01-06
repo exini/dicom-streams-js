@@ -5,6 +5,12 @@ const self = module.exports = {
     trim: function(s) {
         return s.replace(/[\x00-\x20]*$/g, "");
     },
+    concat: function(a, b) {
+        return Buffer.concat([a, b], a.length + b.length);
+    },
+    concatv: function(...buffers) {
+        return Buffer.concat(buffers);
+    },
 
     indeterminateLength: 0xFFFFFFFF,
 
@@ -26,6 +32,16 @@ const self = module.exports = {
     bytesToUInt: function (bytes, bigEndian) { return bigEndian ? self.bytesToUIntBE(bytes) : self.bytesToUIntLE(bytes); },
     bytesToUIntBE: function (bytes) { return bytes.readUInt32BE(0); },
     bytesToUIntLE: function (bytes) { return bytes.readUInt32LE(0); },
+
+    shortToBytes(i, bigEndian) { return bigEndian ? self.shortToBytesBE(i) : self.shortToBytesLE(i); },
+    shortToBytesBE: function(i) { return Buffer.from([i >> 8, i]); },
+    shortToBytesLE: function(i) { return Buffer.from([i, i >> 8]); },
+    intToBytes: function(i, bigEndian) { return bigEndian ? self.intToBytesBE(i) : self.intToBytesLE(i); },
+    intToBytesBE: function(i) { return Buffer.from([i >> 24, i >> 16, i >> 8, i]); },
+    intToBytesLE: function(i) { return Buffer.from([i, i >> 8, i >> 16, i >> 24]); },
+    tagToBytes: function(tag, bigEndian) { return bigEndian ? self.tagToBytesBE(tag) : self.tagToBytesLE(tag); },
+    tagToBytesBE: function(tag) { return self.intToBytesBE(tag); },
+    tagToBytesLE: function(tag) { return Buffer.from([tag >> 16, tag >> 24, tag, tag >> 8]); },
 
     emptyBuffer: Buffer.alloc(0),
 

@@ -1,4 +1,4 @@
-const {Readable, Transform} = require("stream");
+const {Readable, Transform} = require("readable-stream");
 const Detour = require("../src/detour");
 const {objectToStringFlow} = require("../src/flows");
 

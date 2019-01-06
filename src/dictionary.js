@@ -26,7 +26,7 @@ module.exports = {
         return tagToVR.vrOf(tag);
     },
     keywordOf: keywordOf,
-    tagOf: function(keyword) {
+    tagOf: function (keyword) {
         return Tag[keyword];
     },
     keywords: keywords

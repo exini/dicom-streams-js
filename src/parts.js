@@ -7,7 +7,7 @@ class DicomPart {
     }
 }
 
-module.exports = {
+const self = module.exports = {
     DicomPart: DicomPart,
 
     PreamblePart: class extends DicomPart {
@@ -28,6 +28,30 @@ module.exports = {
             this.length = length;
             this.isFmi = isFmi;
             this.explicitVR = explicitVR;
+            if (!bytes) {
+                this.bytes = explicitVR ?
+                    vr.headerLength === 8 ?
+                        Buffer.concat([base.tagToBytes(tag, bigEndian), Buffer.from(vr.name), base.shortToBytes(length, bigEndian)], 8) :
+                        Buffer.concat([base.tagToBytes(tag, bigEndian), Buffer.from(vr.name), Buffer.from([0, 0]), base.intToBytes(length, bigEndian)], 12) :
+                    Buffer.concat([base.tagToBytes(tag, bigEndian), base.intToBytes(length, bigEndian)], 8);
+            }
+        }
+
+        withUpdatedLength(newLength) {
+            if (newLength === this.length)
+                return this;
+            else {
+                let updated = null;
+                if ((this.bytes.length >= 8) && this.explicitVR && (this.vr.headerLength === 8)) { //explicit vr
+                    updated = base.concat(this.bytes.slice(0, 6), base.shortToBytes(newLength, this.bigEndian));
+                } else if ((this.bytes.length >= 12) && this.explicitVR && (this.vr.headerLength === 12)) { //explicit vr
+                    updated = base.concat(this.bytes.slice(0, 8), base.intToBytes(newLength, this.bigEndian));
+                } else { //implicit vr
+                    updated = base.concat(this.bytes.slice(0, 4), base.intToBytes(newLength, this.bigEndian));
+                }
+
+                return new self.HeaderPart(this.tag, this.vr, newLength, this.isFmi, this.bigEndian, this.explicitVR, updated);
+            }
         }
 
         toString() {

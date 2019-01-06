@@ -4,8 +4,8 @@
   "description": "Streaming parsing and processing of dicom data",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "gen-src": "node generate-sources.js"
+    "test":  "mocha 'test/*-test.js'",
+    "build": "browserify src/*.js > dist/bundle.js"
   },
   "keywords": [],
   "author": "Karl Sjostrand",
@@ -18,5 +18,12 @@
     "url": "https://morran.exini/jira/..."
   },
   "homepage": "",
-  "dependencies": {}
+  "dependencies": {
+    "readable-stream": "^3.1.1",
+    "browserify": "^16.2.2"
+  },
+  "devDependencies": {
+    "streamtest": "^1.2.4",
+    "mocha": "^5.2.0"
+  }
 }

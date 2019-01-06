@@ -1,4 +1,4 @@
-const {Transform} = require("stream");
+const {Transform} = require("readable-stream");
 const base = require("../src/base");
 
 class Chunker extends Transform {
@@ -9,7 +9,7 @@ class Chunker extends Transform {
     }
 
     _transform(chunk, encoding, callback) {
-        this.buffer = Buffer.concat([this.buffer, chunk], this.buffer.length + chunk.length);
+        this.buffer = base.concat(this.buffer, chunk);
 
         while (this.buffer.length >= this.size) {
             let newChunk = this.buffer.slice(0, this.size);

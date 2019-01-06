@@ -12,10 +12,6 @@ class ByteParser extends Detour {
         this.hasData = false;
     }
 
-    static concat(a, b) {
-        return Buffer.concat([a, b], a.length + b.length);
-    };
-
     completeStage() {
         this.push(null);
         this.isCompleted = true;
@@ -76,7 +72,7 @@ class ByteParser extends Detour {
     }
 
     process(chunk) {
-        this.buffer = ByteParser.concat(this.buffer, chunk);
+        this.buffer = base.concat(this.buffer, chunk);
         this.hasData = chunk.length > 0;
 
         while (this.hasData && !this.isCompleted)
