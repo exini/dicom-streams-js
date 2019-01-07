@@ -1,10 +1,113 @@
-const {Readable, Writable} = require("readable-stream");
+const {Readable, Writable, pipeline} = require("readable-stream");
+const {promisify} = require("util");
+const zlib = require("zlib");
 const assert = require('assert');
 const parts = require("../src/parts");
+// const {printFlow} = require("../src/flows");
 
-module.exports = {
+class Probe {
+    constructor(array) {
+        this.array = array;
+        this.offset = 0;
+    }
 
-    streamSingle: function (element, after, objectMode) {
+    expectPreamble() {
+        assert(this.array[this.offset] instanceof parts.PreamblePart);
+        this.offset++;
+        return this;
+    }
+
+    expectHeader(tag) {
+        let part = this.array[this.offset];
+        assert(part instanceof parts.HeaderPart);
+        if (tag !== undefined)
+            assert.equal(part.tag, tag);
+        this.offset++;
+        return this;
+    }
+
+    expectValueChunk(length) {
+        let part = this.array[this.offset];
+        assert(part instanceof parts.ValueChunk);
+        if (length !== undefined)
+            assert.equal(part.bytes.length, length);
+        this.offset++;
+        return this;
+    }
+
+    expectDeflatedChunk() {
+        assert(this.array[this.offset] instanceof parts.DeflatedChunk);
+        this.offset++;
+        return this;
+    }
+
+    expectFragments() {
+        assert(this.array[this.offset] instanceof parts.FragmentsPart);
+        this.offset++;
+        return this;
+    }
+
+    expectSequence(tag) {
+        let part = this.array[this.offset];
+        assert(part instanceof parts.SequencePart);
+        if (tag !== undefined)
+            assert.equal(part.tag, tag);
+        this.offset++;
+        return this;
+    }
+
+    expectItem(index) {
+        let part = this.array[this.offset];
+        assert(part instanceof parts.ItemPart);
+        if (index !== undefined)
+            assert.equal(part.index, index);
+        this.offset++;
+        return this;
+    }
+
+    expectItemDelimitation() {
+        assert(this.array[this.offset] instanceof parts.ItemDelimitationPart);
+        this.offset++;
+        return this;
+    }
+
+    expectSequenceDelimitation() {
+        assert(this.array[this.offset] instanceof parts.SequenceDelimitationPart);
+        this.offset++;
+        return this;
+    }
+
+    expectFragment(index, length) {
+        let part = this.array[this.offset];
+        assert(part instanceof parts.ItemPart);
+        if (length !== undefined)
+            assert.equal(part.length, length);
+        if (index !== undefined)
+            assert.equal(part.index, index);
+        this.offset++;
+        return this;
+    }
+
+    expectFragmentsDelimitation() {
+        return this.expectSequenceDelimitation();
+    }
+
+    expectUnknownPart() {
+        assert(this.array[this.offset] instanceof parts.UnknownPart);
+        this.offset++;
+        return this;
+    }
+
+    expectDicomComplete() {
+        assert(this.offset >= this.array.length);
+        this.offset++;
+        return this;
+    }
+}
+
+const self = module.exports = {
+
+    singleSource: function (element, after, objectMode) {
         const readable = new Readable({
             objectMode: objectMode === undefined ? false : objectMode,
             read(size) {
@@ -34,18 +137,22 @@ module.exports = {
         sink.once("finish", () => arrayCallback(array));
         return sink;
     },
-    expectPreamble: function(array) {
-        assert(array.shift() instanceof parts.PreamblePart);
+    streamPromise: promisify(pipeline),
+    probe: function (array) {
+        return new Probe(array);
     },
-    expectHeader: function(array, tag) {
-        let part = array.shift();
-        assert(part instanceof parts.HeaderPart && part.tag === tag);
+    testParts: function (bytes, parseFlow, assertParts) {
+        return self.streamPromise(
+            self.singleSource(bytes),
+            parseFlow,
+            // printFlow(true),
+            self.arraySink(assertParts)
+        );
     },
-    expectValueChunk: function(array) {
-        assert(array.shift() instanceof parts.ValueChunk);
+    expectDicomError: function (asyncFunction) {
+        return assert.rejects(asyncFunction);
     },
-    expectDicomComplete: function(array) {
-        assert(array.length === 0);
+    deflate: function(buffer, gzip) {
+        return gzip ? zlib.deflateSync(buffer) : zlib.deflateRawSync(buffer);
     }
-
 };

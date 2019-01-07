@@ -1,3 +1,6 @@
+const dictionary = require("./dictionary");
+const VR = require("./vr");
+
 const self = module.exports = {
     shiftLeftUnsigned: function(num, n) {
         return num << n >>> 0;
@@ -39,6 +42,9 @@ const self = module.exports = {
     intToBytes: function(i, bigEndian) { return bigEndian ? self.intToBytesBE(i) : self.intToBytesLE(i); },
     intToBytesBE: function(i) { return Buffer.from([i >> 24, i >> 16, i >> 8, i]); },
     intToBytesLE: function(i) { return Buffer.from([i, i >> 8, i >> 16, i >> 24]); },
+    longToBytes: function(i, bigEndian) { return bigEndian ? self.longToBytesBE(i) : self.longToBytesLE(i); },
+    longToBytesBE: function(i) { return Buffer.from([i >> 56, i >> 48, i >> 40, i >> 32, i >> 24, i >> 16, i >> 8, i]); },
+    longToBytesLE: function(i) { return Buffer.from([i, i >> 8, i >> 16, i >> 24, i >> 32, i >> 40, i >> 48, i >> 56]); },
     tagToBytes: function(tag, bigEndian) { return bigEndian ? self.tagToBytesBE(tag) : self.tagToBytesLE(tag); },
     tagToBytesBE: function(tag) { return self.intToBytesBE(tag); },
     tagToBytesLE: function(tag) { return Buffer.from([tag >> 16, tag >> 24, tag, tag >> 8]); },
@@ -47,5 +53,10 @@ const self = module.exports = {
 
     tagToString: function(tag) {
         return ("00000000" + tag.toString(16)).slice(-8);
+    },
+
+    padToEvenLength(bytes, tagOrVR) {
+        let vr = isNaN(tagOrVR) ? tagOrVR : dictionary.vrOf(tagOrVR);
+        return (bytes.length & 1) !== 0 ? self.concat(bytes, Buffer.from([vr.paddingByte])) : bytes;
     }
 };

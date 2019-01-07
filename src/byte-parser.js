@@ -82,7 +82,12 @@ class ByteParser extends Detour {
     cleanup() {
         if (!this.isCompleted)
             if (this.buffer.length > 0)
-                this.failStage(new Error(this.buffer.length + " bytes remain after finished parsing"));
+                try {
+                    this.current.onTruncation(new ByteReader(this.buffer));
+                    this.completeStage();
+                } catch (error) {
+                    this.failStage(error);
+                }
             else
                 this.completeStage();
     }
@@ -98,6 +103,10 @@ const needMoreData = new Error();
 
 class ParseStep {
     parse(reader) {
+    }
+
+    onTruncation(reader) {
+        throw new Error(reader.remainingSize() + " bytes remain after finished parsing");
     }
 }
 

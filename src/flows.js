@@ -1,12 +1,15 @@
 const {Transform} = require("readable-stream");
 
-const printFlow = new Transform({
-    transform(chunk, encoding, callback) {
-        console.log(chunk);
-        this.push(chunk);
-        callback();
-    }
-});
+function printFlow(objectMode){
+    return new Transform({
+        objectMode: objectMode === undefined ? false : objectMode,
+        transform(chunk, encoding, callback) {
+            console.log(chunk);
+            this.push(chunk);
+            callback();
+        }
+    });
+}
 
 function objectToStringFlow(toStringFunction) {
     return new Transform({
