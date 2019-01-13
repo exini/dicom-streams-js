@@ -52,7 +52,8 @@ const self = module.exports = {
     emptyBuffer: Buffer.alloc(0),
 
     tagToString: function(tag) {
-        return ("00000000" + tag.toString(16)).slice(-8);
+        let hex = ("00000000" + tag.toString(16)).slice(-8);
+        return "(" + hex.slice(0, 4) + "," + hex.slice(4, 8) + ")";
     },
 
     padToEvenLength(bytes, tagOrVR) {
