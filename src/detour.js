@@ -41,12 +41,10 @@ class Detour extends Transform {
             if (!this.detourFlow.write(chunk))
                 this.detourFlow.once("drain", callback);
             else
-                process.nextTick(callback);
-        else
-            process.nextTick(() => {
-                this.process(chunk);
                 callback();
-            });
+        else
+            this.process(chunk);
+            callback();
     }
 
     _flush(callback) {
@@ -55,7 +53,7 @@ class Detour extends Transform {
             this.detourFlow.end();
         } else {
             this.cleanup();
-            process.nextTick(callback);
+            callback();
         }
     }
 
