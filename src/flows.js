@@ -15,7 +15,7 @@ function objectToStringFlow(toStringFunction) {
     return new Transform({
         writableObjectMode: true,
         transform(chunk, encoding, callback) {
-            this.push(toStringFunction(chunk) + '\n');
+            this.push(toStringFunction(chunk) + "\n");
             callback();
         }
     });

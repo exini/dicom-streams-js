@@ -19,7 +19,7 @@ class ByteParser extends Detour {
 
     failStage(error) {
         error.message = "Parsing failed: " + error.message;
-        process.nextTick(() => this.emit('error', error));
+        process.nextTick(() => this.emit("error", error));
         this.isCompleted = true;
     }
 

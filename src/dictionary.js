@@ -27,7 +27,9 @@ module.exports = {
     },
     keywordOf: keywordOf,
     tagOf: function (keyword) {
-        return Tag[keyword];
+        let tag = Tag[keyword];
+        if (tag === undefined) throw Error("Unknown keyword " + keyword);
+        return tag;
     },
     keywords: keywords
 };

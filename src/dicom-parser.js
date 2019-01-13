@@ -6,7 +6,7 @@ const VR = require("./vr");
 const parsing = require("./parsing");
 const parts = require("./parts");
 const dictionary = require("./dictionary");
-const {ByteParser, ParseStep, ParseResult, finishedParser} = require('./byte-parser');
+const {ByteParser, ParseStep, ParseResult, finishedParser} = require("./byte-parser");
 
 class DicomParseStep extends ParseStep {
     constructor(state, parser) {
