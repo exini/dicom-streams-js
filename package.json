@@ -1,7 +1,7 @@
 {
   "name": "dicom-streams-js",
   "version": "0.0.1",
-  "description": "Streaming parsing and processing of dicom data",
+  "description": "Streaming parsing and processing of DICOM data",
   "main": "main.js",
   "scripts": {
     "test": "mocha 'test/*-test.js'",
@@ -12,14 +12,15 @@
   "license": "",
   "repository": {
     "type": "git",
-    "url": "https://morran.exini/stash/..."
+    "url": "https://bitbucket.org/exini_dp/dicom-streams-js"
   },
   "bugs": {
-    "url": "https://morran.exini/jira/..."
+    "url": "https://exini1.atlassian.net/secure/RapidBoard.jspa?rapidView=2&projectKey=DCMS"
   },
   "homepage": "",
   "dependencies": {
     "readable-stream": "^3.1.1",
+    "iconv-lite": "^0.4.24",
     "browserify": "^16.2.2"
   },
   "devDependencies": {
