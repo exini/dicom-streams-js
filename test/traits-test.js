@@ -47,12 +47,12 @@ const BasicIntQueue = Trait.compose(
     })
 );
 
-const flowModel = function (base, ...talents) { return talents.reduce((out, cap) => Trait.compose(cap(out)), base); };
-const toFlow = function (model) { return Trait.create(Object.prototype, model); };
-const flow = function (base, ...talents) { return toFlow(flowModel(base, ...talents)); };
+const stack = function (base, ...talents) { return talents.reduce((out, cap) => Trait.compose(cap(out)), base); };
+const realize = function (trait) { return Trait.create(Object.prototype, trait); };
+const create = function (base, ...talents) { return realize(stack(base, ...talents)); };
 
-const doubleAdd = flow(BasicIntQueue, Adding, Doubling);
-const addDouble = flow(BasicIntQueue, Doubling, Adding);
+const doubleAdd = create(BasicIntQueue, Adding, Doubling);
+const addDouble = create(BasicIntQueue, Doubling, Adding);
 
 doubleAdd.put(10);
 addDouble.put(10);
