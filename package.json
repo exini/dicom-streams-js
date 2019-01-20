@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "test": "mocha 'test/*-test.js'",
+    "test-one": "mocha 'test/dicom-flows-test.js'",
     "build": "browserify src/*.js > dist/bundle.js"
   },
   "keywords": [],
@@ -20,7 +21,9 @@
   "homepage": "",
   "dependencies": {
     "readable-stream": "^3.1.1",
+    "multipipe": "^3.0.0",
     "iconv-lite": "^0.4.24",
+    "traits.js": "^1.1.5",
     "browserify": "^16.2.2"
   },
   "devDependencies": {

@@ -32,20 +32,11 @@ const self = module.exports = {
 
     studyDate: function(bigEndian, explicitVR) { return self.element(Tag.StudyDate, "19700101", bigEndian, explicitVR); },
 
-    sequence: function(tag, length, bigEndian) { return base.concatv(base.tagToBytes(tag, bigEndian), Buffer.from("SQ"), Buffer.from([0, 0]), base.intToBytes(length, bigEndian)); },
+    sequence: function(tag, length, bigEndian) {
+        bigEndian = bigEndian === undefined ? false : bigEndian;
+        length = length === undefined ? base.indeterminateLength : length;
+        return base.concatv(base.tagToBytes(tag, bigEndian), Buffer.from("SQ"), Buffer.from([0, 0]), base.intToBytes(length, bigEndian));
+    },
 
-    itemLE: base.concat(base.tagToBytesLE(Tag.Item), base.intToBytesLE(base.indeterminateLength)),
-    itemBE: base.concat(base.tagToBytesBE(Tag.Item), base.intToBytesBE(base.indeterminateLength)),
-    item: function(length, bigEndian) { return length === undefined ? bigEndian ? self.itemBE : self.itemLE : base.concat(base.tagToBytes(Tag.Item, bigEndian), base.intToBytes(length, bigEndian)); },
-
-    itemDelimitationLE: base.concat(base.tagToBytesLE(Tag.ItemDelimitationItem), base.intToBytesLE(0x00000000)),
-    itemDelimitationBE: base.concat(base.tagToBytesBE(Tag.ItemDelimitationItem), base.intToBytesBE(0x00000000)),
-    itemDelimitation: function(bigEndian) { return bigEndian ? self.itemDelimitationBE : self.itemDelimitationLE; },
-
-    sequenceDelimitationLE: base.concat(base.tagToBytesLE(Tag.SequenceDelimitationItem), base.intToBytesLE(0x00000000)),
-    sequenceDelimitationBE: base.concat(base.tagToBytesBE(Tag.SequenceDelimitationItem), base.intToBytesBE(0x00000000)),
-    sequenceDelimitation: function(bigEndian) { return bigEndian ? self.sequenceDelimitationBE : self.sequenceDelimitationLE; },
-    sequenceDelimitationNonZeroLength: function(bigEndian) { return base.concatv(base.tagToBytes(Tag.SequenceDelimitationItem, bigEndian), base.intToBytes(0x00000010, bigEndian)); },
-
-    pixeDataFragments: function(bigEndian) { return base.concatv(base.tagToBytes(Tag.PixelData, bigEndian), Buffer.from("OW"), Buffer.from([0, 0]), base.intToBytes(base.indeterminateLength, bigEndian)) }
+    pixeDataFragments: function(bigEndian) { return base.concatv(base.tagToBytes(Tag.PixelData, bigEndian), Buffer.from("OW"), Buffer.from([0, 0]), Buffer.from([0xFF, 0xFF, 0xFF, 0xFF])) }
 };

@@ -5,6 +5,17 @@ const zlib = require("zlib");
 const parts = require("../src/parts");
 // const {printFlow} = require("../src/flows");
 
+class TestPart extends parts.MetaPart {
+    constructor(id) {
+        super();
+        this.id = id;
+    }
+
+    toString() {
+        return "TestPart: " + this.id;
+    }
+}
+
 class Probe {
     constructor(array) {
         this.array = array;
@@ -98,6 +109,11 @@ class Probe {
         return this;
     }
 
+    expectTestPart() {
+        assert(this.array[this.offset] instanceof TestPart);
+        this.offset++;
+        return this;
+    }
     expectDicomComplete() {
         assert(this.offset >= this.array.length);
         this.offset++;
@@ -106,7 +122,7 @@ class Probe {
 }
 
 const self = module.exports = {
-
+    TestPart: TestPart,
     singleSource: function (element, after, objectMode) {
         const readable = new Readable({
             objectMode: objectMode === undefined ? false : objectMode,
@@ -120,11 +136,13 @@ const self = module.exports = {
         }, after);
         return readable;
     },
-    ignoreSink: new Writable({
-        write(chunk, encoding, callback) {
-            callback();
-        }
-    }),
+    ignoreSink: function () {
+        return new Writable({
+            write(chunk, encoding, callback) {
+                callback();
+            }
+        })
+    },
     arraySink: function (arrayCallback) {
         let array = [];
         let sink = new Writable({
@@ -145,7 +163,6 @@ const self = module.exports = {
         return self.streamPromise(
             self.singleSource(bytes),
             parseFlow,
-            // printFlow(true),
             self.arraySink(assertParts)
         );
     },
