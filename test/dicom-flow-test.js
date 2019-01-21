@@ -245,7 +245,7 @@ describe("The guaranteed delimitation flow", function () {
     it("should handle sequences that end with an item delimitation", function () {
         let bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence, 32), base.item(), data.studyDate(), base.itemDelimitation());
 
-        let testFlow = flow({}, {}, toIndeterminateLengthSequences);
+        let testFlow = toIndeterminateLengthSequences();
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), parts => {
             util.probe(parts)
@@ -264,7 +264,7 @@ describe("The guaranteed delimitation flow", function () {
             data.studyDate(), data.sequence(Tag.DerivationCodeSequence, 24), base.item(16), data.studyDate(),
             data.patientNameJohnDoe());
 
-        let testFlow = flow({}, {}, toIndeterminateLengthSequences);
+        let testFlow = toIndeterminateLengthSequences();
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), parts => {
             util.probe(parts)
@@ -292,7 +292,7 @@ describe("The guaranteed delimitation flow", function () {
         let bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence, 52), base.item(16),
             data.studyDate(), base.item(0), base.item(12), data.sequence(Tag.DerivationCodeSequence, 0));
 
-        let testFlow = flow({}, {}, toIndeterminateLengthSequences);
+        let testFlow = toIndeterminateLengthSequences();
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), parts => {
             util.probe(parts)
@@ -317,7 +317,7 @@ describe("The guaranteed delimitation flow", function () {
             data.emptyPatientName(), data.sequence(Tag.DerivationCodeSequence, 16), base.item(8),
             data.emptyPatientName());
 
-        let testFlow = flow({}, {}, toIndeterminateLengthSequences);
+        let testFlow = toIndeterminateLengthSequences();
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), parts => {
             util.probe(parts)

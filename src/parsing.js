@@ -17,6 +17,10 @@ function isFileMetaInformation(tag) {
     return (tag & 0xFFFF0000) === 0x00020000;
 }
 
+function isGroupLength(tag) {
+    return base.elementNumber(tag) === 0;
+}
+
 function isDeflated(transferSyntaxUid) {
     return transferSyntaxUid === UID.DeflatedExplicitVRLittleEndian || transferSyntaxUid === UID.JPIPReferencedDeflate;
 }
@@ -57,6 +61,7 @@ module.exports = {
     dicomPreambleLength: dicomPreambleLength,
     isPreamble: isPreamble,
     isFileMetaInformation: isFileMetaInformation,
+    isGroupLength: isGroupLength,
     isDeflated: isDeflated,
     tagVr: tagVr,
     dicomInfo: function (data) {
