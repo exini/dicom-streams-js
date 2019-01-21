@@ -1,5 +1,6 @@
 const Trait = require("traits.js");
 const pipe = require("multipipe");
+const base = require("./base");
 const flows = require("./flows");
 const parts = require("./parts");
 const {emptyTagPath, TagPathItem} = require("./tag-path");
