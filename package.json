@@ -2,11 +2,11 @@
   "name": "@exini/dicom-streams-js",
   "version": "0.0.1",
   "description": "Streaming parsing and processing of DICOM data",
-  "main": "dist/bundle.js",
+  "main": "dist/index.js",
   "scripts": {
     "test": "mocha 'test/*-test.js'",
     "test-one": "mocha 'test/dicom-flows-test.js'",
-    "build": "browserify src/*.js > dist/bundle.js"
+    "build": "webpack"
   },
   "keywords": [],
   "author": "karl.sostrand@exini.com",
@@ -23,9 +23,10 @@
     "multipipe": "^3.0.0",
     "iconv-lite": "^0.4.24",
     "traits.js": "^1.1.5",
-    "browserify": "^16.2.2"
+    "@babel/polyfill": "^7.2.5"
   },
   "devDependencies": {
-    "mocha": "^5.2.0"
+    "mocha": "^5.2.0",
+    "webpack": "^3.10.0"
   }
 }
