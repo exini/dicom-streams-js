@@ -88,6 +88,7 @@ const self = module.exports = {
             super(bigEndian, bytes);
             this.index = index;
             this.length = length;
+            this.indeterminate = length === base.indeterminateLength;
         }
 
         toString() {
@@ -112,6 +113,7 @@ const self = module.exports = {
             this.tag = tag;
             this.length = length;
             this.explicitVR = explicitVR;
+            this.indeterminate = length === base.indeterminateLength;
         }
 
         toString() {
@@ -151,7 +153,14 @@ const self = module.exports = {
         toString() {
             return "Unknown []";
         }
+    },
+
+    MetaPart: class extends DicomPart {
+        constructor() {
+            super(false, base.emptyBuffer);
+        }
     }
+
 };
 
 

@@ -1,5 +1,21 @@
 const dictionary = require("./dictionary");
-const VR = require("./vr");
+const Tag = require("./tag");
+
+const indeterminateLength = 0xFFFFFFFF;
+const zero4Bytes = Buffer.from([0, 0, 0, 0]);
+
+function concat(a, b) {
+    return Buffer.concat([a, b], a.length + b.length);
+}
+
+function concatv(...buffers) {
+    return Buffer.concat(buffers);
+}
+
+function intToBytesBE(i) { return Buffer.from([i >> 24, i >> 16, i >> 8, i]); }
+function intToBytesLE(i) { return Buffer.from([i, i >> 8, i >> 16, i >> 24]); }
+function tagToBytesBE(tag) { return intToBytesBE(tag); }
+function tagToBytesLE(tag) { return Buffer.from([tag >> 16, tag >> 24, tag, tag >> 8]); }
 
 const self = module.exports = {
     shiftLeftUnsigned: function(num, n) {
@@ -8,14 +24,10 @@ const self = module.exports = {
     trim: function(s) {
         return s.replace(/[\x00-\x20]*$/g, "");
     },
-    concat: function(a, b) {
-        return Buffer.concat([a, b], a.length + b.length);
-    },
-    concatv: function(...buffers) {
-        return Buffer.concat(buffers);
-    },
+    concat: concat,
+    concatv: concatv,
 
-    indeterminateLength: 0xFFFFFFFF,
+    indeterminateLength: indeterminateLength,
 
     groupNumber: function (tag) { return tag >>> 16; },
     elementNumber: function (tag) { return tag & 0xFFFF; },
@@ -40,14 +52,14 @@ const self = module.exports = {
     shortToBytesBE: function(i) { return Buffer.from([i >> 8, i]); },
     shortToBytesLE: function(i) { return Buffer.from([i, i >> 8]); },
     intToBytes: function(i, bigEndian) { return bigEndian ? self.intToBytesBE(i) : self.intToBytesLE(i); },
-    intToBytesBE: function(i) { return Buffer.from([i >> 24, i >> 16, i >> 8, i]); },
-    intToBytesLE: function(i) { return Buffer.from([i, i >> 8, i >> 16, i >> 24]); },
+    intToBytesBE: intToBytesBE,
+    intToBytesLE: intToBytesLE,
     longToBytes: function(i, bigEndian) { return bigEndian ? self.longToBytesBE(i) : self.longToBytesLE(i); },
     longToBytesBE: function(i) { return Buffer.from([i >> 56, i >> 48, i >> 40, i >> 32, i >> 24, i >> 16, i >> 8, i]); },
     longToBytesLE: function(i) { return Buffer.from([i, i >> 8, i >> 16, i >> 24, i >> 32, i >> 40, i >> 48, i >> 56]); },
     tagToBytes: function(tag, bigEndian) { return bigEndian ? self.tagToBytesBE(tag) : self.tagToBytesLE(tag); },
-    tagToBytesBE: function(tag) { return self.intToBytesBE(tag); },
-    tagToBytesLE: function(tag) { return Buffer.from([tag >> 16, tag >> 24, tag, tag >> 8]); },
+    tagToBytesBE: tagToBytesBE,
+    tagToBytesLE: tagToBytesLE,
 
     emptyBuffer: Buffer.alloc(0),
 
@@ -58,6 +70,24 @@ const self = module.exports = {
 
     padToEvenLength(bytes, tagOrVR) {
         let vr = isNaN(tagOrVR) ? tagOrVR : dictionary.vrOf(tagOrVR);
-        return (bytes.length & 1) !== 0 ? self.concat(bytes, Buffer.from([vr.paddingByte])) : bytes;
-    }
+        return (bytes.length & 1) !== 0 ? concat(bytes, Buffer.from([vr.paddingByte])) : bytes;
+    },
+
+    itemLE: concat(tagToBytesLE(Tag.Item), intToBytesLE(indeterminateLength)),
+    itemBE: concat(tagToBytesBE(Tag.Item), intToBytesBE(indeterminateLength)),
+    item: function(length, bigEndian) {
+        bigEndian = bigEndian === undefined ? false : bigEndian;
+        length = length === undefined ? indeterminateLength : length;
+        return length === indeterminateLength ? bigEndian ? self.itemBE : self.itemLE : concat(self.tagToBytes(Tag.Item, bigEndian), self.intToBytes(length, bigEndian));
+    },
+
+    itemDelimitationLE: concat(tagToBytesLE(Tag.ItemDelimitationItem), zero4Bytes),
+    itemDelimitationBE: concat(tagToBytesBE(Tag.ItemDelimitationItem), zero4Bytes),
+    itemDelimitation: function(bigEndian) { return bigEndian ? self.itemDelimitationBE : self.itemDelimitationLE; },
+
+    sequenceDelimitationLE: concat(tagToBytesLE(Tag.SequenceDelimitationItem), zero4Bytes),
+    sequenceDelimitationBE: concat(tagToBytesBE(Tag.SequenceDelimitationItem), zero4Bytes),
+    sequenceDelimitation: function(bigEndian) { return bigEndian ? self.sequenceDelimitationBE : self.sequenceDelimitationLE; },
+    sequenceDelimitationNonZeroLength: function(bigEndian) { return concatv(self.tagToBytes(Tag.SequenceDelimitationItem, bigEndian), self.intToBytes(0x00000010, bigEndian)); }
+
 };

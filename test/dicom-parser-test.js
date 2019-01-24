@@ -1,3 +1,4 @@
+const pipe = require("multipipe");
 const base = require("../src/base");
 const Tag = require("../src/tag");
 const VR = require("../src/vr");
@@ -62,7 +63,7 @@ describe("DICOM parse flow", function () {
         });
     });
 
-    it("should output a warning message when non-meta information is included in the header", function () {
+    it("should output a warning id when non-meta information is included in the header", function () {
         let bytes = base.concatv(data.fmiGroupLength(data.transferSyntaxUID(), data.studyDate()), data.transferSyntaxUID(), data.studyDate());
 
         return util.testParts(bytes, new parser.ParseFlow(), parts => {
@@ -87,7 +88,7 @@ describe("DICOM parse flow", function () {
         });
     });
 
-    it("should skip very long (and obviously erroneous) transfer syntaxes (see warning log message)", function () {
+    it("should skip very long (and obviously erroneous) transfer syntaxes (see warning log id)", function () {
         let tsuid = data.transferSyntaxUID();
         let malformedTsuid = base.concatv(
             tsuid.slice(0, 6),
@@ -134,7 +135,7 @@ describe("DICOM parse flow", function () {
         });
     });
 
-    it("should inflate gzip deflated datasets (with warning message)", function () {
+    it("should inflate gzip deflated datasets (with warning id)", function () {
         let bytes = base.concatv(
             data.fmiGroupLength(data.transferSyntaxUID(UID.DeflatedExplicitVRLittleEndian)),
             data.transferSyntaxUID(UID.DeflatedExplicitVRLittleEndian),
@@ -172,7 +173,7 @@ describe("DICOM parse flow", function () {
     });
 
     it("should read DICOM data with fragments", function () {
-        let bytes = base.concatv(data.pixeDataFragments(), data.item(4), Buffer.from([1, 2, 3, 4]), data.item(4), Buffer.from([5, 6, 7, 8]), data.sequenceDelimitation());
+        let bytes = base.concatv(data.pixeDataFragments(), base.item(4), Buffer.from([1, 2, 3, 4]), base.item(4), Buffer.from([5, 6, 7, 8]), base.sequenceDelimitation());
 
         return util.testParts(bytes, new parser.ParseFlow(), parts => {
             util.probe(parts)
@@ -187,7 +188,7 @@ describe("DICOM parse flow", function () {
     });
 
     it("should issue a warning when a fragments delimitation tag has nonzero length", function () {
-        let bytes = base.concatv(data.pixeDataFragments(), data.item(4), Buffer.from([1, 2, 3, 4]), data.item(4), Buffer.from([5, 6, 7, 8]), data.sequenceDelimitationNonZeroLength());
+        let bytes = base.concatv(data.pixeDataFragments(), base.item(4), Buffer.from([1, 2, 3, 4]), base.item(4), Buffer.from([5, 6, 7, 8]), base.sequenceDelimitationNonZeroLength());
 
         return util.testParts(bytes, new parser.ParseFlow(), parts => {
             util.probe(parts)
@@ -202,7 +203,7 @@ describe("DICOM parse flow", function () {
     });
 
     it("should parse a tag which is not an item, item data nor fragments delimitation inside fragments as unknown", function () {
-        let bytes = base.concatv(data.pixeDataFragments(), data.item(4), Buffer.from([1, 2, 3, 4]), data.studyDate(), data.item(4), Buffer.from([5, 6, 7, 8]), data.sequenceDelimitation());
+        let bytes = base.concatv(data.pixeDataFragments(), base.item(4), Buffer.from([1, 2, 3, 4]), data.studyDate(), base.item(4), Buffer.from([5, 6, 7, 8]), base.sequenceDelimitation());
 
         return util.testParts(bytes, new parser.ParseFlow(), parts => {
             util.probe(parts)
@@ -218,7 +219,7 @@ describe("DICOM parse flow", function () {
     });
 
     it("should read DICOM data containing a sequence", function () {
-        let bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence), data.item(), data.patientNameJohnDoe(), data.studyDate(), data.itemDelimitation(), data.sequenceDelimitation());
+        let bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence), base.item(), data.patientNameJohnDoe(), data.studyDate(), base.itemDelimitation(), base.sequenceDelimitation());
 
         return util.testParts(bytes, new parser.ParseFlow(), parts => {
             util.probe(parts)
@@ -235,7 +236,7 @@ describe("DICOM parse flow", function () {
     });
 
     it("should read DICOM data containing a sequence in a sequence", function () {
-        let bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence), data.item(), data.sequence(Tag.DerivationCodeSequence), data.item(), data.patientNameJohnDoe(), data.itemDelimitation(), data.sequenceDelimitation(), data.studyDate(), data.itemDelimitation(), data.sequenceDelimitation());
+        let bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence), base.item(), data.sequence(Tag.DerivationCodeSequence), base.item(), data.patientNameJohnDoe(), base.itemDelimitation(), base.sequenceDelimitation(), data.studyDate(), base.itemDelimitation(), base.sequenceDelimitation());
 
         return util.testParts(bytes, new parser.ParseFlow(), parts => {
             util.probe(parts)
@@ -259,7 +260,7 @@ describe("DICOM parse flow", function () {
         let bytes = base.concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()), data.transferSyntaxUID(), data.patientNameJohnDoe());
 
         let chunker = new Chunker(1);
-        let flow = chunker.pipe(new parser.ParseFlow());
+        let flow = pipe(chunker, new parser.ParseFlow());
 
         return util.testParts(bytes, flow, parts => {
             util.probe(parts)
@@ -394,7 +395,7 @@ describe("DICOM parse flow", function () {
     });
 
     it("should handle sequences and items of determinate length", function () {
-        let bytes = base.concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence, 8 + 18 + 16), data.item(18 + 16), data.studyDate(), data.patientNameJohnDoe(), data.patientNameJohnDoe());
+        let bytes = base.concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence, 8 + 18 + 16), base.item(18 + 16), data.studyDate(), data.patientNameJohnDoe(), data.patientNameJohnDoe());
 
         return util.testParts(bytes, new parser.ParseFlow(), parts => {
             util.probe(parts)
@@ -413,7 +414,7 @@ describe("DICOM parse flow", function () {
     });
 
     it("should handle fragments with empty basic offset table (first item)", function () {
-        let bytes = base.concatv(data.pixeDataFragments(), data.item(0), data.item(4), Buffer.from([1, 2, 3, 4]), data.sequenceDelimitation());
+        let bytes = base.concatv(data.pixeDataFragments(), base.item(0), base.item(4), Buffer.from([1, 2, 3, 4]), base.sequenceDelimitation());
 
         return util.testParts(bytes, new parser.ParseFlow(), parts => {
             util.probe(parts)
@@ -428,7 +429,7 @@ describe("DICOM parse flow", function () {
 
     it("should parse sequences with VR UN as a block of bytes", function () {
         let unSequence = base.concatv(base.tagToBytes(Tag.CTExposureSequence), Buffer.from("UN"), Buffer.from([0, 0]), base.intToBytes(24));
-        let bytes = base.concatv(data.patientNameJohnDoe(), unSequence, data.item(16), data.studyDate());
+        let bytes = base.concatv(data.patientNameJohnDoe(), unSequence, base.item(16), data.studyDate());
 
         return util.testParts(bytes, new parser.ParseFlow(), parts => {
             util.probe(parts)
@@ -442,7 +443,7 @@ describe("DICOM parse flow", function () {
 
     it("should parse sequences with VR UN, and where the nested data set(s) have implicit VR, as a block of bytes", function () {
         let unSequence = base.concatv(base.tagToBytes(Tag.CTExposureSequence), Buffer.from("UN"), Buffer.from([0, 0]), base.intToBytes(24));
-        let bytes = base.concatv(data.patientNameJohnDoe(), unSequence, data.item(16), data.studyDate(false, false));
+        let bytes = base.concatv(data.patientNameJohnDoe(), unSequence, base.item(16), data.studyDate(false, false));
 
         return util.testParts(bytes, new parser.ParseFlow(), parts => {
             util.probe(parts)
