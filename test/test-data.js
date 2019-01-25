@@ -20,6 +20,10 @@ const self = module.exports = {
         return self.element(Tag.FileMetaInformationGroupLength, base.intToBytesLE(fmis.map(fmi => fmi.length).reduce((p, c) => p + c)), false, true);
     },
 
+    fmiVersion: function(bigEndian, explicitVR) {
+        return self.element(Tag.FileMetaInformationVersion, Buffer.from([0x00, 0x01]), bigEndian, explicitVR);
+    },
+
     transferSyntaxUID: function(uid, bigEndian, explicitVR) {
         uid = uid || UID.ExplicitVRLittleEndian;
         return self.element(Tag.TransferSyntaxUID, uid, bigEndian, explicitVR);

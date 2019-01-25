@@ -1,16 +1,19 @@
 {
-  "name": "dicom-streams-js",
+  "name": "@exini/dicom-streams-js",
   "version": "0.0.1",
   "description": "Streaming parsing and processing of DICOM data",
-  "main": "main.js",
+  "main": "dist/dicom-streams.js",
   "scripts": {
     "test": "mocha 'test/*-test.js'",
     "test-one": "mocha 'test/dicom-flows-test.js'",
-    "build": "browserify src/*.js > dist/bundle.js"
+    "build": "browserify src/index.js -s dcm -o dist/dicom-streams.js"
   },
-  "keywords": [],
-  "author": "Karl Sjostrand",
-  "license": "",
+  "keywords": [
+    "dicom",
+    "streams"
+  ],
+  "author": "karl.sostrand@exini.com",
+  "license": "UNLICENSED",
   "repository": {
     "type": "git",
     "url": "https://bitbucket.org/exini_dp/dicom-streams-js"
@@ -18,13 +21,11 @@
   "bugs": {
     "url": "https://exini1.atlassian.net/secure/RapidBoard.jspa?rapidView=2&projectKey=DCMS"
   },
-  "homepage": "",
   "dependencies": {
     "readable-stream": "^3.1.1",
     "multipipe": "^3.0.0",
     "iconv-lite": "^0.4.24",
-    "traits.js": "^1.1.5",
-    "browserify": "^16.2.2"
+    "traits.js": "^1.1.5"
   },
   "devDependencies": {
     "mocha": "^5.2.0"
