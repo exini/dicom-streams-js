@@ -1,6 +1,5 @@
 const pipe = require("multipipe");
 const base = require("../src/base");
-const parsing = require("../src/parsing");
 const Tag = require("../src/tag");
 const TagTree = require("../src/tag-tree");
 const parser = require("../src/dicom-parser");
@@ -78,7 +77,7 @@ describe("The tag filter", function () {
         let bytes = base.concatv(data.preamble, data.fmiGroupLength(data.fmiVersion(), data.transferSyntaxUID()), data.fmiVersion(),
             data.transferSyntaxUID(), data.studyDate());
 
-        return util.testParts(bytes, pipe(new parser.ParseFlow(), tagFilter(() => false, tagPath => !parsing.isFileMetaInformation(tagPath.tag()))), parts => {
+        return util.testParts(bytes, pipe(new parser.ParseFlow(), tagFilter(() => false, tagPath => !base.isFileMetaInformation(tagPath.tag()))), parts => {
             util.probe(parts)
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()

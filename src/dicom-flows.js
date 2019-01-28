@@ -1,6 +1,5 @@
 const base = require("./base");
 const parts = require("./parts");
-const parsing = require("./parsing");
 const TagPath = require("./tag-path");
 const {IdentityFlow, DeferToPartFlow, GuaranteedDelimitationEvents, TagPathTracking, flow} = require("./dicom-flow");
 
@@ -13,11 +12,11 @@ const blacklistFilter = function (blacklist) {
 };
 
 const groupLengthDiscardFilter = function() {
-    return tagFilter(() => true, tagPath => !parsing.isGroupLength(tagPath.tag()) || parsing.isFileMetaInformation(tagPath.tag()))
+    return tagFilter(() => true, tagPath => !base.isGroupLength(tagPath.tag()) || base.isFileMetaInformation(tagPath.tag()))
 };
 
 const fmiDiscardFilter = function() {
-    return tagFilter(() => false, tagPath => !parsing.isFileMetaInformation(tagPath.tag()))
+    return tagFilter(() => false, tagPath => !base.isFileMetaInformation(tagPath.tag()))
 };
 
 const tagFilter = function (defaultCondition, tagCondition) {

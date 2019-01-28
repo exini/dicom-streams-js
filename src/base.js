@@ -1,5 +1,6 @@
 const dictionary = require("./dictionary");
 const Tag = require("./tag");
+const UID = require("./uid");
 
 const indeterminateLength = 0xFFFFFFFF;
 const zero4Bytes = Buffer.from([0, 0, 0, 0]);
@@ -88,6 +89,9 @@ const self = module.exports = {
     sequenceDelimitationLE: concat(tagToBytesLE(Tag.SequenceDelimitationItem), zero4Bytes),
     sequenceDelimitationBE: concat(tagToBytesBE(Tag.SequenceDelimitationItem), zero4Bytes),
     sequenceDelimitation: function(bigEndian) { return bigEndian ? self.sequenceDelimitationBE : self.sequenceDelimitationLE; },
-    sequenceDelimitationNonZeroLength: function(bigEndian) { return concatv(self.tagToBytes(Tag.SequenceDelimitationItem, bigEndian), self.intToBytes(0x00000010, bigEndian)); }
+    sequenceDelimitationNonZeroLength: function(bigEndian) { return concatv(self.tagToBytes(Tag.SequenceDelimitationItem, bigEndian), self.intToBytes(0x00000010, bigEndian)); },
 
+    isFileMetaInformation: function(tag) { return (tag & 0xFFFF0000) === 0x00020000; },
+    isGroupLength: function(tag) { return self.elementNumber(tag) === 0; },
+    isDeflated: function(transferSyntaxUid) { return transferSyntaxUid === UID.DeflatedExplicitVRLittleEndian || transferSyntaxUid === UID.JPIPReferencedDeflate; }
 };

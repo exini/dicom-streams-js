@@ -14,7 +14,7 @@ class CharacterSets {
         if (vr)
             return isVrAffectedBySpecificCharacterSet(vr) ? this.decode(bytes) : defaultOnly.decode(bytes);
         else
-            return this.charsetExtensionsEnabled ? this.decodeWithExtensions(bytes) : this.initialCharset.isJp ? jconv.decode(bytes, this.initialCharset.charset) : iconv.decode(bytes, this.initialCharset.charset);
+            return this.charsetExtensionsEnabled ? this.decodeWithExtensions(bytes) : iconv.decode(bytes, this.initialCharset.charset);
     }
 
     decodeWithExtensions(b) {
@@ -142,5 +142,6 @@ module.exports = {
     fromName: fromName,
     fromNames: fromNames,
     fromBytes: fromBytes,
-    encode: encode
+    encode: encode,
+    defaultOnly: defaultOnly
 };

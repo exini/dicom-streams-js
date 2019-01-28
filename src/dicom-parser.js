@@ -3,7 +3,6 @@ const base = require("./base");
 const Tag = require("./tag");
 const UID = require("./uid");
 const VR = require("./vr");
-const parsing = require("./parsing");
 const parts = require("./parts");
 const dictionary = require("./dictionary");
 const {ByteParser, ParseStep, ParseResult, finishedParser} = require("./byte-parser");
@@ -54,17 +53,42 @@ class FragmentsState {
 class AtBeginning extends DicomParseStep {
     constructor(parser) {
         super(null, parser);
+        this.dicomPreambleLength = 132;
+
+    }
+
+    static isDICM(bytes) {
+        return bytes[0] === 68 && bytes[1] === 73 && bytes[2] === 67 && bytes[3] === 77;
+    }
+
+    static dicomInfo(data, assumeBigEndian) {
+        let tag1 = base.bytesToTag(data, assumeBigEndian);
+        let vr = dictionary.vrOf(tag1);
+        if (vr === VR.UN)
+            return undefined;
+        if (base.bytesToVR(data.slice(4, 6)) === vr.code)
+            return { bigEndian: assumeBigEndian, explicitVR: true, hasFmi: base.isFileMetaInformation(tag1) };
+        if (base.bytesToUInt(data.slice(4, 8), assumeBigEndian) >= 0)
+            if (assumeBigEndian)
+                throw Error("Implicit VR Big Endian encoded DICOM Stream");
+            else
+                return { bigEndian: false, explicitVR: false, hasFmi: base.isFileMetaInformation(tag1) };
+        return undefined;
+    }
+
+    isPreamble(data) {
+        return data.length >= this.dicomPreambleLength && AtBeginning.isDICM(data.slice(this.dicomPreambleLength - 4, this.dicomPreambleLength));
     }
 
     parse(reader) {
         let maybePreamble = undefined;
-        if (reader.remainingSize() < parsing.dicomPreambleLength + 8) {
+        if (reader.remainingSize() < this.dicomPreambleLength + 8) {
             if (reader.remainingData().slice(0, 128).every(b => b === 0))
-                reader.ensure(parsing.dicomPreambleLength + 8);
-        } else if (parsing.isPreamble(reader.remainingData()))
-            maybePreamble = new parts.PreamblePart(reader.take(parsing.dicomPreambleLength));
+                reader.ensure(this.dicomPreambleLength + 8);
+        } else if (this.isPreamble(reader.remainingData()))
+            maybePreamble = new parts.PreamblePart(reader.take(this.dicomPreambleLength));
         reader.ensure(8);
-        let info = parsing.dicomInfo(reader.remainingData());
+        let info = AtBeginning.dicomInfo(reader.remainingData());
         if (info) {
             let nextState = info.hasFmi ?
                 new InFmiHeader(new FmiHeaderState(undefined, info.bigEndian, info.explicitVR, info.hasFmi, 0, undefined), this.parser) :
@@ -75,8 +99,8 @@ class AtBeginning extends DicomParseStep {
     }
 
     onTruncation(reader) {
-        if (reader.remainingSize() === parsing.dicomPreambleLength && parsing.isPreamble(reader.remainingData()))
-            this.parser.push(new parts.PreamblePart(reader.take(parsing.dicomPreambleLength)));
+        if (reader.remainingSize() === this.dicomPreambleLength && this.isPreamble(reader.remainingData()))
+            this.parser.push(new parts.PreamblePart(reader.take(this.dicomPreambleLength)));
         else
             super.onTruncation(reader);
     }
@@ -205,7 +229,7 @@ function toDatasetStep(reader, valueLength, state, parser) {
     let bigEndian = tsuid === UID.ExplicitVRBigEndianRetired;
     let explicitVR = tsuid !== UID.ImplicitVRLittleEndian;
 
-    if (parsing.isDeflated(tsuid)) {
+    if (base.isDeflated(tsuid)) {
         if (parser.inflate) {
             reader.ensure(valueLength + 2);
 
@@ -226,15 +250,24 @@ function toDatasetStep(reader, valueLength, state, parser) {
             parser.setDetourFlow(inflater);
             parser.setDetour(true, remainingBytes);
         } else
-            return new InDeflatedData(state.bigEndian, parser);
+            return new InDeflatedData(state, parser);
     }
     return new InDatasetHeader(new DatasetHeaderState(0, bigEndian, explicitVR), parser);
+}
+
+function readTagVr(data, bigEndian, explicitVr) {
+    let tag = base.bytesToTag(data, bigEndian);
+    if (tag === 0xFFFEE000 || tag === 0xFFFEE00D || tag === 0xFFFEE0DD)
+        return {tag: tag, vr: null};
+    if (explicitVr)
+        return {tag: tag, vr: VR.valueOf(base.bytesToVR(data.slice(4, 6)))};
+    return {tag: tag, vr: dictionary.vrOf(tag)};
 }
 
 function readHeader(reader, state) {
     reader.ensure(8);
     let tagVrBytes = reader.remainingData().slice(0, 8);
-    let tagVr = parsing.tagVr(tagVrBytes, state.bigEndian, state.explicitVR);
+    let tagVr = readTagVr(tagVrBytes, state.bigEndian, state.explicitVR);
     if (tagVr.vr && state.explicitVR) {
         if (tagVr.vr.headerLength === 8)
             return {

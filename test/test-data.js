@@ -3,7 +3,6 @@ const Tag = require("../src/tag");
 const UID = require("../src/uid");
 const dictionary = require("../src/dictionary");
 const parts = require("../src/parts");
-const parsing = require("../src/parsing");
 
 const self = module.exports = {
     preamble: base.concat(Buffer.from(new Array(128).fill(0)), Buffer.from("DICM")),
@@ -12,7 +11,7 @@ const self = module.exports = {
         bigEndian = bigEndian === undefined ? false : bigEndian;
         explicitVR = explicitVR === undefined ? true : explicitVR;
         let valueBytes = base.padToEvenLength(Buffer.from(value), tag);
-        let headerBytes = new parts.HeaderPart(tag, dictionary.vrOf(tag), valueBytes.length, parsing.isFileMetaInformation(tag), bigEndian, explicitVR).bytes;
+        let headerBytes = new parts.HeaderPart(tag, dictionary.vrOf(tag), valueBytes.length, base.isFileMetaInformation(tag), bigEndian, explicitVR).bytes;
         return base.concat(headerBytes, valueBytes);
     },
 
