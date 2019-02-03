@@ -11,10 +11,9 @@ class CharacterSets {
     }
 
     decode(bytes, vr) {
-        if (vr)
-            return isVrAffectedBySpecificCharacterSet(vr) ? this.decode(bytes) : defaultOnly.decode(bytes);
-        else
-            return this.charsetExtensionsEnabled ? this.decodeWithExtensions(bytes) : iconv.decode(bytes, this.initialCharset.charset);
+        return vr ?
+            isVrAffectedBySpecificCharacterSet(vr) ? this.decode(bytes) : defaultOnly.decode(bytes) :
+            this.charsetExtensionsEnabled ? this.decodeWithExtensions(bytes) : iconv.decode(bytes, this.initialCharset.charset);
     }
 
     decodeWithExtensions(b) {
