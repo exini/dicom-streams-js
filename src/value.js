@@ -1,6 +1,8 @@
 const base = require("./base");
 const VR = require("./vr");
 
+// TODO support for types other than string
+
 class Value {
     constructor(bytes) {
         this.bytes = bytes;

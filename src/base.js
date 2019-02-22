@@ -8,6 +8,22 @@ const zero4Bytes = Buffer.from([0, 0, 0, 0]);
 
 function concat(a, b) { return Buffer.concat([a, b], a.length + b.length); }
 function concatv(...buffers) { return Buffer.concat(buffers); }
+function flatten(array) { return [].concat.apply([], array); }
+function appendToArray(object, array) {
+    let newArray = array.slice();
+    newArray.push(object);
+    return newArray;
+}
+function prependToArray(object, array) {
+    let newArray = array.slice();
+    newArray.unshift(object);
+    return newArray;
+}
+function concatArrays(array1, array2) {
+    let newArray = array1.slice();
+    array2.forEach(newArray.push);
+    return newArray;
+}
 
 function tagToBytesBE(tag) { return intToBytesBE(tag); }
 function tagToBytesLE(tag) { return Buffer.from([tag >> 16, tag >> 24, tag, tag >> 8]); }
@@ -22,8 +38,13 @@ const self = module.exports = {
     zero4Bytes: zero4Bytes,
 
     shiftLeftUnsigned: function(num, n) { return num << n >>> 0; },
+
     concat: concat,
     concatv: concatv,
+    flatten: flatten,
+    appendToArray: appendToArray,
+    prependToArray: prependToArray,
+    concatArrays: concatArrays,
 
     groupNumber: function (tag) { return tag >>> 16; },
     elementNumber: function (tag) { return tag & 0xFFFF; },
