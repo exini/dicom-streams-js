@@ -1,6 +1,6 @@
 const assert = require("assert");
 const base = require("../src/base");
-const Value = require("../src/value");
+const {Value} = require("../src/value");
 const TagPath = require("../src/tag-path");
 const parts = require("../src/parts");
 const {Elements, ValueElement, Sequence, Item, Fragment, Fragments, preambleElement, SequenceElement, FragmentElement, FragmentsElement, ItemElement, ItemDelimitationElement, SequenceDelimitationElement} = require("../src/elements");
@@ -127,7 +127,7 @@ describe("Elements", function () {
     });
 
     it("should return fragments", function () {
-        let elements = create(studyDate, new Fragments(Tag.PixelData, VR.OB, [new Fragment(4, Value.create(Buffer.from([1, 2, 3, 4])))]));
+        let elements = create(studyDate, new Fragments(Tag.PixelData, VR.OB, [new Fragment(4, new Value(Buffer.from([1, 2, 3, 4])))]));
         assert(elements.fragmentsByTag(Tag.PixelData) !== undefined);
         assert(elements.fragmentsByTag(Tag.SeriesDate) === undefined);
         assert(elements.fragmentsByTag(Tag.StudyDate) === undefined);
@@ -181,12 +181,12 @@ describe("Elements data classes", function () {
         assert.deepEqual(new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, "20010101")).toBytes(), base.concat(new parts.HeaderPart(Tag.StudyDate, VR.DA, 8).bytes, Buffer.from("20010101")));
         assert.deepEqual(new SequenceElement(Tag.DerivationCodeSequence, 10).toBytes(), data.sequence(Tag.DerivationCodeSequence, 10));
         assert.deepEqual(new FragmentsElement(Tag.PixelData, VR.OW).toBytes(), data.pixeDataFragments());
-        assert.deepEqual(new FragmentElement(1, 4, Value.create(Buffer.from([1, 2, 3, 4]))).toBytes(), base.concat(base.item(4), Buffer.from([1, 2, 3, 4])));
+        assert.deepEqual(new FragmentElement(1, 4, new Value(Buffer.from([1, 2, 3, 4]))).toBytes(), base.concat(base.item(4), Buffer.from([1, 2, 3, 4])));
         assert.deepEqual(new ItemElement(1, 10).toBytes(), base.item(10));
         assert.deepEqual(new ItemDelimitationElement(1).toBytes(), base.itemDelimitation());
         assert.deepEqual(new SequenceDelimitationElement().toBytes(), base.sequenceDelimitation());
         assert.deepEqual(new Sequence(Tag.DerivationCodeSequence, base.indeterminateLength, [new Item(create(), base.indeterminateLength)]).toBytes(), base.concatv(data.sequence(Tag.DerivationCodeSequence), base.item(), base.itemDelimitation(), base.sequenceDelimitation()));
-        assert.deepEqual(new Fragments(Tag.PixelData, VR.OW, [], [new Fragment(4, Value.create(Buffer.from([1, 2, 3, 4])))]).toBytes(), base.concatv(data.pixeDataFragments(), base.item(0), base.item(4), Buffer.from([1, 2, 3, 4]), base.sequenceDelimitation()));
+        assert.deepEqual(new Fragments(Tag.PixelData, VR.OW, [], [new Fragment(4, new Value(Buffer.from([1, 2, 3, 4])))]).toBytes(), base.concatv(data.pixeDataFragments(), base.item(0), base.item(4), Buffer.from([1, 2, 3, 4]), base.sequenceDelimitation()));
     });
 
     it("should have expected string representations in terms of number of lines", function () {
@@ -196,12 +196,12 @@ describe("Elements data classes", function () {
         checkString(new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, "20010101")).toString(), 1);
         checkString(new SequenceElement(Tag.DerivationCodeSequence, 10).toString(), 1);
         checkString(new FragmentsElement(Tag.PixelData, VR.OW).toString(), 1);
-        checkString(new FragmentElement(1, 4, Value.create(Buffer.from([1, 2, 3, 4]))).toString(), 1);
+        checkString(new FragmentElement(1, 4, new Value(Buffer.from([1, 2, 3, 4]))).toString(), 1);
         checkString(new ItemElement(1, 10).toString(), 1);
         checkString(new ItemDelimitationElement(1).toString(), 1);
         checkString(new SequenceDelimitationElement().toString(), 1);
         checkString(new Sequence(Tag.DerivationCodeSequence, base.indeterminateLength, [new Item(create(), base.indeterminateLength)]).toString(), 1);
-        checkString(new Fragments(Tag.PixelData, VR.OW, [], [new Fragment(4, Value.create(Buffer.from([1, 2, 3, 4])))]).toString(), 1);
+        checkString(new Fragments(Tag.PixelData, VR.OW, [], [new Fragment(4, new Value(Buffer.from([1, 2, 3, 4])))]).toString(), 1);
     });
 
 });

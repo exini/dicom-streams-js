@@ -6,7 +6,7 @@ const UID = require("../src/uid");
 const parser = require("../src/dicom-parser");
 const data = require("./test-data");
 const util = require("./util");
-const Chunker = require("./chunker");
+const {Chunker} = require("./chunker");
 
 describe("DICOM parse flow", function () {
 

@@ -44,4 +44,6 @@ class TagPathLike {
 
 }
 
-module.exports = TagPathLike;
+module.exports = {
+    TagPathLike: TagPathLike
+};

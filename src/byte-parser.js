@@ -1,5 +1,5 @@
 const base = require("./base");
-const Detour = require("./detour");
+const {Detour} = require("./detour");
 
 class ByteParser extends Detour {
 

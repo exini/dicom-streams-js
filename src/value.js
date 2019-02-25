@@ -9,6 +9,18 @@ class Value {
         this.length = bytes.length;
     }
 
+    static fromString(vr, value, bigEndian) {
+        bigEndian = bigEndian === undefined ? false : bigEndian;
+        return create(stringBytes(vr, value, bigEndian), vr);
+    };
+
+    static fromStrings(vr, values, bigEndian) {
+        bigEndian = bigEndian === undefined ? false : bigEndian;
+        return create(combine(values.map(v => stringBytes(vr, v, bigEndian)), vr), vr)
+    };
+
+    static empty() { return new Value(base.emptyBuffer); }
+
     toStrings(vr, bigEndian, characterSets) {
         bigEndian = bigEndian === undefined ? false : bigEndian;
         characterSets = characterSets === undefined ? base.defaultCharacterSet: characterSets;
@@ -58,7 +70,6 @@ const combine = function(values, vr) {
     return values.reduce((prev, curr) => base.concatv(prev, delim, curr));
 };
 
-const empty = new Value(base.emptyBuffer);
 const create = function(bytes, vr) { return vr ? new Value(base.padToEvenLength(bytes, vr)) : new Value(bytes); };
 
 const stringBytes = function(vr, value, bigEndian) {
@@ -71,16 +82,6 @@ const stringBytes = function(vr, value, bigEndian) {
     if (vr === VR.US) return base.shortToBytes(parseInt(value), bigEndian);
     if (vr === VR.OB || vr === VR.OW || vr === VR.OL || vr === VR.OF || vr === VR.OD) throw Error("Cannot create binary array from string");
     return Buffer.from(value);
-};
-
-const fromString = function(vr, value, bigEndian) {
-    bigEndian = bigEndian === undefined ? false : bigEndian;
-    return create(stringBytes(vr, value, bigEndian), vr);
-};
-
-const fromStrings = function(vr, values, bigEndian) {
-    bigEndian = bigEndian === undefined ? false : bigEndian;
-    return create(combine(values.map(v => stringBytes(vr, v, bigEndian)), vr), vr)
 };
 
 const chunk = function(arr, len) {
@@ -102,8 +103,5 @@ const parseFL = function(value, bigEndian) { return splitFixed(value, 4).map(b =
 const parseFD = function(value, bigEndian) { return splitFixed(value, 8).map(b => base.bytesToDouble(b, bigEndian)); };
 
 module.exports = {
-    empty: empty,
-    create: create,
-    fromString: fromString,
-    fromStrings: fromStrings
+    Value: Value
 };

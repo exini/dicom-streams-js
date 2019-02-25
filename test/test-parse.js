@@ -1,5 +1,5 @@
 const fs = require("fs");
-const Chunker = require("./chunker");
+const {Chunker} = require("./chunker");
 const {objectToStringFlow} = require("../src/flows");
 
 const parser = require("../src/dicom-parser");

@@ -1,4 +1,4 @@
-const TagPathLike = require("./tag-path-like");
+const {TagPathLike} = require("./tag-path-like");
 const {TagPathTag, TagPathItem, TagPathItemEnd, TagPathSequence, TagPathSequenceEnd} = require("./tag-path");
 const base = require("./base");
 const dictionary = require("./dictionary");

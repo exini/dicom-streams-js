@@ -26,4 +26,6 @@ class Chunker extends Transform {
     }
 }
 
-module.exports = Chunker;
+module.exports = {
+    Chunker: Chunker
+};

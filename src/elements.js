@@ -4,8 +4,8 @@ const parts = require("./parts");
 const VR = require("./vr");
 const Tag = require("./tag");
 const TagPath = require("./tag-path");
-const Value = require("./value");
-const CharacterSets = require("./character-sets");
+const {Value} = require("./value");
+const {CharacterSets} = require("./character-sets");
 
 // TODO support for types other than string, support for setters and remove
 
@@ -430,7 +430,7 @@ class Fragments extends ElementSet {
         let elements = [];
         elements.push(new FragmentsElement(this.tag, this.vr, this.bigEndian, this.explicitVR));
         if (this.offsets !== undefined)
-            elements.push(new FragmentElement(1, 4 * this.offsets.length, Value.create(this.offsets.map(offset => base.longToBytes(offset, this.bigEndian).slice(0, 4), this.bigEndian).reduce(base.concat, base.emptyBuffer), this.bigEndian)));
+            elements.push(new FragmentElement(1, 4 * this.offsets.length, new Value(this.offsets.map(offset => base.longToBytes(offset, this.bigEndian).slice(0, 4), this.bigEndian).reduce(base.concat, base.emptyBuffer), this.bigEndian)));
         for (let i = 1; i <= this.fragments.length; i++) {
             elements.push(this.fragment(i).toElement(i + 1));
         }

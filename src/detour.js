@@ -59,4 +59,6 @@ class Detour extends Transform {
 
 }
 
-module.exports = Detour;
+module.exports = {
+    Detour: Detour
+};

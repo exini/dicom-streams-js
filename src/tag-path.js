@@ -1,5 +1,5 @@
-const TagPathLike = require("./tag-path-like");
 const base = require("./base");
+const {TagPathLike} = require("./tag-path-like");
 const dictionary = require("./dictionary");
 
 class TagPath extends TagPathLike {

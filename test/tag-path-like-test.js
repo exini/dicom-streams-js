@@ -1,5 +1,5 @@
 const assert = require("assert");
-const TagPathLike = require("../src/tag-path-like");
+const {TagPathLike} = require("../src/tag-path-like");
 const Tag = require("../src/tag");
 
 class TestTagPath extends TagPathLike {

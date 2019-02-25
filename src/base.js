@@ -1,7 +1,7 @@
 const dictionary = require("./dictionary");
 const Tag = require("./tag");
 const UID = require("./uid");
-const CharacterSets = require("./character-sets");
+const {CharacterSets} = require("./character-sets");
 
 const indeterminateLength = 0xFFFFFFFF;
 const zero4Bytes = Buffer.from([0, 0, 0, 0]);
@@ -76,13 +76,13 @@ const self = module.exports = {
     shortToBytes(i, bigEndian) { return bigEndian ? self.shortToBytesBE(i) : self.shortToBytesLE(i); },
     shortToBytesBE: function(i) { return Buffer.from([i >> 8, i]); },
     shortToBytesLE: function(i) { return Buffer.from([i, i >> 8]); },
-    intToBytes: function(i, bigEndian) { return bigEndian ? intToBytesBE(i) : intToBytesLE(i); },
+    intToBytes: function(i, bigEndian) { return bigEndian ? self.intToBytesBE(i) : self.intToBytesLE(i); },
     intToBytesBE: intToBytesBE,
     intToBytesLE: intToBytesLE,
     longToBytes: function(i, bigEndian) { return bigEndian ? self.longToBytesBE(i) : self.longToBytesLE(i); },
     longToBytesBE: function(i) { return Buffer.from([i >> 56, i >> 48, i >> 40, i >> 32, i >> 24, i >> 16, i >> 8, i]); },
     longToBytesLE: function(i) { return Buffer.from([i, i >> 8, i >> 16, i >> 24, i >> 32, i >> 40, i >> 48, i >> 56]); },
-    tagToBytes: function(tag, bigEndian) { return bigEndian ? tagToBytesBE(tag) : tagToBytesLE(tag); },
+    tagToBytes: function(tag, bigEndian) { return bigEndian ? self.tagToBytesBE(tag) : self.tagToBytesLE(tag); },
     tagToBytesBE: tagToBytesBE,
     tagToBytesLE: tagToBytesLE,
 
@@ -109,8 +109,6 @@ const self = module.exports = {
         return (bytes.length & 1) !== 0 ? self.concat(bytes, Buffer.from([vr.paddingByte])) : bytes;
     },
 
-    truncate: function(n, bytes, bigEndian) { return bigEndian ? bytes.slice(n) : bytes.slice(0, bytes.length - n); },
-
     itemLE: concat(tagToBytesLE(Tag.Item), intToBytesLE(indeterminateLength)),
     itemBE: concat(tagToBytesBE(Tag.Item), intToBytesBE(indeterminateLength)),
     item: function(length, bigEndian) {
@@ -133,5 +131,5 @@ const self = module.exports = {
     isDeflated: function(transferSyntaxUid) { return transferSyntaxUid === UID.DeflatedExplicitVRLittleEndian || transferSyntaxUid === UID.JPIPReferencedDeflate; },
 
     systemZone: new Date().getTimezoneOffset(),
-    defaultCharacterSet: CharacterSets.defaultOnly
+    defaultCharacterSet: CharacterSets.defaultOnly()
 };
