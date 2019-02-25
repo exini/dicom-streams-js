@@ -5,6 +5,7 @@ const VR = require("./vr");
 const Tag = require("./tag");
 const TagPath = require("./tag-path");
 const Value = require("./value");
+const CharacterSets = require("./character-sets");
 
 // TODO support for types other than string, support for setters and remove
 
@@ -15,12 +16,15 @@ class Elements {
         this.data = data;
     }
 
-    elementByTag(tag) { return data.find(e => e.tag === tag); }
+    elementByTag(tag) { return this.data.find(e => e.tag === tag); }
 
     elementByPath(tagPath) {
         let tp = tagPath.previous();
-        if (tp instanceof TagPath.TagPathItem) return base.flatten(this.getNested(tp).map(e => e.elementByTag(tagPath.tag)));
-        if (tp.isEmpty()) return this.elementByTag(tagPath.tag);
+        if (tp instanceof TagPath.TagPathItem) {
+            let e = this.nestedByPath(tp);
+            return e === undefined ? undefined : e.elementByTag(tagPath.tag());
+        }
+        if (tp.isEmpty()) return this.elementByTag(tagPath.tag());
         throw Error("Unsupported tag path type");
     }
 
@@ -106,57 +110,32 @@ class Elements {
         return e && e instanceof Fragments ? e : undefined;
     }
 
-    filter(f) {
-        return new Elements(this.characterSets, this.zoneOffset, this.data.filter(f));
-    }
+    filter(f) { return new Elements(this.characterSets, this.zoneOffset, this.data.filter(f)); }
 
-    head() {
-        return this.data.length > 0 ? this.data[0] : undefined;
-    }
+    head() { return this.data.length > 0 ? this.data[0] : undefined; }
 
-    size() {
-        return this.data.length;
-    }
+    size() { return this.data.length; }
 
-    isEmpty() {
-        return this.data.length <= 0;
-    }
+    isEmpty() { return this.data.length <= 0; }
 
-    nonEmpty() {
-        return !this.isEmpty();
-    }
+    nonEmpty() { return !this.isEmpty(); }
 
     contains(tag) {
-        this.data.map(e => e.tag).includes(tag);
+        return typeof tag === "number" ? this.data.map(e => e.tag).includes(tag) :
+            tag instanceof TagPath.TagPathTag ? this.elementByPath(tag) !== undefined :
+            tag instanceof TagPath.TagPathItem ? this.nestedByPath(tag) !== undefined : false;
     }
 
-    contains(tagPath) {
-        return this.elementByPath(tagPath) !== undefined;
-    }
+    sorted() { return new Elements(this.characterSets, this.zoneOffset, this.data.slice().sort((e1, e2) => e1.tag - e2.tag)); }
 
-    contains(tagPath) {
-        return this.nestedByPath(tagPath) !== undefined;
-    }
-
-    sorted() {
-        return new Elements(this.characterSets, this.zoneOffset, this.data.sort((e1, e2) => e1.tag - e2.tag));
-    }
-
-    toElements() {
-        return base.flatten(this.data.map(e => e.toElements()));
-    }
-
-    toParts() {
-        return base.flatten(this.toElements().map(e => e.toParts()))
-    }
-
+    toElements() { return base.flatten(this.data.map(e => e.toElements())); }
+    toParts() { return base.flatten(this.toElements().map(e => e.toParts())) }
     toBytes(withPreamble) {
         withPreamble = withPreamble === undefined ? true : withPreamble;
         return this.data
             .map(e => e.toBytes())
             .reduce((p, e) => base.concat(p, e), withPreamble ? preambleElement.toBytes() : base.emptyBuffer);
     }
-
     toStrings(indent) {
         let space = " ";
 
@@ -168,27 +147,27 @@ class Elements {
             return space.repeat(Math.max(0, 4 - (length + "").length));
         };
 
-        return this.data.map(e => {
+        return base.flatten(this.data.map(e => {
             if (e instanceof ValueElement) {
                 let strings = e.value.toStrings(e.vr, e.bigEndian, this.characterSets);
                 let s = strings.join(base.multiValueDelimiter);
                 let vm = strings.length + "";
-                return [indent + base.tagToString(e.tag) + space + e.vr + space + s + space1(s) + " # " + space2(e.length) + space + e.length + ", " + vm + space + dictionary.keywordOf(e.tag)];
+                return [indent + base.tagToString(e.tag) + space + e.vr.name + space + s + space + space1(s) + " # " + space2(e.length) + space + e.length + ", " + vm + space + dictionary.keywordOf(e.tag)];
             }
 
             if (e instanceof Sequence) {
                 let hDescription = e.length === base.indeterminateLength ? "Sequence with indeterminate length" : "Sequence with explicit length " + e.length;
-                let heading = indent + base.tagToString(e.tag) + " SQ " + hDescription + space + space1(hDescription) + " # " + space2(e.length) + space + e.length + ", 1 " + dictionary.keywordOf(e.tag);
-                let items = base.flatten(s.items.map(i => {
+                let heading = indent + base.tagToString(e.tag) + " SQ " + hDescription + space + space1(hDescription) + " # " + space2(base.toInt32(e.length)) + space + base.toInt32(e.length) + ", 1 " + dictionary.keywordOf(e.tag);
+                let items = base.flatten(e.items.map(i => {
                     let iDescription = i.indeterminate ? "Item with indeterminate length" : "Item with explicit length " + i.length;
-                    let heading = indent + "  " + base.tagToString(Tag.Item) + " na " + iDescription + space + space1(iDescription) + " # " + space2(i.length) + space + i.length + ", 1 Item";
+                    let heading = indent + "  " + base.tagToString(Tag.Item) + " na " + iDescription + space + space1(iDescription) + " # " + space2(base.toInt32(i.length)) + space + base.toInt32(i.length) + ", 1 Item";
                     let elems = i.elements.toStrings(indent + "    ");
-                    let delimitation = indent + "  " + base.tagToString(Tag.ItemDelimitationItem) + " na " + space.repeat(43) + " #     0, 0 ItemDelimitationItem" + (i.indeterminate ? "" : " (marker)");
+                    let delimitation = indent + "  " + base.tagToString(Tag.ItemDelimitationItem) + " na " + space.repeat(41) + " #     0, 0 ItemDelimitationItem" + (i.indeterminate ? "" : " (marker)");
                     elems.unshift(heading);
                     elems.push(delimitation);
                     return elems;
                 }));
-                let delimitation = indent + base.tagToString(Tag.SequenceDelimitationItem) + " na " + space.repeat(43) + " #     0, 0 SequenceDelimitationItem" + (s.indeterminate ? "" : " (marker)");
+                let delimitation = indent + base.tagToString(Tag.SequenceDelimitationItem) + " na " + space.repeat(41) + " #     0, 0 SequenceDelimitationItem" + (e.indeterminate ? "" : " (marker)");
                 items.unshift(heading);
                 items.push(delimitation);
                 return items;
@@ -196,13 +175,13 @@ class Elements {
 
             if (e instanceof Fragments) {
                 let hDescription = "Fragments with " + e.length + " fragment(s)";
-                let heading = indent + base.tagToString(e.tag) + space + e.vr + space + hDescription + space + space1(hDescription) + " #    na, 1 " + dictionary.keywordOf(e.tag);
-                let offsets = f.offsets.map(o => {
+                let heading = indent + base.tagToString(e.tag) + space + e.vr.name + space + hDescription + space + space1(hDescription) + " #    na, 1 " + dictionary.keywordOf(e.tag);
+                let offsets = e.offsets.map(o => {
                     let description = "Offsets table with " + o.length + " offset(s)";
                     return [indent + space + space + base.tagToString(Tag.Item) + " na " + description + space + space1(description) + " # " + space2(o.length * 4) + space + o.length * 4 + ", 1 Item"]
                 });
                 offsets = offsets ? offsets : [];
-                let fragments = f.fragments.map(f => {
+                let fragments = e.fragments.map(f => {
                     let description = "Fragment with length " + f.length;
                     return indent + space + space + base.tagToString(Tag.Item) + " na " + description + space + space1(description) + " # " + space2(f.length) + space + f.length + ", 1 Item";
                 });
@@ -215,17 +194,13 @@ class Elements {
             }
 
             return [];
-        });
+        }));
     }
-
     toString() {
         return this.toStrings("").join("\r\n");
     }
 
 }
-
-function createEmptyElements(characterSets, zoneOffset) { return new Elements(characterSets, zoneOffset, []); }
-function elementsBuilder(characterSets, zoneOffset) { new ElementsBuilder(characterSets, zoneOffset); }
 
 class Element {
     constructor(bigEndian) {
@@ -266,37 +241,21 @@ class ValueElement extends ElementSet {
 
     setValue(value) { return new ValueElement(this.tag, this.vr, value.ensurePadding(this.vr), this.bigEndian, this.explicitVR); }
     toBytes() { return this.toParts().map(p => p.bytes).reduce(base.concat); }
-    toParts() { return new [parts.HeaderPart(this.tag, this.vr, this.length, base.isFileMetaInformation(this.tag), this.bigEndian, this.explicitVR), new parts.ValueChunk(this.bigEndian, this.value.bytes, true)]; }
+    toParts() { return [new parts.HeaderPart(this.tag, this.vr, this.length, base.isFileMetaInformation(this.tag), this.bigEndian, this.explicitVR), new parts.ValueChunk(this.bigEndian, this.value.bytes, true)]; }
     toElements() { return [this]; }
     toString() {
         let strings = this.value.toStrings(this.vr, this.bigEndian, base.defaultCharacterSet);
         let s = strings.join(base.multiValueDelimiter);
         let vm = strings.length + "";
-        return "ValueElement(" + base.tagToString(this.tag) + " " + this.vr + " [" + s + "] # " + this.length + ", " + vm + " " + dictionary.keywordOf(this.tag) + ")";
+        return "ValueElement(" + base.tagToString(this.tag) + " " + this.vr.name + " [" + s + "] # " + this.length + ", " + vm + " " + dictionary.keywordOf(this.tag) + ")";
     }
-}
-
-function createValueElement(tag, value, bigEndian, explicitVR) {
-    return new ValueElement(tag, dictionary.vrOf(tag), value, bigEndian, explicitVR);
-}
-
-function createValueElementFromBytes(tag, bytes, bigEndian, explicitVR) {
-    return createValueElement(tag, new Value(bytes), bigEndian, explicitVR);
-}
-
-function createValueElementFromString(tag, string, bigEndian, explicitVR) {
-    return createValueElement(tag, Value.fromString(dictionary.vrOf(tag), string, bigEndian), bigEndian, explicitVR);
-}
-
-function createEmptyValueElement(tag, vr, bigEndian, explicitVR) {
-    return new ValueElement(tag, vr, Value.empty, bigEndian, explicitVR);
 }
 
 class SequenceElement extends Element {
     constructor(tag, length, bigEndian, explicitVR) {
         super(bigEndian);
         this.tag = tag;
-        this.length = length;
+        this.length = length === undefined ? base.indeterminateLength : length;
         this.explicitVR = explicitVR === undefined ? true : explicitVR;
     }
 
@@ -315,7 +274,7 @@ class FragmentsElement extends Element {
 
     toBytes() { return this.toParts()[0].bytes; }
     toParts() { return [new parts.HeaderPart(this.tag, this.vr, base.indeterminateLength, false, this.bigEndian, this.explicitVR)]; }
-    toString() { return "FragmentsElement(" + base.tagToString(this.tag) + " " + this.vr + " # " + dictionary.keywordOf(this.tag) + ")"; }
+    toString() { return "FragmentsElement(" + base.tagToString(this.tag) + " " + this.vr.name + " # " + dictionary.keywordOf(this.tag) + ")"; }
 }
 
 class FragmentElement extends Element {
@@ -326,7 +285,7 @@ class FragmentElement extends Element {
         this.value = value;
     }
 
-    toBytes() { return this.toParts().map(_.bytes).reduce(base.concat); }
+    toBytes() { return this.toParts().map(p => p.bytes).reduce(base.concat); }
     toParts() {
         let itemParts = new ItemElement(this.index, this.value.length, this.bigEndian).toParts();
         itemParts.push(new parts.ValueChunk(this.bigEndian, this.value.bytes, true));
@@ -335,16 +294,14 @@ class FragmentElement extends Element {
     toString() { return "FragmentElement(index = " + this.index + ", length = " + this.length + ")"; }
 }
 
-function createEmptyFragmentElement(index, length, bigEndian) { return new FragmentElement(index, length, Value.empty, bigEndian); }
-
 class ItemElement extends Element {
     constructor(index, length, bigEndian) {
         super(bigEndian);
         this.index = index;
-        this.length = length;
+        this.length = length === undefined ? base.indeterminateLength : length;
     }
 
-    toBytes() { return base.concat(base.tagToBytes(Tag.Item, bigEndian), base.intToBytes(this.length, this.bigEndian)); }
+    toBytes() { return base.concat(base.tagToBytes(Tag.Item, this.bigEndian), base.intToBytes(this.length, this.bigEndian)); }
     toParts() { return [new parts.ItemPart(this.index, this.length, this.bigEndian, this.toBytes())]; }
     toString() { return "ItemElement(index = " + this.index + ", length = " + this.length + ")"; }
 }
@@ -375,10 +332,9 @@ class SequenceDelimitationElement extends Element {
 
 class Sequence extends ElementSet {
     constructor(tag, length, items, bigEndian, explicitVR) {
-        super(tag, vr, bigEndian, explicitVR);
-        this.length = length;
-        this.items = items;
-        this.vr = VR.SQ;
+        super(tag, VR.SQ, bigEndian, explicitVR);
+        this.length = length === undefined ? base.indeterminateLength : length;
+        this.items = items === undefined ? [] : items;
         this.indeterminate = this.length === base.indeterminateLength;
     }
 
@@ -394,13 +350,13 @@ class Sequence extends ElementSet {
         let newLength = this.indeterminate ? this.length : this.length - this.item(index).toBytes().length;
         return new Sequence(this.tag, newLength, newItems, this.bigEndian, this.explicitVR);
     }
-    toBytes() { return this.toElements().map(e => e.toBytes()).reduce(base.concat); }
+    toBytes() { return this.toElements().map(e => e.toBytes()).reduce(base.concat, base.emptyBuffer); }
     toElements() {
         let elements = [];
         elements.push(new SequenceElement(this.tag, this.length, this.bigEndian, this.explicitVR));
         for (let i = 1; i <= this.items.length; i++) {
             let itemElements = this.item(i).toElements(i);
-            itemElements.forEach(elements.push);
+            itemElements.forEach(e => elements.push(e));
         }
         elements.push(new SequenceDelimitationElement(!this.indeterminate, this.bigEndian));
         return elements;
@@ -414,11 +370,6 @@ class Sequence extends ElementSet {
     toString() { return "Sequence(" + base.tagToString(this.tag) + " SQ # " + this.length + " " + this.size() + " " + dictionary.keywordOf(this.tag) + ")"; }
 }
 
-function createEmptySequence(tag, length, bigEndian, explicitVR) { return new Sequence(tag, length === undefined ? base.indeterminateLength : length, [], bigEndian, explicitVR); }
-function createSequenceFromElements(tag, elements, bigEndian, explicitVR) {
-    return new Sequence(tag, base.indeterminateLength, elements.map(e => createItemFromElements(e, base.indeterminateLength, bigEndian)), bigEndian, explicitVR);
-}
-
 class Item {
     constructor(elements, length, bigEndian) {
         this.elements = elements;
@@ -430,7 +381,7 @@ class Item {
     toElements(index) {
         let elements = [];
         elements.push(new ItemElement(index, this.length, this.bigEndian));
-        this.elements.toElements().forEach(elements.push);
+        this.elements.toElements().forEach(e => elements.push(e));
         elements.push(new ItemDelimitationElement(index, !this.indeterminate, this.bigEndian));
         return elements;
     }
@@ -442,21 +393,16 @@ class Item {
     toString() { return "Item(length = " + this.length + ", elements size = " + this.elements.size + ")"; }
 }
 
-function createEmptyItem(length, bigEndian) { return new Item(createEmptyElements(), length, bigEndian); }
-function createItemFromElements(elements, length, bigEndian) { return new Item(elements, length, bigEndian); }
-
 class Fragment {
     constructor(length, value, bigEndian) {
         this.length = length;
         this.value = value;
-        this.bigEndian = bigEndian;
+        this.bigEndian = bigEndian === undefined ? false : bigEndian;
     }
 
     toElement(index) { return new FragmentElement(index, this.length, this.value, this.bigEndian); }
     toString() { return "Fragment(length = " + this.length + ", value length = " + this.value.length + ")"; }
 }
-
-function createFragmentFromElement(fragmentElement) { return new Fragment(fragmentElement.length, fragmentElement.value, fragmentElement.bigEndian); }
 
 class Fragments extends ElementSet {
     constructor(tag, vr, offsets, fragments, bigEndian, explicitVR) {
@@ -465,10 +411,10 @@ class Fragments extends ElementSet {
         this.fragments = fragments;
     }
 
-    fragment(index) { return this.fragments.length <= index ? undefined : this.fragments[index - 1]; }
-    frameCount() { return this.offsets.length === 0 && this.fragments.length === 0 ? 0 : this.offsets.length === 0 ?  1 : this.offsets.size; }
+    fragment(index) { return this.fragments.length > index ? undefined : this.fragments[index - 1]; }
+    frameCount() { return this.offsets === undefined && this.fragments.length === 0 ? 0 : this.offsets === undefined ?  1 : this.offsets.size; }
     addFragment(fragment) {
-        if (this.fragments.length === 0 && this.offsets.length === 0) {
+        if (this.fragments.length === 0 && this.offsets === undefined) {
             let bytes = fragment.value.bytes;
             let offsets = [];
             for (let i = 0; i < bytes.length; i += 4) {
@@ -483,20 +429,62 @@ class Fragments extends ElementSet {
     toElements() {
         let elements = [];
         elements.push(new FragmentsElement(this.tag, this.vr, this.bigEndian, this.explicitVR));
-        if (this.offsets.length > 0)
-            elements.push(new FragmentElement(1, 4 * this.offsets.length, Value(this.offsets.map(offset => base.longToBytes(offset, this.bigEndian).slice(0, 4), this.bigEndian).reduce(base.concat), this.bigEndian)));
+        if (this.offsets !== undefined)
+            elements.push(new FragmentElement(1, 4 * this.offsets.length, Value.create(this.offsets.map(offset => base.longToBytes(offset, this.bigEndian).slice(0, 4), this.bigEndian).reduce(base.concat, base.emptyBuffer), this.bigEndian)));
         for (let i = 1; i <= this.fragments.length; i++) {
             elements.push(this.fragment(i).toElement(i + 1));
         }
         elements.push(new SequenceDelimitationElement(this.bigEndian));
+        return elements;
     }
     setFragment(index, fragment) {
         let newFragments = this.fragments.slice();
         newFragments[index - 1] = fragment;
         return new Fragments(this.tag, this.vr, this.offsets, newFragments, this.bigEndian, this.explicitVR);
     }
-    toString() { return "Fragments(" + base.tagToString(this.tag) + " " + this.vr + " # " + this.fragments.length + " " + dictionary.keywordOf(this.tag) + ")"; }
+    toString() { return "Fragments(" + base.tagToString(this.tag) + " " + this.vr.name + " # " + this.fragments.length + " " + dictionary.keywordOf(this.tag) + ")"; }
 }
 
-function createEmptyFragments(tag, vr, bigEndian, explicitVR) { return new Fragments(tag, vr, [], [], bigEndian, explicitVR); }
+class ElementsBuilder {
+    constructor(characterSets, zoneOffset) {
+        this.characterSets = characterSets;
+        this.zoneOffset = zoneOffset;
+        this.data = [];
+    }
 
+    parseZoneOffset(s) {
+        if (s.length < 5) return NaN;
+        return parseInt(s.slice(0, 1) + (parseInt(s.slice(1,3)) * 60 + parseInt(s.slice(3, 5))));
+    }
+
+    addElement(element) {
+        if (element instanceof ValueElement && element.tag === Tag.SpecificCharacterSet)
+            this.characterSets = CharacterSets.fromBytes(element.value.toBytes());
+        if (element instanceof ValueElement && element.tag === Tag.TimezoneOffsetFromUTC) {
+            let newOffset = this.parseZoneOffset(element.value.toSingleString(VR.SH, element.bigEndian, this.characterSets));
+            this.zoneOffset = isNaN(newOffset) ? this.zoneOffset : newOffset;
+        }
+        this.data.push(element);
+        return this;
+    }
+    result() { return new Elements(this.characterSets, this.zoneOffset, data); }
+    toString() { return "ElementsBuilder(characterSets = " + this.characterSets + ", zoneOffset = " + this.zoneOffset + ", size = " + this.data.size + ")"; }
+}
+
+module.exports = {
+    Elements: Elements,
+    Element: Element,
+    ElementSet: ElementSet,
+    preambleElement: preambleElement,
+    ValueElement: ValueElement,
+    SequenceElement: SequenceElement,
+    FragmentElement: FragmentElement,
+    FragmentsElement: FragmentsElement,
+    ItemElement: ItemElement,
+    ItemDelimitationElement: ItemDelimitationElement,
+    SequenceDelimitationElement: SequenceDelimitationElement,
+    Sequence: Sequence,
+    Item: Item,
+    Fragment: Fragment,
+    Fragments: Fragments
+};

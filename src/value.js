@@ -52,10 +52,8 @@ const trimPadding = function(s, paddingByte) {
 };
 
 const combine = function(values, vr) {
-    if (values.length === 0)
-        return base.emptyBuffer;
     if (vr === VR.AT || vr === VR.FL || vr === VR.FD || vr === VR.SL || vr === VR.SS || vr === VR.UL || vr === VR.US || vr === VR.OB || vr === VR.OW || vr === VR.OL || vr === VR.OF || vr === VR.OD)
-        return values.reduce(base.concat);
+        return values.reduce(base.concat, base.emptyBuffer);
     let delim = Buffer.from("\\");
     return values.reduce((prev, curr) => base.concatv(prev, delim, curr));
 };

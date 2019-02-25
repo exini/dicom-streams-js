@@ -37,7 +37,9 @@ const self = module.exports = {
     emptyBuffer: Buffer.alloc(0),
     zero4Bytes: zero4Bytes,
 
-    shiftLeftUnsigned: function(num, n) { return num << n >>> 0; },
+    toUInt32: function(num) { return num >>> 0 },
+    toInt32: function(num) { return num >> 0 },
+    shiftLeftUnsigned: function(num, n) { return self.toUInt32(num << n); },
 
     concat: concat,
     concatv: concatv,
@@ -130,5 +132,6 @@ const self = module.exports = {
     isGroupLength: function(tag) { return self.elementNumber(tag) === 0; },
     isDeflated: function(transferSyntaxUid) { return transferSyntaxUid === UID.DeflatedExplicitVRLittleEndian || transferSyntaxUid === UID.JPIPReferencedDeflate; },
 
+    systemZone: new Date().getTimezoneOffset(),
     defaultCharacterSet: CharacterSets.defaultOnly
 };
