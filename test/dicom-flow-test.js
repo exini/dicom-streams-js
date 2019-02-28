@@ -32,7 +32,7 @@ describe("The dicom flow", function () {
         }, DicomFlow);
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectTestPart("Preamble")
                 .expectTestPart("Header")
                 .expectTestPart("Value Chunk")
@@ -217,7 +217,7 @@ describe("The guaranteed delimitation flow", function () {
         }, IdentityFlow, GuaranteedDelimitationEvents);
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence, 56)
                 .expectItem(1, 16)
                 .expectHeader(Tag.StudyDate)
@@ -248,7 +248,7 @@ describe("The guaranteed delimitation flow", function () {
         let testFlow = toIndeterminateLengthSequences();
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence)
                 .expectItem(1)
                 .expectHeader(Tag.StudyDate)
@@ -267,7 +267,7 @@ describe("The guaranteed delimitation flow", function () {
         let testFlow = toIndeterminateLengthSequences();
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
                 .expectSequence(Tag.DerivationCodeSequence)
@@ -295,7 +295,7 @@ describe("The guaranteed delimitation flow", function () {
         let testFlow = toIndeterminateLengthSequences();
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence)
                 .expectItem(1)
                 .expectHeader(Tag.StudyDate)
@@ -320,7 +320,7 @@ describe("The guaranteed delimitation flow", function () {
         let testFlow = toIndeterminateLengthSequences();
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence)
                 .expectItem(1)
                 .expectHeader(Tag.PatientName)
@@ -452,7 +452,7 @@ describe("DICOM flows with tag path tracking", function () {
         };
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), createTestFlow(), createTestFlow()), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence, 24)
                 .expectItem(1, 16)
                 .expectHeader(Tag.PatientName)
@@ -488,6 +488,54 @@ describe("DICOM flows with tag path tracking", function () {
             TagPath.fromItem(Tag.DigitalSignaturesSequence, 1).thenTag(Tag.Signature),
             TagPath.fromItemEnd(Tag.DigitalSignaturesSequence, 1), // item end (inserted)
             TagPath.fromSequenceEnd(Tag.DigitalSignaturesSequence) // sequence end (inserted)
+        ];
+
+        let check = function (tagPath) {
+            assert(tagPath.isEqualTo(expectedPaths.shift()));
+        };
+
+        let testFlow = flow({}, {
+            onPart: function (part) {
+                check(this.tagPath());
+                return [part];
+            }
+        }, DeferToPartFlow, TagPathTracking);
+
+        return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), () => {
+        });
+    });
+
+    it("should handle elements, sequences and items of zero length", function () {
+        let bytes = base.concatv(Buffer.from([8, 0, 32, 0, 68, 65, 0, 0]), data.patientNameJohnDoe(),
+            data.sequence(Tag.MACParametersSequence, 0),
+            data.sequence(Tag.WaveformSequence),
+            base.sequenceDelimitation(),
+            data.sequence(Tag.DigitalSignaturesSequence, 680),
+            base.item(0),
+            base.item(),
+            base.itemDelimitation(),
+            base.item(10),
+            data.element(Tag.MACIDNumber, Buffer.from([1, 1])));
+
+        let expectedPaths = [
+            TagPath.fromTag(Tag.StudyDate),
+            TagPath.fromTag(Tag.StudyDate), // inserted
+            TagPath.fromTag(Tag.PatientName),
+            TagPath.fromTag(Tag.PatientName),
+            TagPath.fromSequence(Tag.MACParametersSequence), // sequence start
+            TagPath.fromSequenceEnd(Tag.MACParametersSequence), // sequence end (inserted)
+            TagPath.fromSequence(Tag.WaveformSequence), // sequence start
+            TagPath.fromSequenceEnd(Tag.WaveformSequence), // sequence end
+            TagPath.fromSequence(Tag.DigitalSignaturesSequence), // sequence start
+            TagPath.fromItem(Tag.DigitalSignaturesSequence, 1), // item start
+            TagPath.fromItemEnd(Tag.DigitalSignaturesSequence, 1), // item end (inserted)
+            TagPath.fromItem(Tag.DigitalSignaturesSequence, 2), // item start
+            TagPath.fromItemEnd(Tag.DigitalSignaturesSequence, 2), // item end
+            TagPath.fromItem(Tag.DigitalSignaturesSequence, 3), // item start
+            TagPath.fromItem(Tag.DigitalSignaturesSequence, 3).thenTag(Tag.MACIDNumber),
+            TagPath.fromItem(Tag.DigitalSignaturesSequence, 3).thenTag(Tag.MACIDNumber),
+            TagPath.fromItemEnd(Tag.DigitalSignaturesSequence, 3), // item end (inserted),
+            TagPath.fromSequenceEnd(Tag.DigitalSignaturesSequence) // sequence end (inserted),
         ];
 
         let check = function (tagPath) {

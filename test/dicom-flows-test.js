@@ -13,7 +13,7 @@ describe("The DICOM group length discard filter", function () {
         let bytes = base.concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()), data.transferSyntaxUID(), groupLength, data.studyDate());
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), groupLengthDiscardFilter()), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectPreamble()
                 .expectHeader(Tag.FileMetaInformationGroupLength)
                 .expectValueChunk()
@@ -32,7 +32,7 @@ describe("The DICOM file meta information discard filter", function () {
             data.patientNameJohnDoe(), data.studyDate());
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), fmiDiscardFilter()), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
                 .expectHeader(Tag.StudyDate)
@@ -48,7 +48,7 @@ describe("The tag filter", function () {
             base.itemDelimitation(), base.sequenceDelimitation());
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), tagFilter(() => true, tagPath => tagPath.tag() !== Tag.PatientName)), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence)
                 .expectItem(1)
                 .expectHeader(Tag.StudyDate)
@@ -64,7 +64,7 @@ describe("The tag filter", function () {
             data.fmiVersion(), data.transferSyntaxUID(), data.patientNameJohnDoe(), data.studyDate());
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), tagFilter(() => false, tagPath => base.groupNumber(tagPath.tag()) >= 8)), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
                 .expectHeader(Tag.StudyDate)
@@ -78,7 +78,7 @@ describe("The tag filter", function () {
             data.transferSyntaxUID(), data.studyDate());
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), tagFilter(() => false, tagPath => !base.isFileMetaInformation(tagPath.tag()))), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
                 .expectDicomComplete()
@@ -92,7 +92,7 @@ describe("The whitelist filter", function () {
             data.patientNameJohnDoe(), data.studyDate());
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), whitelistFilter([TagTree.fromTag(Tag.StudyDate)])), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
                 .expectDicomComplete()
@@ -104,7 +104,7 @@ describe("The whitelist filter", function () {
             base.itemDelimitation(), base.sequenceDelimitation());
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), whitelistFilter([TagTree.fromTag(Tag.StudyDate)])), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectDicomComplete()
         });
     });
@@ -114,7 +114,7 @@ describe("The whitelist filter", function () {
             base.item(4), Buffer.from([5, 6, 7, 8]), base.sequenceDelimitation());
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), whitelistFilter([])), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectDicomComplete()
         });
     });
@@ -124,7 +124,7 @@ describe("The whitelist filter", function () {
             data.patientNameJohnDoe(), data.studyDate(), base.itemDelimitation(), base.sequenceDelimitation());
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), whitelistFilter([TagTree.fromAnyItem(Tag.DerivationCodeSequence).thenTag(Tag.StudyDate)])), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence)
                 .expectItem(1)
                 .expectHeader(Tag.StudyDate)
@@ -141,7 +141,7 @@ describe("The whitelist filter", function () {
             base.sequenceDelimitation());
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), whitelistFilter([TagTree.fromItem(Tag.DerivationCodeSequence, 2).thenTag(Tag.StudyDate)])), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence)
                 .expectItem(2)
                 .expectHeader(Tag.StudyDate)
@@ -162,7 +162,7 @@ describe("The blacklist filter", function () {
             data.patientNameJohnDoe());
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), blacklistFilter([TagTree.fromAnyItem(Tag.DerivationCodeSequence)])), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
                 .expectHeader(Tag.PatientName)
@@ -177,7 +177,7 @@ describe("The blacklist filter", function () {
             base.item(), data.studyDate(), base.itemDelimitation(), base.sequenceDelimitation());
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), blacklistFilter([TagTree.fromTag(Tag.StudyDate), TagTree.fromItem(Tag.DerivationCodeSequence, 1)])), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence)
                 .expectItem(2)
                 .expectHeader(Tag.StudyDate)
@@ -194,7 +194,7 @@ describe("The blacklist filter", function () {
             base.item(), data.studyDate(), base.itemDelimitation(), base.sequenceDelimitation());
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), blacklistFilter([TagTree.fromItem(Tag.DerivationCodeSequence, 1).thenTag(Tag.StudyDate)])), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
                 .expectSequence(Tag.DerivationCodeSequence)
@@ -219,7 +219,7 @@ describe("The sequence length filter", function () {
                 data.sequence(Tag.AbstractPriorCodeSequence), base.item(), data.studyDate(), base.itemDelimitation(), base.item(16), data.studyDate(), base.sequenceDelimitation());
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), toIndeterminateLengthSequences()), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence, -1)
                 .expectItem(1, -1)
                 .expectHeader(Tag.StudyDate)
@@ -249,7 +249,7 @@ describe("The sequence length filter", function () {
             data.sequence(Tag.DerivationCodeSequence, 32), base.item(), data.studyDate(), base.itemDelimitation());
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), toIndeterminateLengthSequences()), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence, -1)
                 .expectItem(1, -1)
                 .expectHeader(Tag.StudyDate)
@@ -267,7 +267,7 @@ describe("The sequence length filter", function () {
             data.pixeDataFragments(), base.item(4), Buffer.from([1, 2, 3, 4]), base.sequenceDelimitation());
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), toIndeterminateLengthSequences()), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectFragments()
                 .expectItem(1, 4)
                 .expectValueChunk()
@@ -289,7 +289,7 @@ describe("The sequence length filter", function () {
             data.sequence(Tag.DerivationCodeSequence, 24), base.item(16), data.studyDate(), data.patientNameJohnDoe());
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), toIndeterminateLengthSequences()), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
                 .expectSequence(Tag.DerivationCodeSequence, -1)
@@ -316,7 +316,7 @@ describe("The sequence length filter", function () {
             base.item(0), base.item(12), data.sequence(Tag.DerivationCodeSequence, 0));
 
         return util.testParts(bytes, pipe(new parser.ParseFlow(), toIndeterminateLengthSequences()), parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence, -1)
                 .expectItem(1, -1)
                 .expectHeader(Tag.StudyDate)

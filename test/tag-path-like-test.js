@@ -13,11 +13,12 @@ class TestTagPath extends TagPathLike {
     isEmpty() { return false; }
 }
 
-const emptyTagPath = new class extends TagPathLike {
+class EmptyTagPath extends TagPathLike {
     tag() { throw new Error("Empty tag path"); }
     previous() { return this; }
     isEmpty() { return true; }
-}();
+}
+const emptyTagPath = new EmptyTagPath();
 
 
 describe("The tag path depth", function () {

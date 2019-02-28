@@ -61,6 +61,11 @@ class AtBeginning extends DicomParseStep {
         return bytes[0] === 68 && bytes[1] === 73 && bytes[2] === 67 && bytes[3] === 77;
     }
 
+    static tryReadHeader(data) {
+        let info = this.dicomInfo(data, false)
+        return info === undefined ? this.dicomInfo(data, true) : info;
+
+    }
     static dicomInfo(data, assumeBigEndian) {
         let tag1 = base.bytesToTag(data, assumeBigEndian);
         let vr = dictionary.vrOf(tag1);
@@ -88,7 +93,7 @@ class AtBeginning extends DicomParseStep {
         } else if (this.isPreamble(reader.remainingData()))
             maybePreamble = new parts.PreamblePart(reader.take(this.dicomPreambleLength));
         reader.ensure(8);
-        let info = AtBeginning.dicomInfo(reader.remainingData());
+        let info = AtBeginning.tryReadHeader(reader.remainingData());
         if (info) {
             let nextState = info.hasFmi ?
                 new InFmiHeader(new FmiHeaderState(undefined, info.bigEndian, info.explicitVR, info.hasFmi, 0, undefined), this.parser) :

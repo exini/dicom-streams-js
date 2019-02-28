@@ -78,11 +78,12 @@ const DeferToPartFlow = Trait.compose(
         onItemDelimitation: function(part) { return this.onPart(part); }
     }));
 
-const dicomStartMarker = new class extends parts.MetaPart {
+class DicomStartMarker extends parts.MetaPart {
     toString() {
         return "Start Marker []";
     }
-}();
+}
+const dicomStartMarker = new DicomStartMarker();
 
 const StartEvent = function(SuperFlow) {
     return flowModel({
@@ -95,11 +96,12 @@ const StartEvent = function(SuperFlow) {
     }, SuperFlow);
 };
 
-const dicomEndMarker = new class extends parts.MetaPart {
+class DicomEndMarker extends parts.MetaPart {
     toString() {
         return "End Marker []";
     }
-}();
+}
+const dicomEndMarker = new DicomEndMarker();
 
 const EndEvent = function(SuperFlow) {
     return flowModel({
@@ -130,11 +132,16 @@ const InFragments = function(SuperFlow) {
     }, SuperFlow);
 };
 
-const valueChunkMarker = new class extends parts.MetaPart {
+class ValueChunkMarker extends parts.ValueChunk {
+    constructor() {
+        super(false, base.emptyBuffer, true);
+    }
+
     toString() {
         return "Value Chunk Marker []";
     }
-}();
+}
+const valueChunkMarker = new ValueChunkMarker();
 
 const GuaranteedValueEvent = function(SuperFlow) {
     return flowModel({
@@ -313,5 +320,7 @@ module.exports = {
     TagPathTracking: TagPathTracking,
     dicomStartMarker: dicomStartMarker,
     dicomEndMarker: dicomEndMarker,
+    sequenceDelimitationPartMarker: sequenceDelimitationPartMarker,
+    ItemDelimitationPartMarker: ItemDelimitationPartMarker,
     valueChunkMarker: valueChunkMarker
 };

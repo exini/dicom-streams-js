@@ -110,11 +110,12 @@ class ParseStep {
     }
 }
 
-const finishedParser = new class extends ParseStep {
+class FinishedParser extends ParseStep {
     parse(reader) {
         throw new Error("No initial parser installed: you must use startWith(...)")
     }
-}();
+}
+const finishedParser = new FinishedParser();
 
 class ParseResult {
     constructor(result, nextStep) {

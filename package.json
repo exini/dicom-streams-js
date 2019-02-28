@@ -5,7 +5,7 @@
   "main": "dist/dicom-streams.js",
   "scripts": {
     "test": "mocha 'test/*-test.js'",
-    "test-one": "mocha 'test/elements-test.js'",
+    "test-one": "mocha 'test/element-flows-test.js'",
     "build": "browserify src/index.js -s dcm -o dist/dicom-streams.js"
   },
   "keywords": [

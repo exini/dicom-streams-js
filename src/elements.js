@@ -223,14 +223,15 @@ class ElementSet {
     toElements() { return []; }
 }
 
-const preambleElement = new class extends Element {
+class PreambleElement extends Element {
     constructor() {
         super(false);
     }
     toBytes() { return base.concat(Buffer.from(new Array(128).fill(0)), Buffer.from("DICM")); }
     toString() { return "PreambleElement(0, ..., 0, D, I, C, M)"; }
     toParts() { return [new parts.PreamblePart(this.toBytes())]; }
-}();
+}
+const preambleElement = new PreambleElement();
 
 class ValueElement extends ElementSet {
     constructor(tag, vr, value, bigEndian, explicitVR) {

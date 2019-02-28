@@ -145,10 +145,11 @@ class TagTreeTrunk extends TagTree {
     thenItem(tag, item) { return new TagTreeItem(tag, item, this); }
 }
 
-const emptyTagTree = new class extends TagTreeTrunk {
+class EmptyTagTree extends TagTreeTrunk {
     tag() { throw new Error("Empty tag tree"); }
     previous() { return emptyTagTree; }
-}();
+}
+const emptyTagTree = new EmptyTagTree(-1, null);
 
 class TagTreeTag extends TagTree {
     constructor(tag, previous) {

@@ -35,10 +35,12 @@ const self = module.exports = {
 
     studyDate: function(bigEndian, explicitVR) { return self.element(Tag.StudyDate, "19700101", bigEndian, explicitVR); },
 
-    sequence: function(tag, length, bigEndian) {
+    sequence: function(tag, length, bigEndian, explicitVR) {
         bigEndian = bigEndian === undefined ? false : bigEndian;
+        explicitVR = explicitVR === undefined ? true : explicitVR;
         length = length === undefined ? base.indeterminateLength : length;
-        return base.concatv(base.tagToBytes(tag, bigEndian), Buffer.from("SQ"), Buffer.from([0, 0]), base.intToBytes(length, bigEndian));
+        let vrBytes = explicitVR ? base.concat(Buffer.from("SQ"), Buffer.from([0, 0])) : base.emptyBuffer;
+        return base.concatv(base.tagToBytes(tag, bigEndian), vrBytes, base.intToBytes(length, bigEndian));
     },
 
     pixeDataFragments: function(bigEndian) { return base.concatv(base.tagToBytes(Tag.PixelData, bigEndian), Buffer.from("OW"), Buffer.from([0, 0]), Buffer.from([0xFF, 0xFF, 0xFF, 0xFF])) }

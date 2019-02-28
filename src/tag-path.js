@@ -112,10 +112,11 @@ class TagPathTrunk extends TagPath {
     thenItemEnd(tag, item) { return new TagPathItemEnd(tag, item, this); }
 }
 
-const emptyTagPath = new class extends TagPathTrunk {
+class EmptyTagPath extends TagPathTrunk {
     tag() { throw new Error("Empty tag path"); }
     previous() { return emptyTagPath; }
-}();
+}
+const emptyTagPath = new EmptyTagPath(-1, null);
 
 class TagPathTag extends TagPath {
     constructor(tag, previous) {

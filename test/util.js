@@ -3,7 +3,7 @@ const {promisify} = require("util");
 const zlib = require("zlib");
     const assert = require("assert");
 const parts = require("../src/parts");
-// const {printFlow} = require("../src/flows");
+const {ValueElement, ItemElement, ItemDelimitationElement, SequenceElement, SequenceDelimitationElement, FragmentElement, preambleElement, FragmentsElement} = require("../src/elements");
 
 class TestPart extends parts.MetaPart {
     constructor(id) {
@@ -16,7 +16,7 @@ class TestPart extends parts.MetaPart {
     }
 }
 
-class Probe {
+class PartProbe {
     constructor(array) {
         this.array = array;
         this.offset = 0;
@@ -114,6 +114,97 @@ class Probe {
         this.offset++;
         return this;
     }
+
+    expectDicomComplete() {
+        assert(this.offset >= this.array.length);
+        this.offset++;
+        return this;
+    }
+}
+
+class ElementProbe {
+    constructor(array) {
+        this.array = array;
+        this.offset = 0;
+    }
+
+    expectElement(tag, value) {
+        let part = this.array[this.offset];
+        assert(part instanceof ValueElement || part instanceof SequenceElement || part instanceof FragmentsElement);
+        if (value !== undefined)
+            assert.deepEqual(part.value.bytes, value);
+        if (tag !== undefined)
+            assert.equal(part.tag, tag);
+        this.offset++;
+        return this;
+    }
+
+    expectPreamble() {
+        assert.equal(this.array[this.offset], preambleElement);
+        this.offset++;
+        return this;
+    }
+
+    expectFragments(tag) {
+        let part = this.array[this.offset];
+        assert(part instanceof FragmentsElement);
+        if (tag !== undefined)
+            assert.equal(part.tag, tag);
+        this.offset++;
+        return this;
+    }
+
+    expectFragment(length) {
+        let part = this.array[this.offset];
+        assert(part instanceof FragmentElement);
+        if (length !== undefined)
+            assert.equal(part.length, length);
+        this.offset++;
+        return this;
+    }
+
+    expectSequence(tag, length) {
+        let part = this.array[this.offset];
+        assert(part instanceof SequenceElement);
+        if (length !== undefined)
+            assert.equal(part.length, length);
+        if (tag !== undefined)
+            assert.equal(part.tag, tag);
+        this.offset++;
+        return this;
+    }
+
+    expectItem(index, length) {
+        let part = this.array[this.offset];
+        assert(part instanceof ItemElement);
+        if (length !== undefined)
+            assert.equal(part.length, length);
+        if (index !== undefined)
+            assert.equal(part.index, index);
+        this.offset++;
+        return this;
+    }
+
+    expectItemDelimitation(index, marker) {
+        let part = this.array[this.offset];
+        assert(part instanceof ItemDelimitationElement);
+        if (marker !== undefined)
+            assert.equal(part.marker, marker);
+        if (index !== undefined)
+            assert.equal(part.index, index);
+        this.offset++;
+        return this;
+    }
+
+    expectSequenceDelimitation(marker) {
+        let part = this.array[this.offset];
+        assert(part instanceof SequenceDelimitationElement);
+        if (marker !== undefined)
+            assert.equal(part.marker, marker);
+        this.offset++;
+        return this;
+    }
+
     expectDicomComplete() {
         assert(this.offset >= this.array.length);
         this.offset++;
@@ -156,8 +247,11 @@ const self = module.exports = {
         return sink;
     },
     streamPromise: promisify(pipeline),
-    probe: function (array) {
-        return new Probe(array);
+    partProbe: function (array) {
+        return new PartProbe(array);
+    },
+    elementProbe: function (array) {
+        return new ElementProbe(array);
     },
     testParts: function (bytes, parseFlow, assertParts) {
         return self.streamPromise(
