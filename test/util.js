@@ -1,7 +1,7 @@
 const {Readable, Writable, pipeline} = require("readable-stream");
 const {promisify} = require("util");
 const zlib = require("zlib");
-    const assert = require("assert");
+const assert = require("assert");
 const parts = require("../src/parts");
 const {ValueElement, ItemElement, ItemDelimitationElement, SequenceElement, SequenceDelimitationElement, FragmentElement, preambleElement, FragmentsElement} = require("../src/elements");
 
@@ -225,6 +225,24 @@ const self = module.exports = {
             readable.push(element);
             readable.push(null);
         }, after);
+        return readable;
+    },
+    arraySource: function (array, delay, objectMode) {
+        let arr = array.slice();
+        const readable = new Readable({
+            objectMode: objectMode === undefined ? false : objectMode,
+            read(size) {
+            }
+        });
+        delay = delay || 0;
+        let id = setInterval(() => {
+            if (arr.length > 0)
+                readable.push(arr.shift());
+            else {
+                readable.push(null);
+                clearInterval(id);
+            }
+        }, delay);
         return readable;
     },
     ignoreSink: function () {

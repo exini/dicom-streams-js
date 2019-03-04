@@ -12,7 +12,6 @@ const elementFlow = function () {
         _currentFragment: { value: undefined },
 
         onPart: function (part) {
-            console.log(part);
 
             if (part instanceof parts.PreamblePart)
                 return [preambleElement];

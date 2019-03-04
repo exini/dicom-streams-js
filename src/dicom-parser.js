@@ -62,7 +62,7 @@ class AtBeginning extends DicomParseStep {
     }
 
     static tryReadHeader(data) {
-        let info = this.dicomInfo(data, false)
+        let info = this.dicomInfo(data, false);
         return info === undefined ? this.dicomInfo(data, true) : info;
 
     }
@@ -320,16 +320,20 @@ function readDatasetHeader(reader, state, stopTag) {
     return new parts.UnknownPart(state.bigEndian, reader.take(header.headerLength))
 }
 
-module.exports = {
-    ParseFlow: class extends ByteParser {
-        constructor(chunkSize, stopTag, inflate) {
-            super();
-            this.chunkSize = chunkSize || 1024 * 1024;
-            this.stopTag = stopTag;
-            this.inflate = inflate === undefined ? true : inflate;
-            this.startWith(new AtBeginning(this));
-        }
+class ParseFlow extends ByteParser {
+    constructor(chunkSize, stopTag, inflate) {
+        super();
+        this.chunkSize = chunkSize || 1024 * 1024;
+        this.stopTag = stopTag;
+        this.inflate = inflate === undefined ? true : inflate;
+        this.startWith(new AtBeginning(this));
     }
+}
+
+function parseFlow(chunkSize, stopTag, inflate) { return new ParseFlow(chunkSize, stopTag, inflate); }
+
+module.exports = {
+    parseFlow: parseFlow
 };
 
 

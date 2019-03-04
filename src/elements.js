@@ -11,9 +11,10 @@ const {CharacterSets} = require("./character-sets");
 
 class Elements {
     constructor(characterSets, zoneOffset, data) {
-        this.characterSets = characterSets;
-        this.zoneOffset = zoneOffset;
-        this.data = data;
+        this.characterSets = characterSets === undefined ? base.defaultCharacterSet : characterSets;
+        this.zoneOffset = zoneOffset === undefined ? base.systemZone : zoneOffset;
+        this.data = data === undefined ? [] : data;
+        this.size = this.data.length;
     }
 
     elementByTag(tag) { return this.data.find(e => e.tag === tag); }
@@ -114,8 +115,6 @@ class Elements {
 
     head() { return this.data.length > 0 ? this.data[0] : undefined; }
 
-    size() { return this.data.length; }
-
     isEmpty() { return this.data.length <= 0; }
 
     nonEmpty() { return !this.isEmpty(); }
@@ -174,13 +173,14 @@ class Elements {
             }
 
             if (e instanceof Fragments) {
-                let hDescription = "Fragments with " + e.length + " fragment(s)";
+                let hDescription = "Fragments with " + e.size + " fragment(s)";
                 let heading = indent + base.tagToString(e.tag) + space + e.vr.name + space + hDescription + space + space1(hDescription) + " #    na, 1 " + dictionary.keywordOf(e.tag);
-                let offsets = e.offsets.map(o => {
-                    let description = "Offsets table with " + o.length + " offset(s)";
-                    return [indent + space + space + base.tagToString(Tag.Item) + " na " + description + space + space1(description) + " # " + space2(o.length * 4) + space + o.length * 4 + ", 1 Item"]
-                });
-                offsets = offsets ? offsets : [];
+                let offsets = [];
+                if (e.offsets !== undefined) {
+                    let len = e.offsets.length
+                    let description = "Offsets table with " + len + " offset(s)";
+                    offsets = [indent + space + space + base.tagToString(Tag.Item) + " na " + description + space + space1(description) + " # " + space2(len * 4) + space + len * 4 + ", 1 Item"];
+                }
                 let fragments = e.fragments.map(f => {
                     let description = "Fragment with length " + f.length;
                     return indent + space + space + base.tagToString(Tag.Item) + " na " + description + space + space1(description) + " # " + space2(f.length) + space + f.length + ", 1 Item";
@@ -311,8 +311,7 @@ class ItemDelimitationElement extends Element {
     constructor(index, marker, bigEndian) {
         super(bigEndian);
         this.index = index;
-        this.marker = marker;
-        this.bigEndian = bigEndian;
+        this.marker = marker === undefined ? false : marker;
     }
 
     toBytes() { return this.marker ? base.emptyBuffer : base.concat(base.tagToBytes(Tag.ItemDelimitationItem, this.bigEndian), Buffer.from([0, 0, 0, 0])); }
@@ -323,7 +322,7 @@ class ItemDelimitationElement extends Element {
 class SequenceDelimitationElement extends Element {
     constructor(marker, bigEndian) {
         super(bigEndian);
-        this.marker = marker;
+        this.marker = marker === undefined ? false : marker;
     }
 
     toBytes() { return this.marker ? base.emptyBuffer : base.concat(base.tagToBytes(Tag.SequenceDelimitationItem, this.bigEndian), Buffer.from([0, 0, 0, 0])); }
@@ -337,6 +336,7 @@ class Sequence extends ElementSet {
         this.length = length === undefined ? base.indeterminateLength : length;
         this.items = items === undefined ? [] : items;
         this.indeterminate = this.length === base.indeterminateLength;
+        this.size = this.items.length;
     }
 
     item(index) { return this.items.length >= index ? this.items[index - 1] : undefined; }
@@ -362,13 +362,12 @@ class Sequence extends ElementSet {
         elements.push(new SequenceDelimitationElement(!this.indeterminate, this.bigEndian));
         return elements;
     }
-    size() { return this.items.length; }
     setItem(index, item) {
         let newItems = this.items.slice();
         newItems[index - 1] = item;
         return new Sequence(this.tag, this.length, newItems, this.bigEndian, this.explicitVR);
     }
-    toString() { return "Sequence(" + base.tagToString(this.tag) + " SQ # " + this.length + " " + this.size() + " " + dictionary.keywordOf(this.tag) + ")"; }
+    toString() { return "Sequence(" + base.tagToString(this.tag) + " SQ # " + this.length + " " + this.size + " " + dictionary.keywordOf(this.tag) + ")"; }
 }
 
 class Item {
@@ -409,24 +408,24 @@ class Fragments extends ElementSet {
     constructor(tag, vr, offsets, fragments, bigEndian, explicitVR) {
         super(tag, vr, bigEndian, explicitVR);
         this.offsets = offsets;
-        this.fragments = fragments;
+        this.fragments = fragments === undefined ? [] : fragments;
+        this.size = this.fragments.length;
     }
 
     fragment(index) { return this.fragments.length > index ? undefined : this.fragments[index - 1]; }
     frameCount() { return this.offsets === undefined && this.fragments.length === 0 ? 0 : this.offsets === undefined ?  1 : this.offsets.size; }
     addFragment(fragment) {
-        if (this.fragments.length === 0 && this.offsets === undefined) {
+        if (this.size === 0 && this.offsets === undefined) {
             let bytes = fragment.value.bytes;
             let offsets = [];
             for (let i = 0; i < bytes.length; i += 4) {
-                offsets.push(base.bytesToUInt(bytes, fragment.bigEndian));
+                offsets.push(base.bytesToUInt(bytes.slice(i), fragment.bigEndian));
             }
             return new Fragments(this.tag, this.vr, offsets, this.fragments, this.bigEndian, this.explicitVR);
         } else
             return new Fragments(this.tag, this.vr, this.offsets, base.appendToArray(fragment, this.fragments), this.bigEndian, this.explicitVR);
     }
     toBytes() { return this.toElements().map(e => e.toBytes()).reduce(base.concat); }
-    size() { return this.fragments.length; }
     toElements() {
         let elements = [];
         elements.push(new FragmentsElement(this.tag, this.vr, this.bigEndian, this.explicitVR));
@@ -468,7 +467,7 @@ class ElementsBuilder {
         this.data.push(element);
         return this;
     }
-    result() { return new Elements(this.characterSets, this.zoneOffset, data); }
+    result() { return new Elements(this.characterSets, this.zoneOffset, this.data); }
     toString() { return "ElementsBuilder(characterSets = " + this.characterSets + ", zoneOffset = " + this.zoneOffset + ", size = " + this.data.size + ")"; }
 }
 
@@ -487,5 +486,6 @@ module.exports = {
     Sequence: Sequence,
     Item: Item,
     Fragment: Fragment,
-    Fragments: Fragments
+    Fragments: Fragments,
+    ElementsBuilder: ElementsBuilder
 };

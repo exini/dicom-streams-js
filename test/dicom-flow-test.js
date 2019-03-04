@@ -4,7 +4,7 @@ const assert = require("assert");
 const base = require("../src/base");
 const Tag = require("../src/tag");
 const TagPath = require("../src/tag-path");
-const parser = require("../src/dicom-parser");
+const {parseFlow} = require("../src/dicom-parser");
 const {flow, DicomFlow, IdentityFlow, DeferToPartFlow, StartEvent, EndEvent, InFragments, InSequence, GuaranteedValueEvent, GuaranteedDelimitationEvents, TagPathTracking, dicomStartMarker, dicomEndMarker} = require("../src/dicom-flow");
 const {toIndeterminateLengthSequences} = require("../src/dicom-flows");
 const data = require("./test-data");
@@ -31,7 +31,7 @@ describe("The dicom flow", function () {
             onPart: function () {return [];}
         }, DicomFlow);
 
-        return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), parts => {
+        return util.testParts(bytes, pipe(parseFlow(), testFlow), parts => {
             util.partProbe(parts)
                 .expectTestPart("Preamble")
                 .expectTestPart("Header")
@@ -70,7 +70,7 @@ describe("The in fragments flow", function () {
             }
         }, IdentityFlow, InFragments);
 
-        return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), () => {
+        return util.testParts(bytes, pipe(parseFlow(), testFlow), () => {
             assert.equal(expectedInFragments.length, 0);
         });
     });
@@ -89,7 +89,7 @@ describe("The guaranteed value flow", function () {
             }
         }, IdentityFlow, GuaranteedValueEvent);
 
-        return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), () => {
+        return util.testParts(bytes, pipe(parseFlow(), testFlow), () => {
             assert.equal(expectedChunkLengths.length, 0);
         });
     });
@@ -107,7 +107,7 @@ describe("The guaranteed value flow", function () {
             }
         }, IdentityFlow, GuaranteedValueEvent);
 
-        return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow1, testFlow2), () => {
+        return util.testParts(bytes, pipe(parseFlow(), testFlow1, testFlow2), () => {
             assert.equal(nEvents, 1);
         });
     });
@@ -124,7 +124,7 @@ describe("The start event flow", function () {
             }
         }, IdentityFlow, StartEvent);
 
-        return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), parts => {
+        return util.testParts(bytes, pipe(parseFlow(), testFlow), parts => {
             assert.equal(parts[0], dicomStartMarker);
             assert.equal(parts.length, 3);
         });
@@ -187,7 +187,7 @@ describe("The end event flow", function () {
             }
         }, IdentityFlow, EndEvent);
 
-        return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), parts => {
+        return util.testParts(bytes, pipe(parseFlow(), testFlow), parts => {
             assert.equal(parts.length, 3);
             assert.equal(parts[2], dicomEndMarker);
         });
@@ -216,7 +216,7 @@ describe("The guaranteed delimitation flow", function () {
             }
         }, IdentityFlow, GuaranteedDelimitationEvents);
 
-        return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), parts => {
+        return util.testParts(bytes, pipe(parseFlow(), testFlow), parts => {
             util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence, 56)
                 .expectItem(1, 16)
@@ -247,7 +247,7 @@ describe("The guaranteed delimitation flow", function () {
 
         let testFlow = toIndeterminateLengthSequences();
 
-        return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), parts => {
+        return util.testParts(bytes, pipe(parseFlow(), testFlow), parts => {
             util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence)
                 .expectItem(1)
@@ -266,7 +266,7 @@ describe("The guaranteed delimitation flow", function () {
 
         let testFlow = toIndeterminateLengthSequences();
 
-        return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), parts => {
+        return util.testParts(bytes, pipe(parseFlow(), testFlow), parts => {
             util.partProbe(parts)
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
@@ -294,7 +294,7 @@ describe("The guaranteed delimitation flow", function () {
 
         let testFlow = toIndeterminateLengthSequences();
 
-        return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), parts => {
+        return util.testParts(bytes, pipe(parseFlow(), testFlow), parts => {
             util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence)
                 .expectItem(1)
@@ -319,7 +319,7 @@ describe("The guaranteed delimitation flow", function () {
 
         let testFlow = toIndeterminateLengthSequences();
 
-        return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), parts => {
+        return util.testParts(bytes, pipe(parseFlow(), testFlow), parts => {
             util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence)
                 .expectItem(1)
@@ -356,7 +356,7 @@ describe("The guaranteed delimitation flow", function () {
             }
         }, IdentityFlow, GuaranteedDelimitationEvents);
 
-        return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow1, testFlow2), () => {
+        return util.testParts(bytes, pipe(parseFlow(), testFlow1, testFlow2), () => {
             assert.equal(nItemDelims, 1);
             assert.equal(nSeqDelims, 1);
         });
@@ -385,7 +385,7 @@ describe("The InSequence support", function () {
             }
         }, DeferToPartFlow, InSequence);
 
-        return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), () => {});
+        return util.testParts(bytes, pipe(parseFlow(), testFlow), () => {});
     });
 });
 
@@ -440,7 +440,7 @@ describe("DICOM flows with tag path tracking", function () {
             }
         }, DeferToPartFlow, TagPathTracking);
 
-        return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), () => {
+        return util.testParts(bytes, pipe(parseFlow(), testFlow), () => {
         });
     });
 
@@ -451,7 +451,7 @@ describe("DICOM flows with tag path tracking", function () {
             return flow({}, {}, IdentityFlow, TagPathTracking);
         };
 
-        return util.testParts(bytes, pipe(new parser.ParseFlow(), createTestFlow(), createTestFlow()), parts => {
+        return util.testParts(bytes, pipe(parseFlow(), createTestFlow(), createTestFlow()), parts => {
             util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence, 24)
                 .expectItem(1, 16)
@@ -501,7 +501,7 @@ describe("DICOM flows with tag path tracking", function () {
             }
         }, DeferToPartFlow, TagPathTracking);
 
-        return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), () => {
+        return util.testParts(bytes, pipe(parseFlow(), testFlow), () => {
         });
     });
 
@@ -549,7 +549,7 @@ describe("DICOM flows with tag path tracking", function () {
             }
         }, DeferToPartFlow, TagPathTracking);
 
-        return util.testParts(bytes, pipe(new parser.ParseFlow(), testFlow), () => {
+        return util.testParts(bytes, pipe(parseFlow(), testFlow), () => {
         });
     });
 
@@ -558,6 +558,6 @@ describe("DICOM flows with tag path tracking", function () {
 
         let testFlow = flow({}, {}, IdentityFlow, TagPathTracking);
 
-        return util.streamPromise(source, pipe(new parser.ParseFlow(), testFlow), util.arraySink(() => {}));
+        return util.streamPromise(source, pipe(parseFlow(), testFlow), util.arraySink(() => {}));
     });
 });
