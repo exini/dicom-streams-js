@@ -83,7 +83,7 @@ class Elements {
                 let e = this._traverseTrunk(elems, trunk.previous());
                 return e ? e.nestedByTag(trunk.tag(), trunk.item) : undefined;
             }
-            throw new Error("Unsupported tag path type");
+            throw Error("Unsupported tag path type");
         }
     }
 

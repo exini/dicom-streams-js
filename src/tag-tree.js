@@ -46,13 +46,13 @@ class TagTree extends TagPathLike {
                     let i = parseInt(s.substring(1, 5) + s.substring(6, 10), 16);
                     if (!isNaN(i)) return i;
                 }
-                throw new Error(s + " is not a tag or name string");
+                throw Error(s + " is not a tag or name string");
             }
         };
         let parseIndex = function(s) {
             if (s === "*") return undefined;
             let i = parseInt(s);
-            if (isNaN(i)) throw new Error(s + " is not a number");
+            if (isNaN(i)) throw Error(s + " is not a number");
             return i;
         };
         let createTag = function(s) { return TagTree.fromTag(parseTag(s)); };
@@ -80,7 +80,7 @@ class TagTree extends TagPathLike {
             }
             return createTag(lastTag);
         } catch (error) {
-            throw new Error("Tag tree could not be parsed: " + error.message);
+            throw Error("Tag tree could not be parsed: " + error.message);
         }
     }
 
@@ -220,7 +220,7 @@ class TagTreeTrunk extends TagTree {
 }
 
 class EmptyTagTree extends TagTreeTrunk {
-    tag() { throw new Error("Empty tag tree"); }
+    tag() { throw Error("Empty tag tree"); }
     previous() { return emptyTagTree; }
 }
 const emptyTagTree = new EmptyTagTree(-1, null);

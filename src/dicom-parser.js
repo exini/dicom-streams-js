@@ -76,7 +76,7 @@ class AtBeginning extends DicomParseStep {
             return { bigEndian: assumeBigEndian, explicitVR: true, hasFmi: base.isFileMetaInformation(tag1) };
         if (base.bytesToUInt(data.slice(4, 8), assumeBigEndian) >= 0)
             if (assumeBigEndian)
-                throw new Error("Implicit VR Big Endian encoded DICOM Stream");
+                throw Error("Implicit VR Big Endian encoded DICOM Stream");
             else
                 return { bigEndian: false, explicitVR: false, hasFmi: base.isFileMetaInformation(tag1) };
         return undefined;

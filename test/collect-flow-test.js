@@ -1,108 +1,106 @@
 const pipe = require("multipipe");
+const assert = require("assert");
 const base = require("../src/base");
 const Tag = require("../src/tag");
 const {TagPath} = require("../src/tag-path");
 const {parseFlow} = require("../src/dicom-parser");
+const {collectFlow, collectFromTagPathsFlow} = require("../src/collect-flow");
+const {printFlow} = require("../src/flows");
 const data = require("./test-data");
 const util = require("./util");
-const {elementFlow} = require("../src/element-flows");
-const {printFlow} = require("../src/flows");
 
-/*
 describe("A collect elements flow", function () {
     it("should first produce an elements part followed by the input dicom parts", function () {
         let bytes = base.concat(data.studyDate(), data.patientNameJohnDoe());
         let tags = [Tag.StudyDate, Tag.PatientName].map(TagPath.fromTag);
-        let source = Source.single(bytes)
-        .via(parseFlow)
-        .via(collectFlow(tags, "tag"))
+        return util.testParts(bytes, pipe(parseFlow(), collectFromTagPathsFlow(tags, "tag")), parts => {
+            let e = parts.shift();
+            assert.equal(e.label, "tag");
+            assert.equal(e.elements.size, 2);
+            assert(e.elements.elementByTag(Tag.StudyDate) !== undefined);
+            assert(e.elements.elementByTag(Tag.PatientName) !== undefined);
 
-    source.runWith(TestSink.probe[DicomPart])
-        .request(1)
-        .expectNextChainingPF {
-case e: ElementsPart =>
-        e.label shouldBe "tag"
-    e.elements should have size 2
-    e.elements(Tag.StudyDate) should not be empty
-    e.elements(Tag.PatientName) should not be empty
-}
-.expectHeader(Tag.StudyDate)
-    .expectValueChunk()
-    .expectHeader(Tag.PatientName)
-    .expectValueChunk()
-    .expectDicomComplete()
-}
+            util.partProbe(parts)
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
 
-it should "produce an empty elements part when stream is empty" in {
-    val bytes = ByteString.empty
+    it("should produce an empty elements part when stream is empty", function () {
+        let bytes = base.emptyBuffer;
 
-    val source = Source.single(bytes)
-        .via(parseFlow)
-        .via(collectFlow(Set.empty, "tag"))
+        return util.testParts(bytes, pipe(parseFlow(), collectFromTagPathsFlow([], "tag")), parts => {
+            let e = parts.shift();
+            assert(e.elements.isEmpty());
 
-    source.runWith(TestSink.probe[DicomPart])
-        .request(1)
-        .expectNextChainingPF {
-case e: ElementsPart => e.elements.isEmpty shouldBe true
-}
-.expectDicomComplete()
-}
+            util.partProbe(parts)
+                .expectDicomComplete()
+        });
+    });
 
-it should "produce an empty elements part when no relevant data elements are present" in {
-    val bytes = patientNameJohnDoe() ++ studyDate()
+    it("should produce an empty elements part when no relevant data elements are present", function () {
+        let bytes = base.concat(data.patientNameJohnDoe(), data.studyDate());
 
-    val source = Source.single(bytes)
-        .via(parseFlow)
-        .via(collectFlow(Set(Tag.Modality, Tag.SeriesInstanceUID).map(TagPath.fromTag), "tag"))
+        return util.testParts(bytes, pipe(parseFlow(), collectFromTagPathsFlow([Tag.Modality, Tag.SeriesInstanceUID].map(TagPath.fromTag), "tag")), parts => {
+            let e = parts.shift();
+            assert(e.elements.isEmpty());
 
-    source.runWith(TestSink.probe[DicomPart])
-        .request(1)
-        .expectNextChainingPF {
-case e: ElementsPart => e.elements.isEmpty shouldBe true
-}
-.expectHeader(Tag.PatientName)
-    .expectValueChunk()
-    .expectHeader(Tag.StudyDate)
-    .expectValueChunk()
-    .expectDicomComplete()
-}
+            util.partProbe(parts)
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
 
-it should "apply the stop tag appropriately" in {
-    val bytes = studyDate() ++ patientNameJohnDoe() ++ pixelData(2000)
+    it("should apply the stop tag appropriately", function () {
+        let bytes = base.concatv(data.studyDate(), data.patientNameJohnDoe(), data.pixelData(2000));
 
-val source = Source.single(bytes)
-    .via(ParseFlow(chunkSize = 500))
-    .via(collectFlow(Set(Tag.StudyDate, Tag.PatientName).map(TagPath.fromTag), "tag", maxBufferSize = 1000))
+        return util.testParts(bytes, pipe(parseFlow(500), collectFromTagPathsFlow([Tag.StudyDate, Tag.PatientName].map(TagPath.fromTag), "tag")), parts => {
+            let e = parts.shift();
+            assert.equal(e.label, "tag");
+            assert.equal(e.elements.size, 2);
+            assert(e.elements.elementByTag(Tag.StudyDate) !== undefined);
+            assert(e.elements.elementByTag(Tag.PatientName) !== undefined);
 
-source.runWith(TestSink.probe[DicomPart])
-    .request(1)
-    .expectNextChainingPF {
-case e: ElementsPart =>
-        e.label shouldBe "tag"
-    e.elements.size shouldBe 2
-    e.elements(Tag.StudyDate) should not be empty
-    e.elements(Tag.PatientName) should not be empty
-}
-.expectHeader(Tag.StudyDate)
-    .expectValueChunk()
-    .expectHeader(Tag.PatientName)
-    .expectValueChunk()
-    .expectHeader(Tag.PixelData)
-    .expectValueChunk()
-    .expectValueChunk()
-    .expectValueChunk()
-    .expectValueChunk()
-    .expectDicomComplete()
-}
+            util.partProbe(parts)
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectHeader(Tag.PixelData)
+                .expectValueChunk()
+                .expectValueChunk()
+                .expectValueChunk()
+                .expectValueChunk()
+                .expectDicomComplete()
+        });
+    });
 
-it should "fail if max buffer size is exceeded" in {
-    val bytes = studyDate() ++ patientNameJohnDoe() ++ pixelData(2000)
+    it("should fail if max buffer size is exceeded", function () {
+        let bytes = base.concatv(data.studyDate(), data.patientNameJohnDoe(), data.pixelData(2000));
 
-val source = Source.single(bytes)
-    .via(ParseFlow(chunkSize = 500))
-    .via(collectFlow(_.tag == Tag.PatientName, _.tag > Tag.PixelData, "tag", maxBufferSize = 1000))
+        let cFlow = collectFlow(
+            tagPath => tagPath.tag() === Tag.PatientName,
+            tagPath => tagPath.tag() > Tag.PixelData,
+            "tag",
+            10);
 
-source.runWith(TestSink.probe[DicomPart])
-    .expectDicomError()
-}
-*/
+        let stream = pipe(util.singleSource(bytes), parseFlow(500), cFlow, util.ignoreSink());
+
+        return new Promise((resolve, reject) => {
+            stream.on("finish", () => {
+                reject(new Error("No error thrown"));
+            });
+
+            stream.on("error", e => {
+                resolve("Caught error", e, "as expected");
+            });
+        });
+    });
+
+});

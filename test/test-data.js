@@ -43,5 +43,6 @@ const self = module.exports = {
         return base.concatv(base.tagToBytes(tag, bigEndian), vrBytes, base.intToBytes(length, bigEndian));
     },
 
+    pixelData: function(length, bigEndian, explicitVR) { return self.element(Tag.PixelData, Buffer.from(new Array(length).fill(0)), bigEndian, explicitVR); },
     pixeDataFragments: function(bigEndian) { return base.concatv(base.tagToBytes(Tag.PixelData, bigEndian), Buffer.from("OW"), Buffer.from([0, 0]), Buffer.from([0xFF, 0xFF, 0xFF, 0xFF])) }
 };

@@ -254,10 +254,11 @@ const self = module.exports = {
         }, delay);
         return readable;
     },
-    ignoreSink: function () {
+    ignoreSink: function (objectMode) {
         return new Writable({
+            objectMode: objectMode === undefined ? false : objectMode,
             write(chunk, encoding, callback) {
-                callback();
+                process.nextTick(() => callback());
             }
         })
     },
@@ -267,7 +268,7 @@ const self = module.exports = {
             objectMode: true,
             write(chunk, encoding, callback) {
                 array.push(chunk);
-                callback();
+                process.nextTick(() => callback());
             }
         });
         sink.once("finish", () => arrayCallback(array));
@@ -280,10 +281,10 @@ const self = module.exports = {
     elementProbe: function (array) {
         return new ElementProbe(array);
     },
-    testParts: function (bytes, parseFlow, assertParts) {
+    testParts: function (bytes, flow, assertParts) {
         return self.streamPromise(
             self.singleSource(bytes),
-            parseFlow,
+            flow,
             self.arraySink(assertParts)
         );
     },

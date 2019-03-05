@@ -4,8 +4,11 @@ const assert = require("assert");
 const base = require("../src/base");
 const Tag = require("../src/tag");
 const {TagPath, emptyTagPath} = require("../src/tag-path");
+const {SequencePart} = require("../src/parts");
 const {parseFlow} = require("../src/dicom-parser");
-const {flow, DicomFlow, IdentityFlow, DeferToPartFlow, StartEvent, EndEvent, InFragments, InSequence, GuaranteedValueEvent, GuaranteedDelimitationEvents, TagPathTracking, dicomStartMarker, dicomEndMarker} = require("../src/dicom-flow");
+const {flow, DicomFlow, IdentityFlow, DeferToPartFlow, StartEvent, EndEvent, InFragments, InSequence,
+    GuaranteedValueEvent, GuaranteedDelimitationEvents, TagPathTracking, dicomStartMarker,
+    dicomEndMarker} = require("../src/dicom-flow");
 const {toIndeterminateLengthSequences} = require("../src/dicom-flows");
 const data = require("./test-data");
 const util = require("./util");
@@ -52,6 +55,21 @@ describe("The dicom flow", function () {
                 .expectTestPart("Sequence End")
                 .expectDicomComplete()
         });
+    });
+
+    it("should emit errors properly", function () {
+        let testFlow = flow({}, {
+            onPart: function(part) {
+                if (part instanceof SequencePart)
+                    throw Error("Sequences not allowed in this flow");
+                return [part];
+            }
+        }, DeferToPartFlow);
+
+        let bytes = base.concatv(data.patientNameJohnDoe(), data.sequence(Tag.DerivationCodeSequence), base.item(),
+            data.studyDate(), base.itemDelimitation(), base.sequenceDelimitation());
+
+        return util.expectDicomError(() => util.testParts(bytes, pipe(parseFlow(), testFlow), () => {}));
     });
 });
 
@@ -561,3 +579,4 @@ describe("DICOM flows with tag path tracking", function () {
         return util.streamPromise(source, pipe(parseFlow(), testFlow), util.arraySink(() => {}));
     });
 });
+

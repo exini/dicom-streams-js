@@ -3,7 +3,8 @@ const base = require("../src/base");
 const {Value} = require("../src/value");
 const {TagPath} = require("../src/tag-path");
 const {HeaderPart} = require("../src/parts");
-const {Elements, ValueElement, Sequence, Item, Fragment, Fragments, preambleElement, SequenceElement, FragmentElement, FragmentsElement, ItemElement, ItemDelimitationElement, SequenceDelimitationElement} = require("../src/elements");
+const {Elements, ValueElement, Sequence, Item, Fragment, Fragments, preambleElement, SequenceElement, FragmentElement,
+    FragmentsElement, ItemElement, ItemDelimitationElement, SequenceDelimitationElement} = require("../src/elements");
 const VR = require("../src/vr");
 const data = require("./test-data");
 

@@ -1,10 +1,10 @@
 const Trait = require("traits.js");
+const pipe = require("multipipe");
 const base = require("./base");
 const flows = require("./flows");
 const {PreamblePart, HeaderPart, ValueChunk, SequencePart, SequenceDelimitationPart, FragmentsPart, ItemPart,
     ItemDelimitationPart, DeflatedChunk, UnknownPart, MetaPart} = require("./parts");
 const {emptyTagPath, TagPathItem} = require("./tag-path");
-const pipe = require("multipipe");
 
 const flowModel = function (resolutions, impl, base, ...capabilities) {
     let parent = capabilities.reduce((out, cap) => Trait.compose(cap(out)), base);

@@ -4,7 +4,8 @@ const {Elements, ValueElement} = require("./elements");
 const {Value} = require("./value");
 const Tag = require("./tag");
 const {CharacterSets} = require("./character-sets");
-const {valueChunkMarker, sequenceDelimitationPartMarker, ItemDelimitationPartMarker, DeferToPartFlow, EndEvent, TagPathTracking, flow} = require("./dicom-flow");
+const {valueChunkMarker, sequenceDelimitationPartMarker, ItemDelimitationPartMarker, DeferToPartFlow, EndEvent,
+    TagPathTracking, flow} = require("./dicom-flow");
 
 function collectFlow(tagCondition, stopCondition, label, maxBufferSize) {
     maxBufferSize = maxBufferSize === undefined ? 1000000 : maxBufferSize;
@@ -36,11 +37,11 @@ function collectFlow(tagCondition, stopCondition, label, maxBufferSize) {
                 return [part];
             else {
                 if (maxBufferSize > 0 && this._currentBufferSize.value > maxBufferSize)
-                    throw new Error("Error collecting elements: max buffer size exceeded");
+                    throw Error("Error collecting elements: max buffer size exceeded");
 
                 if (part !== valueChunkMarker && part !== sequenceDelimitationPartMarker && !(part instanceof ItemDelimitationPartMarker)) {
                     this._buffer.value.push(part);
-                    this._currentBufferSize.value += part.bytes.size;
+                    this._currentBufferSize.value += part.bytes.length;
                 }
 
                 if (part instanceof HeaderPart && stopCondition(this.tagPath()))
@@ -82,7 +83,7 @@ function collectFlow(tagCondition, stopCondition, label, maxBufferSize) {
 
 function collectFromTagPathsFlow(tagPaths, label, maxBufferSize) {
     let maxTag = tagPaths.length > 0 ? Math.max(...tagPaths.map(t => t.head().tag())) : 0;
-    let tagCondition = tagPath => tagPaths.some(tagPath.startsWith);
+    let tagCondition = tagPath => tagPaths.some(tp => tagPath.startsWith(tp));
     let stopCondition = tagPaths.length > 0 ? (tagPath => tagPath.isRoot() && tagPath.tag() > maxTag) : (() => true);
 
     return collectFlow(tagCondition, stopCondition, label, maxBufferSize)

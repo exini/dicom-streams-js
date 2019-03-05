@@ -30,7 +30,7 @@ class Detour extends Transform {
     }
 
     process(chunk) {
-        throw new Error("Must implement process function");
+        throw Error("Must implement process function");
     }
 
     cleanup() {
@@ -41,7 +41,7 @@ class Detour extends Transform {
             if (!this.detourFlow.write(chunk))
                 this.detourFlow.once("drain", callback);
             else
-                callback();
+                process.nextTick(() => callback());
         else
             this.process(chunk);
             callback();
@@ -53,7 +53,7 @@ class Detour extends Transform {
             this.detourFlow.end();
         } else {
             this.cleanup();
-            callback();
+            process.nextTick(() => callback());
         }
     }
 

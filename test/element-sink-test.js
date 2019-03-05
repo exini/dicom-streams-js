@@ -1,7 +1,8 @@
 const assert = require("assert");
 const base = require("../src/base");
 const {Value} = require("../src/value");
-const {ValueElement, SequenceElement, FragmentElement, FragmentsElement, ItemElement, ItemDelimitationElement, SequenceDelimitationElement} = require("../src/elements");
+const {ValueElement, SequenceElement, FragmentElement, FragmentsElement, ItemElement, ItemDelimitationElement,
+    SequenceDelimitationElement} = require("../src/elements");
 const VR = require("../src/vr");
 const UID = require("../src/uid");
 const {parseFlow} = require("../src/dicom-parser");

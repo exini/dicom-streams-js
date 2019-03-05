@@ -16,13 +16,13 @@ class Chunker extends Transform {
             this.buffer = this.buffer.slice(this.size);
             this.push(newChunk);
         }
-        callback();
+        process.nextTick(() => callback());
     }
 
     _flush(callback) {
         if (this.buffer.length)
             this.push(this.buffer);
-        callback();
+        process.nextTick(() => callback());
     }
 }
 

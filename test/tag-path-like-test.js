@@ -14,7 +14,7 @@ class TestTagPath extends TagPathLike {
 }
 
 class EmptyTagPath extends TagPathLike {
-    tag() { throw new Error("Empty tag path"); }
+    tag() { throw Error("Empty tag path"); }
     previous() { return this; }
     isEmpty() { return true; }
 }
