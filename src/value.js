@@ -19,6 +19,14 @@ class Value {
         return create(combine(values.map(v => stringBytes(vr, v, bigEndian)), vr), vr)
     };
 
+    static fromBuffer(vr, buffer) {
+        return create(buffer, vr);
+    }
+
+    static fromBytes(vr, bytes) {
+        return Value.fromBuffer(vr, Buffer.from(bytes));
+    }
+
     static empty() { return new Value(base.emptyBuffer); }
 
     toStrings(vr, bigEndian, characterSets) {
@@ -51,7 +59,7 @@ class Value {
     }
 
     ensurePadding(vr) {
-        return new Value(base.padToEvenLength(this.bytes, vr));
+        return Value.fromBuffer(vr, this.bytes);
     }
 }
 

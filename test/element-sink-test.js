@@ -14,24 +14,24 @@ describe("An element sink", function () {
 
     it("aggregate streamed elements into an Elements", function () {
         let elementList = [
-            new ValueElement(Tag.TransferSyntaxUID, VR.UI, new Value(Buffer.from(UID.ExplicitVRLittleEndian))),
-            new ValueElement(Tag.StudyDate, VR.DA, new Value(Buffer.from("20040329"))),
+            new ValueElement(Tag.TransferSyntaxUID, VR.UI, Value.fromString(VR.UI, UID.ExplicitVRLittleEndian)),
+            new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, "20040329")),
             new SequenceElement(Tag.DerivationCodeSequence),
             new ItemElement(1),
-            new ValueElement(Tag.StudyDate, VR.DA, new Value(Buffer.from("20040329"))),
+            new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, "20040329")),
             new ItemDelimitationElement(1),
             new ItemElement(2),
             new SequenceElement(Tag.DerivationCodeSequence),
             new ItemElement(1),
-            new ValueElement(Tag.StudyDate, VR.DA, new Value(Buffer.from("20040329"))),
+            new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR. DA,"20040329")),
             new ItemDelimitationElement(1),
             new SequenceDelimitationElement(),
             new ItemDelimitationElement(2),
             new SequenceDelimitationElement(),
-            new ValueElement(Tag.PatientName, VR.PN, new Value(Buffer.from("Doe^John"))),
+            new ValueElement(Tag.PatientName, VR.PN, Value.fromString(VR.PN, "Doe^John")),
             new FragmentsElement(Tag.PixelData, VR.OB),
-            new FragmentElement(1, 4, new Value(Buffer.from([1, 2, 3, 4]))),
-            new FragmentElement(2, 4, new Value(Buffer.from([1, 2, 3, 4]))),
+            new FragmentElement(1, 4, Value.fromBytes(VR.OB, [1, 2, 3, 4])),
+            new FragmentElement(2, 4, Value.fromBytes(VR.OB, [1, 2, 3, 4])),
             new SequenceDelimitationElement()
         ];
 
@@ -44,7 +44,7 @@ describe("An element sink", function () {
 
     it("should handle zero length values, fragments, sequences and items", function () {
         let elementList = [
-            new ValueElement(Tag.StudyDate, VR.DA, new Value(base.emptyBuffer)),
+            new ValueElement(Tag.StudyDate, VR.DA, Value.empty()),
             new SequenceElement(Tag.DerivationCodeSequence),
             new SequenceDelimitationElement(),
             new SequenceElement(Tag.DerivationCodeSequence, 0),
@@ -56,7 +56,7 @@ describe("An element sink", function () {
             new ItemDelimitationElement(2, true),
             new SequenceDelimitationElement(),
             new FragmentsElement(Tag.PixelData, VR.OB),
-            new FragmentElement(1, 0, new Value(base.emptyBuffer)),
+            new FragmentElement(1, 0, Value.empty()),
             new SequenceDelimitationElement(),
             new FragmentsElement(Tag.PixelData, VR.OB),
             new SequenceDelimitationElement()
@@ -72,8 +72,8 @@ describe("An element sink", function () {
     it("should convert an empty offsets table item to an empty list of offsets", function () {
         let elementList = [
             new FragmentsElement(Tag.PixelData, VR.OB),
-            new FragmentElement(1, 0, new Value(base.emptyBuffer)),
-            new FragmentElement(2, 0, new Value(Buffer.from([1, 2, 3, 4]))),
+            new FragmentElement(1, 0, Value.empty()),
+            new FragmentElement(2, 0, Value.fromBytes(VR.OB, [1, 2, 3, 4])),
             new SequenceDelimitationElement()
         ];
 
@@ -89,7 +89,7 @@ describe("An element sink", function () {
     it("should map an offsets table to a list of offsets", function () {
         let elementList = [
             new FragmentsElement(Tag.PixelData, VR.OB),
-            new FragmentElement(1, 0, new Value(base.concatv(base.intToBytesLE(1), base.intToBytesLE(2),
+            new FragmentElement(1, 0, Value.fromBuffer(VR.OB, base.concatv(base.intToBytesLE(1), base.intToBytesLE(2),
                 base.intToBytesLE(3), base.intToBytesLE(4)))),
             new SequenceDelimitationElement()
         ];

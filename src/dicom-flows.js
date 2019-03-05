@@ -1,6 +1,6 @@
 const base = require("./base");
-const parts = require("./parts");
-const TagPath = require("./tag-path");
+const {SequencePart, SequenceDelimitationPart, ItemPart, ItemDelimitationPart} = require("./parts");
+const {emptyTagPath} = require("./tag-path");
 const {IdentityFlow, DeferToPartFlow, GuaranteedDelimitationEvents, TagPathTracking, flow} = require("./dicom-flow");
 
 const whitelistFilter = function (whitelist) {
@@ -24,7 +24,7 @@ const tagFilter = function (defaultCondition, tagCondition) {
         _keeping: { value: false },
         _update: function (part) {
             let t = this.tagPath();
-            this._keeping.value = t === TagPath.emptyTagPath ? defaultCondition(part) : tagCondition(t);
+            this._keeping.value = t === emptyTagPath ? defaultCondition(part) : tagCondition(t);
         },
         _emit: function (part) {
             return this._keeping.value ? [part] : [];
@@ -49,8 +49,8 @@ const toIndeterminateLengthSequences = function() {
         indeterminateBytes: Buffer.from([0xFF, 0xFF, 0xFF, 0xFF]),
         onSequence: function (part) {
             return this.toIndeterminateLengthSequences_onSequence(part).map(p => {
-                if (p instanceof parts.SequencePart && !p.indeterminate) {
-                    return new parts.SequencePart(
+                if (p instanceof SequencePart && !p.indeterminate) {
+                    return new SequencePart(
                         part.tag,
                         base.indeterminateLength,
                         part.bigEndian,
@@ -63,13 +63,13 @@ const toIndeterminateLengthSequences = function() {
         onSequenceDelimitation: function (part) {
             let out = this.toIndeterminateLengthSequences_onSequenceDelimitation(part);
             if (part.bytes.length <= 0)
-                out.push(new parts.SequenceDelimitationPart(part.bigEndian, base.sequenceDelimitation(part.bigEndian)));
+                out.push(new SequenceDelimitationPart(part.bigEndian, base.sequenceDelimitation(part.bigEndian)));
             return out;
         },
         onItem: function (part) {
             return this.toIndeterminateLengthSequences_onItem(part).map(p => {
-                if (p instanceof parts.ItemPart && !this.inFragments.value && !p.indeterminate) {
-                    return new parts.ItemPart(
+                if (p instanceof ItemPart && !this.inFragments.value && !p.indeterminate) {
+                    return new ItemPart(
                         part.index,
                         base.indeterminateLength,
                         part.bigEndian,
@@ -81,7 +81,7 @@ const toIndeterminateLengthSequences = function() {
         onItemDelimitation: function (part) {
             let out = this.toIndeterminateLengthSequences_onItemDelimitation(part);
             if (part.bytes.length <= 0)
-                out.push(new parts.ItemDelimitationPart(part.index, part.bigEndian, base.itemDelimitation(part.bigEndian)));
+                out.push(new ItemDelimitationPart(part.index, part.bigEndian, base.itemDelimitation(part.bigEndian)));
             return out;
         }
     }, IdentityFlow, GuaranteedDelimitationEvents);

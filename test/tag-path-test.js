@@ -1,5 +1,5 @@
 const assert = require("assert");
-const TagPath = require("../src/tag-path");
+const {TagPath, emptyTagPath} = require("../src/tag-path");
 const Tag = require("../src/tag");
 
 describe("A tag path", function () {
@@ -88,22 +88,22 @@ describe("Comparing two tag paths", function () {
     });
 
     it("should not provide a particular ordering of two empty tag paths", function () {
-        assert(!TagPath.emptyTagPath.isBelow(TagPath.emptyTagPath));
+        assert(!emptyTagPath.isBelow(emptyTagPath));
     });
 
     it("should sort empty paths as less than any other path", function () {
-        assert(TagPath.emptyTagPath.isBelow(TagPath.fromTag(0)));
-        assert(TagPath.emptyTagPath.isBelow(TagPath.fromItem(0, 1)));
+        assert(emptyTagPath.isBelow(TagPath.fromTag(0)));
+        assert(emptyTagPath.isBelow(TagPath.fromItem(0, 1)));
     });
 
     it("should sort non-empty tag paths after empty paths", function () {
-        assert(!TagPath.fromTag(0).isBelow(TagPath.emptyTagPath));
-        assert(!TagPath.fromItem(0, 1).isBelow(TagPath.emptyTagPath));
+        assert(!TagPath.fromTag(0).isBelow(emptyTagPath));
+        assert(!TagPath.fromItem(0, 1).isBelow(emptyTagPath));
     });
 
     it("should establish a total ordering among tag paths encountered when parsing a file", function () {
         let createPaths = function() { return [
-            TagPath.emptyTagPath, // preamble
+            emptyTagPath, // preamble
             TagPath.fromTag(Tag.FileMetaInformationGroupLength), // FMI group length header
             TagPath.fromTag(Tag.TransferSyntaxUID), // Transfer syntax header
             TagPath.fromTag(Tag.StudyDate), // Patient name header
@@ -162,7 +162,7 @@ describe("Two tag paths", function () {
     });
 
     it("should be equal if both are empty", function () {
-        assert(TagPath.emptyTagPath.isEqualTo(TagPath.emptyTagPath));
+        assert(emptyTagPath.isEqualTo(emptyTagPath));
     });
 
     it("should not be equal if they point to same tags but are of different types", function () {
@@ -193,17 +193,17 @@ describe("The startsWith test", function () {
     });
 
     it("should return true for two empty paths", function () {
-        assert(TagPath.emptyTagPath.startsWith(TagPath.emptyTagPath));
+        assert(emptyTagPath.startsWith(emptyTagPath));
     });
 
     it("should return true when any path starts with empty path", function () {
         let aPath = TagPath.fromTag(1);
-        assert(aPath.startsWith(TagPath.emptyTagPath));
+        assert(aPath.startsWith(emptyTagPath));
     });
 
     it("should return false when empty path starts with non-empty path", function () {
         let aPath = TagPath.fromTag(1);
-        assert(!TagPath.emptyTagPath.startsWith(aPath));
+        assert(!emptyTagPath.startsWith(aPath));
     });
 
     it("should return false when subject path is longer than path", function () {
@@ -234,7 +234,7 @@ describe("The startsWith test", function () {
     it("should support startsWith documentation examples", function () {
         assert(TagPath.fromTag(0x00100010).startsWith(TagPath.fromTag(0x00100010)));
         assert(TagPath.fromItem(0x00089215, 2).thenTag(0x00100010).startsWith(TagPath.fromItem(0x00089215, 2)));
-        assert(TagPath.fromItem(0x00089215, 2).thenTag(0x00100010).startsWith(TagPath.emptyTagPath));
+        assert(TagPath.fromItem(0x00089215, 2).thenTag(0x00100010).startsWith(emptyTagPath));
         assert(!TagPath.fromItem(0x00089215, 2).thenTag(0x00100010).startsWith(TagPath.fromItem(0x00089215, 1)));
         assert(!TagPath.fromItem(0x00089215, 2).startsWith(TagPath.fromItem(0x00089215, 2).thenTag(0x00100010)));
     });
@@ -249,17 +249,17 @@ describe("The endsWith test", function () {
     });
 
     it("should return true for two empty paths", function () {
-        assert(TagPath.emptyTagPath.endsWith(TagPath.emptyTagPath));
+        assert(emptyTagPath.endsWith(emptyTagPath));
     });
 
     it("should return true when checking if non-empty path ends with empty path", function () {
         let aPath = TagPath.fromTag(1);
-        assert(aPath.endsWith(TagPath.emptyTagPath));
+        assert(aPath.endsWith(emptyTagPath));
     });
 
     it("should return false when empty path starts with non-empty path", function () {
         let aPath = TagPath.fromTag(1);
-        assert(!TagPath.emptyTagPath.endsWith(aPath));
+        assert(!emptyTagPath.endsWith(aPath));
     });
 
     it("should return false when a shorter tag is compared to a longer", function () {
@@ -290,7 +290,7 @@ describe("The endsWith test", function () {
     it("should support endsWith documentation examples", function () {
         assert(TagPath.fromTag(0x00100010).endsWith(TagPath.fromTag(0x00100010)));
         assert(TagPath.fromItem(0x00089215, 2).thenTag(0x00100010).endsWith(TagPath.fromTag(0x00100010)));
-        assert(TagPath.fromItem(0x00089215, 2).thenTag(0x00100010).endsWith(TagPath.emptyTagPath));
+        assert(TagPath.fromItem(0x00089215, 2).thenTag(0x00100010).endsWith(emptyTagPath));
         assert(!TagPath.fromTag(0x00100010).endsWith(TagPath.fromItem(0x00089215, 2).thenTag(0x00100010)));
     });
 });
@@ -336,12 +336,12 @@ describe("The drop operation", function () {
         assert(path.drop(1).isEqualTo(TagPath.fromItem(2, 1).thenItem(3, 3).thenTag(4)));
         assert(path.drop(2).isEqualTo(TagPath.fromItem(3, 3).thenTag(4)));
         assert(path.drop(3).isEqualTo(TagPath.fromTag(4)));
-        assert(path.drop(4).isEqualTo(TagPath.emptyTagPath));
-        assert(path.drop(100).isEqualTo(TagPath.emptyTagPath));
+        assert(path.drop(4).isEqualTo(emptyTagPath));
+        assert(path.drop(100).isEqualTo(emptyTagPath));
     });
 
     it("should support sequence and item end nodes", function () {
-        assert(TagPath.fromItemEnd(1,1).drop(1).isEqualTo(TagPath.emptyTagPath));
-        assert(TagPath.fromSequenceEnd(1).drop(1).isEqualTo(TagPath.emptyTagPath));
+        assert(TagPath.fromItemEnd(1,1).drop(1).isEqualTo(emptyTagPath));
+        assert(TagPath.fromSequenceEnd(1).drop(1).isEqualTo(emptyTagPath));
     });
 });

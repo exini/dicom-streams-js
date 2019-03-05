@@ -1,9 +1,10 @@
 const base = require("./base");
 const dictionary = require("./dictionary");
-const parts = require("./parts");
+const {PreamblePart, HeaderPart, ValueChunk, SequencePart, SequenceDelimitationPart, ItemPart,
+    ItemDelimitationPart} = require("./parts");
 const VR = require("./vr");
 const Tag = require("./tag");
-const TagPath = require("./tag-path");
+const {TagPathTag, TagPathItem} = require("./tag-path");
 const {Value} = require("./value");
 const {CharacterSets} = require("./character-sets");
 
@@ -17,11 +18,13 @@ class Elements {
         this.size = this.data.length;
     }
 
+    static empty(characterSets, zoneOffset) { return new Elements(characterSets, zoneOffset, []); }
+
     elementByTag(tag) { return this.data.find(e => e.tag === tag); }
 
     elementByPath(tagPath) {
         let tp = tagPath.previous();
-        if (tp instanceof TagPath.TagPathItem) {
+        if (tp instanceof TagPathItem) {
             let e = this.nestedByPath(tp);
             return e === undefined ? undefined : e.elementByTag(tagPath.tag());
         }
@@ -76,7 +79,7 @@ class Elements {
         if (trunk.isEmpty())
             return elems;
         else {
-            if (trunk instanceof TagPath.TagPathItem) {
+            if (trunk instanceof TagPathItem) {
                 let e = this._traverseTrunk(elems, trunk.previous());
                 return e ? e.nestedByTag(trunk.tag(), trunk.item) : undefined;
             }
@@ -111,6 +114,48 @@ class Elements {
         return e && e instanceof Fragments ? e : undefined;
     }
 
+    _insertOrdered(element) {
+        if (this.isEmpty())
+            return [element];
+        else {
+            let b = [];
+            let isBelow = true;
+            this.data.forEach(e => {
+                if (isBelow && e.tag > element.tag) {
+                    b.push(element);
+                    isBelow = false
+                }
+                if (e.tag === element.tag) {
+                    b.push(element);
+                    isBelow = false;
+                } else
+                    b.push(e);
+            });
+            if (isBelow)
+                b.push(element);
+            return b;
+        }
+    }
+
+    setElementSet(element) {
+        if (element instanceof ValueElement && element.tag === Tag.SpecificCharacterSet)
+            return new Elements(CharacterSets.fromBytes(element.toBytes()), this.zoneOffset, this._insertOrdered(element));
+        if (element instanceof ValueElement && element.tag === Tag.TimezoneOffsetFromUTC) {
+            let newOffset = parseZoneOffset(element.value.toSingleString(VR.SH, element.bigEndian, this.characterSets));
+            newOffset = isNaN(newOffset) ? base.systemZone : newOffset;
+            return new Elements(this.characterSets, newOffset, this._insertOrdered(element));
+        }
+        return new Elements(this.characterSets, this.zoneOffset, this._insertOrdered(element));
+    }
+
+    setCharacterSets(characterSets) {
+        return new Elements(characterSets, this.zoneOffset, this.data);
+    }
+
+    setZoneOffset(zoneOffset) {
+        return new Elements(this.characterSets, zoneOffset, this.data);
+    }
+
     filter(f) { return new Elements(this.characterSets, this.zoneOffset, this.data.filter(f)); }
 
     head() { return this.data.length > 0 ? this.data[0] : undefined; }
@@ -121,8 +166,8 @@ class Elements {
 
     contains(tag) {
         return typeof tag === "number" ? this.data.map(e => e.tag).includes(tag) :
-            tag instanceof TagPath.TagPathTag ? this.elementByPath(tag) !== undefined :
-            tag instanceof TagPath.TagPathItem ? this.nestedByPath(tag) !== undefined : false;
+            tag instanceof TagPathTag ? this.elementByPath(tag) !== undefined :
+            tag instanceof TagPathItem ? this.nestedByPath(tag) !== undefined : false;
     }
 
     sorted() { return new Elements(this.characterSets, this.zoneOffset, this.data.slice().sort((e1, e2) => e1.tag - e2.tag)); }
@@ -229,7 +274,7 @@ class PreambleElement extends Element {
     }
     toBytes() { return base.concat(Buffer.from(new Array(128).fill(0)), Buffer.from("DICM")); }
     toString() { return "PreambleElement(0, ..., 0, D, I, C, M)"; }
-    toParts() { return [new parts.PreamblePart(this.toBytes())]; }
+    toParts() { return [new PreamblePart(this.toBytes())]; }
 }
 const preambleElement = new PreambleElement();
 
@@ -242,7 +287,7 @@ class ValueElement extends ElementSet {
 
     setValue(value) { return new ValueElement(this.tag, this.vr, value.ensurePadding(this.vr), this.bigEndian, this.explicitVR); }
     toBytes() { return this.toParts().map(p => p.bytes).reduce(base.concat); }
-    toParts() { return [new parts.HeaderPart(this.tag, this.vr, this.length, base.isFileMetaInformation(this.tag), this.bigEndian, this.explicitVR), new parts.ValueChunk(this.bigEndian, this.value.bytes, true)]; }
+    toParts() { return [new HeaderPart(this.tag, this.vr, this.length, base.isFileMetaInformation(this.tag), this.bigEndian, this.explicitVR), new ValueChunk(this.bigEndian, this.value.bytes, true)]; }
     toElements() { return [this]; }
     toString() {
         let strings = this.value.toStrings(this.vr, this.bigEndian, base.defaultCharacterSet);
@@ -260,8 +305,8 @@ class SequenceElement extends Element {
         this.explicitVR = explicitVR === undefined ? true : explicitVR;
     }
 
-    toBytes() { return new parts.HeaderPart(this.tag, VR.SQ, this.length, false, this.bigEndian, this.explicitVR).bytes; }
-    toParts() { return [new parts.SequencePart(this.tag, this.length, this.bigEndian, this.explicitVR, this.toBytes())]; }
+    toBytes() { return new HeaderPart(this.tag, VR.SQ, this.length, false, this.bigEndian, this.explicitVR).bytes; }
+    toParts() { return [new SequencePart(this.tag, this.length, this.bigEndian, this.explicitVR, this.toBytes())]; }
     toString() { return "SequenceElement(" + base.tagToString(this.tag) + " SQ # " + this.length + " " + dictionary.keywordOf(this.tag) + ")"; }
 }
 
@@ -274,7 +319,7 @@ class FragmentsElement extends Element {
     }
 
     toBytes() { return this.toParts()[0].bytes; }
-    toParts() { return [new parts.HeaderPart(this.tag, this.vr, base.indeterminateLength, false, this.bigEndian, this.explicitVR)]; }
+    toParts() { return [new HeaderPart(this.tag, this.vr, base.indeterminateLength, false, this.bigEndian, this.explicitVR)]; }
     toString() { return "FragmentsElement(" + base.tagToString(this.tag) + " " + this.vr.name + " # " + dictionary.keywordOf(this.tag) + ")"; }
 }
 
@@ -289,7 +334,7 @@ class FragmentElement extends Element {
     toBytes() { return this.toParts().map(p => p.bytes).reduce(base.concat); }
     toParts() {
         let itemParts = new ItemElement(this.index, this.value.length, this.bigEndian).toParts();
-        itemParts.push(new parts.ValueChunk(this.bigEndian, this.value.bytes, true));
+        itemParts.push(new ValueChunk(this.bigEndian, this.value.bytes, true));
         return itemParts;
     }
     toString() { return "FragmentElement(index = " + this.index + ", length = " + this.length + ")"; }
@@ -303,7 +348,7 @@ class ItemElement extends Element {
     }
 
     toBytes() { return base.concat(base.tagToBytes(Tag.Item, this.bigEndian), base.intToBytes(this.length, this.bigEndian)); }
-    toParts() { return [new parts.ItemPart(this.index, this.length, this.bigEndian, this.toBytes())]; }
+    toParts() { return [new ItemPart(this.index, this.length, this.bigEndian, this.toBytes())]; }
     toString() { return "ItemElement(index = " + this.index + ", length = " + this.length + ")"; }
 }
 
@@ -315,7 +360,7 @@ class ItemDelimitationElement extends Element {
     }
 
     toBytes() { return this.marker ? base.emptyBuffer : base.concat(base.tagToBytes(Tag.ItemDelimitationItem, this.bigEndian), Buffer.from([0, 0, 0, 0])); }
-    toParts() { return this.marker ? [] : [new parts.ItemDelimitationPart(this.index, this.bigEndian, this.toBytes())]; }
+    toParts() { return this.marker ? [] : [new ItemDelimitationPart(this.index, this.bigEndian, this.toBytes())]; }
     toString() { return "ItemDelimitationElement(index = " + this.index + ", marker = " + this.marker + ")"; }
 }
 
@@ -326,7 +371,7 @@ class SequenceDelimitationElement extends Element {
     }
 
     toBytes() { return this.marker ? base.emptyBuffer : base.concat(base.tagToBytes(Tag.SequenceDelimitationItem, this.bigEndian), Buffer.from([0, 0, 0, 0])); }
-    toParts() { return this.marker ? [] : [new parts.SequenceDelimitationPart(this.bigEndian, this.toBytes())]; }
+    toParts() { return this.marker ? [] : [new SequenceDelimitationPart(this.bigEndian, this.toBytes())]; }
     toString() { return "SequenceDelimitationElement(marker = " + this.marker + ")"; }
 }
 
@@ -445,6 +490,11 @@ class Fragments extends ElementSet {
     toString() { return "Fragments(" + base.tagToString(this.tag) + " " + this.vr.name + " # " + this.fragments.length + " " + dictionary.keywordOf(this.tag) + ")"; }
 }
 
+function parseZoneOffset(s) {
+    if (s.length < 5) return NaN;
+    return parseInt(s.slice(0, 1) + (parseInt(s.slice(1,3)) * 60 + parseInt(s.slice(3, 5))));
+}
+
 class ElementsBuilder {
     constructor(characterSets, zoneOffset) {
         this.characterSets = characterSets;
@@ -452,16 +502,11 @@ class ElementsBuilder {
         this.data = [];
     }
 
-    parseZoneOffset(s) {
-        if (s.length < 5) return NaN;
-        return parseInt(s.slice(0, 1) + (parseInt(s.slice(1,3)) * 60 + parseInt(s.slice(3, 5))));
-    }
-
     addElement(element) {
         if (element instanceof ValueElement && element.tag === Tag.SpecificCharacterSet)
             this.characterSets = CharacterSets.fromBytes(element.value.toBytes());
         if (element instanceof ValueElement && element.tag === Tag.TimezoneOffsetFromUTC) {
-            let newOffset = this.parseZoneOffset(element.value.toSingleString(VR.SH, element.bigEndian, this.characterSets));
+            let newOffset = parseZoneOffset(element.value.toSingleString(VR.SH, element.bigEndian, this.characterSets));
             this.zoneOffset = isNaN(newOffset) ? this.zoneOffset : newOffset;
         }
         this.data.push(element);

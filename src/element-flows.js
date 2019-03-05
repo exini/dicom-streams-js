@@ -1,5 +1,6 @@
 const base = require("./base");
-const parts = require("./parts");
+const {PreamblePart, HeaderPart, ValueChunk, SequencePart, SequenceDelimitationPart, ItemPart, ItemDelimitationPart,
+    FragmentsPart} = require("./parts");
 const {Value} = require("./value");
 const {DeferToPartFlow, GuaranteedDelimitationEvents, GuaranteedValueEvent, sequenceDelimitationPartMarker, ItemDelimitationPartMarker, flow} = require("./dicom-flow");
 const {preambleElement, FragmentElement, ValueElement, FragmentsElement, SequenceElement, SequenceDelimitationElement, ItemElement, ItemDelimitationElement} = require("./elements");
@@ -13,22 +14,22 @@ const elementFlow = function () {
 
         onPart: function (part) {
 
-            if (part instanceof parts.PreamblePart)
+            if (part instanceof PreamblePart)
                 return [preambleElement];
 
-            if (part instanceof parts.HeaderPart) {
+            if (part instanceof HeaderPart) {
                 this._currentValue.value = new ValueElement(part.tag, part.vr, Value.empty(), part.bigEndian, part.explicitVR);
                 this._bytes.value = base.emptyBuffer;
                 return [];
             }
 
-            if (part instanceof parts.ItemPart && this.inFragments()) {
+            if (part instanceof ItemPart && this.inFragments()) {
                 this._currentFragment.value = new FragmentElement(part.index, part.length, Value.empty(), part.bigEndian);
                 this._bytes.value = base.emptyBuffer;
                 return [];
             }
 
-            if (part instanceof parts.ValueChunk) {
+            if (part instanceof ValueChunk) {
                 this._bytes.value = base.concat(this._bytes.value, part.bytes);
                 if (part.last)
                     if (this.inFragments())
@@ -51,25 +52,25 @@ const elementFlow = function () {
                     return [];
             }
 
-            if (part instanceof parts.SequencePart)
+            if (part instanceof SequencePart)
                 return [new SequenceElement(part.tag, part.length, part.bigEndian, part.explicitVR)];
 
-            if (part instanceof parts.FragmentsPart)
+            if (part instanceof FragmentsPart)
                 return [new FragmentsElement(part.tag, part.vr, part.bigEndian, part.explicitVR)];
 
-            if (part instanceof parts.ItemPart)
+            if (part instanceof ItemPart)
                 return [new ItemElement(part.index, part.length, part.bigEndian)];
 
             if (part instanceof ItemDelimitationPartMarker)
                 return [new ItemDelimitationElement(part.index, true, part.bigEndian)];
 
-            if (part instanceof parts.ItemDelimitationPart)
+            if (part instanceof ItemDelimitationPart)
                 return [new ItemDelimitationElement(part.index, false, part.bigEndian)];
 
             if (part === sequenceDelimitationPartMarker)
                 return [new SequenceDelimitationElement(true, part.bigEndian)];
 
-            if (part instanceof parts.SequenceDelimitationPart)
+            if (part instanceof SequenceDelimitationPart)
                 return [new SequenceDelimitationElement(false, part.bigEndian)];
 
             return [];

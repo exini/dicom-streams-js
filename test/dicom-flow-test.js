@@ -3,7 +3,7 @@ const pipe = require("multipipe");
 const assert = require("assert");
 const base = require("../src/base");
 const Tag = require("../src/tag");
-const TagPath = require("../src/tag-path");
+const {TagPath, emptyTagPath} = require("../src/tag-path");
 const {parseFlow} = require("../src/dicom-parser");
 const {flow, DicomFlow, IdentityFlow, DeferToPartFlow, StartEvent, EndEvent, InFragments, InSequence, GuaranteedValueEvent, GuaranteedDelimitationEvents, TagPathTracking, dicomStartMarker, dicomEndMarker} = require("../src/dicom-flow");
 const {toIndeterminateLengthSequences} = require("../src/dicom-flows");
@@ -400,7 +400,7 @@ describe("DICOM flows with tag path tracking", function () {
             data.pixeDataFragments(), base.item(4), Buffer.from([1, 2, 3, 4]), base.sequenceDelimitation());
 
         let expectedPaths = [
-            TagPath.emptyTagPath, // preamble
+            emptyTagPath, // preamble
             TagPath.fromTag(Tag.FileMetaInformationGroupLength), // FMI group length header
             TagPath.fromTag(Tag.FileMetaInformationGroupLength), // FMI group length value
             TagPath.fromTag(Tag.TransferSyntaxUID), // Transfer syntax header

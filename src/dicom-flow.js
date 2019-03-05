@@ -1,7 +1,8 @@
 const Trait = require("traits.js");
 const base = require("./base");
 const flows = require("./flows");
-const parts = require("./parts");
+const {PreamblePart, HeaderPart, ValueChunk, SequencePart, SequenceDelimitationPart, FragmentsPart, ItemPart,
+    ItemDelimitationPart, DeflatedChunk, UnknownPart, MetaPart} = require("./parts");
 const {emptyTagPath, TagPathItem} = require("./tag-path");
 const pipe = require("multipipe");
 
@@ -33,16 +34,16 @@ const DicomFlow = Trait({
      onPart: Trait.required,
      baseFlow: function () { return flows.identityFlow(true); },
      handlePart: function (part) {
-        if (part instanceof parts.PreamblePart) return this.onPreamble(part);
-        if (part instanceof parts.HeaderPart) return this.onHeader(part);
-        if (part instanceof parts.ValueChunk) return this.onValueChunk(part);
-        if (part instanceof parts.SequencePart) return this.onSequence(part);
-        if (part instanceof parts.SequenceDelimitationPart) return this.onSequenceDelimitation(part);
-        if (part instanceof parts.FragmentsPart) return this.onFragments(part);
-        if (part instanceof parts.ItemPart) return this.onItem(part);
-        if (part instanceof parts.ItemDelimitationPart) return this.onItemDelimitation(part);
-        if (part instanceof parts.DeflatedChunk) return this.onDeflatedChunk(part);
-        if (part instanceof parts.UnknownPart) return this.onUnknown(part);
+        if (part instanceof PreamblePart) return this.onPreamble(part);
+        if (part instanceof HeaderPart) return this.onHeader(part);
+        if (part instanceof ValueChunk) return this.onValueChunk(part);
+        if (part instanceof SequencePart) return this.onSequence(part);
+        if (part instanceof SequenceDelimitationPart) return this.onSequenceDelimitation(part);
+        if (part instanceof FragmentsPart) return this.onFragments(part);
+        if (part instanceof ItemPart) return this.onItem(part);
+        if (part instanceof ItemDelimitationPart) return this.onItemDelimitation(part);
+        if (part instanceof DeflatedChunk) return this.onDeflatedChunk(part);
+        if (part instanceof UnknownPart) return this.onUnknown(part);
         return this.onPart(part);
     }
 });
@@ -78,7 +79,7 @@ const DeferToPartFlow = Trait.compose(
         onItemDelimitation: function(part) { return this.onPart(part); }
     }));
 
-class DicomStartMarker extends parts.MetaPart {
+class DicomStartMarker extends MetaPart {
     toString() {
         return "Start Marker []";
     }
@@ -96,7 +97,7 @@ const StartEvent = function(SuperFlow) {
     }, SuperFlow);
 };
 
-class DicomEndMarker extends parts.MetaPart {
+class DicomEndMarker extends MetaPart {
     toString() {
         return "End Marker []";
     }
@@ -132,7 +133,7 @@ const InFragments = function(SuperFlow) {
     }, SuperFlow);
 };
 
-class ValueChunkMarker extends parts.ValueChunk {
+class ValueChunkMarker extends ValueChunk {
     constructor() {
         super(false, base.emptyBuffer, true);
     }
@@ -155,7 +156,7 @@ const GuaranteedValueEvent = function(SuperFlow) {
     }, SuperFlow);
 };
 
-class SequenceDelimitationPartMarker extends parts.SequenceDelimitationPart {
+class SequenceDelimitationPartMarker extends SequenceDelimitationPart {
     constructor() {
         super(false, base.emptyBuffer);
     }
@@ -166,7 +167,7 @@ class SequenceDelimitationPartMarker extends parts.SequenceDelimitationPart {
 }
 const sequenceDelimitationPartMarker = new SequenceDelimitationPartMarker();
 
-class ItemDelimitationPartMarker extends parts.ItemDelimitationPart {
+class ItemDelimitationPartMarker extends ItemDelimitationPart {
     constructor(index) {
         super(index, false, base.emptyBuffer);
     }
@@ -191,9 +192,9 @@ const GuaranteedDelimitationEvents = function(SuperFlow) {
         maybeDelimit: function() {
             let delimits = this._partStack.value
                 .filter(p => p.bytesLeft <= 0) // find items and sequences that have ended
-                .map(p => p.part instanceof parts.ItemPart ? new ItemDelimitationPartMarker(p.part.index) : sequenceDelimitationPartMarker);
+                .map(p => p.part instanceof ItemPart ? new ItemDelimitationPartMarker(p.part.index) : sequenceDelimitationPartMarker);
             this._partStack.value = this._partStack.value.filter(p => p.bytesLeft > 0); // only keep items and sequences with bytes left to subtract
-            let out = delimits.map(d => (d instanceof parts.ItemDelimitationPart) ? this.onItemDelimitation(d) : this.onSequenceDelimitation(d));
+            let out = delimits.map(d => (d instanceof ItemDelimitationPart) ? this.onItemDelimitation(d) : this.onSequenceDelimitation(d));
             return [].concat(...out);
         },
         subtractAndEmit: function(part, handle) {

@@ -1,6 +1,6 @@
 const assert = require("assert");
-const TagTree = require("../src/tag-tree");
-const TagPath = require("../src/tag-path");
+const {TagTree, emptyTagTree} = require("../src/tag-tree");
+const {TagPath, emptyTagPath} = require("../src/tag-path");
 const Tag = require("../src/tag");
 
 describe("A tag tree", function () {
@@ -59,7 +59,7 @@ describe("Two tag trees", function () {
     });
 
     it("should be equal if both are empty", function () {
-        assert(TagTree.emptyTagTree.isEqualTo(TagTree.emptyTagTree));
+        assert(emptyTagTree.isEqualTo(emptyTagTree));
     });
 
     it("should support equals documentation examples", function () {
@@ -75,7 +75,7 @@ describe("The isPath test", function () {
     it ("should support documentation examples", function () {
         assert(TagTree.fromItem(0x00089215, 3).thenTag(0x00100010).isPath());
         assert(!TagTree.fromAnyItem(0x00089215).thenTag(0x00100010).isPath());
-        assert(TagTree.emptyTagTree.isPath());
+        assert(emptyTagTree.isPath());
     });
 });
 
@@ -103,7 +103,7 @@ describe("The hasPath test", function () {
     it("should support documentation examples", function () {
         assert(TagTree.fromAnyItem(0x00089215).thenTag(0x00100010).hasPath(TagPath.fromItem(0x00089215, 1).thenTag(0x00100010)));
         assert(!TagTree.fromAnyItem(0x00089215).thenTag(0x00100010).hasPath(TagPath.fromItem(0x00089215, 1)));
-        assert(TagTree.emptyTagTree.hasPath(TagPath.emptyTagPath));
+        assert(emptyTagTree.hasPath(emptyTagPath));
     });
 });
 
@@ -115,17 +115,17 @@ describe("The hasTrunk test", function () {
     });
 
     it("should return true for two empty structures", function () {
-        assert(TagTree.emptyTagTree.hasTrunk(TagPath.emptyTagPath));
+        assert(emptyTagTree.hasTrunk(emptyTagPath));
     });
 
     it("should return true when subject path is empty", function () {
         let aTree = TagTree.fromTag(1);
-        assert(aTree.hasTrunk(TagPath.emptyTagPath));
+        assert(aTree.hasTrunk(emptyTagPath));
     });
 
     it("should return false when empty tree starts with non-empty path", function () {
         let path = TagPath.fromTag(1);
-        assert(!TagTree.emptyTagTree.hasTrunk(path));
+        assert(!emptyTagTree.hasTrunk(path));
     });
 
     it("should return false when subject path is longer than tree", function () {
@@ -206,17 +206,17 @@ describe("The hasTwig test", function () {
     });
 
     it("should return true for empty tree and path", function () {
-        assert(TagTree.emptyTagTree.hasTwig(TagPath.emptyTagPath));
+        assert(emptyTagTree.hasTwig(emptyTagPath));
     });
 
     it("should return false when checking if non-empty tree ends with empty path", function () {
         let aTree = TagTree.fromTag(1);
-        assert(!aTree.hasTwig(TagPath.emptyTagPath));
+        assert(!aTree.hasTwig(emptyTagPath));
     });
 
     it("should return false when empty tree starts with non-empty path", function () {
         let path = TagPath.fromTag(1);
-        assert(!TagTree.emptyTagTree.hasTwig(path));
+        assert(!emptyTagTree.hasTwig(path));
     });
 
     it("should return false when a shorter tree is compared to a longer path", function () {
@@ -253,7 +253,7 @@ describe("The hasTwig test", function () {
 
 describe("Creating a tag path from a tag tree", function () {
     it ("should handle empty tag paths", function () {
-        assert.equal(TagTree.fromPath(TagPath.emptyTagPath), TagTree.emptyTagTree);
+        assert.equal(TagTree.fromPath(emptyTagPath), emptyTagTree);
     });
 
     it("should handle simple paths", function () {
@@ -309,7 +309,7 @@ describe("The drop operation", function () {
         assert(path.drop(1).isEqualTo(TagTree.fromItem(2, 1).thenItem(3, 3).thenTag(4)));
         assert(path.drop(2).isEqualTo(TagTree.fromItem(3, 3).thenTag(4)));
         assert(path.drop(3).isEqualTo(TagTree.fromTag(4)));
-        assert(path.drop(4).isEqualTo(TagTree.emptyTagTree));
-        assert(path.drop(100).isEqualTo(TagTree.emptyTagTree));
+        assert(path.drop(4).isEqualTo(emptyTagTree));
+        assert(path.drop(100).isEqualTo(emptyTagTree));
     });
 });

@@ -2,10 +2,11 @@ const {Readable, Writable, pipeline} = require("readable-stream");
 const {promisify} = require("util");
 const zlib = require("zlib");
 const assert = require("assert");
-const parts = require("../src/parts");
+const {PreamblePart, HeaderPart, ItemDelimitationPart, ItemPart, SequenceDelimitationPart, SequencePart, ValueChunk,
+    FragmentsPart, DeflatedChunk, UnknownPart, MetaPart, ElementsPart} = require("../src/parts");
 const {ValueElement, ItemElement, ItemDelimitationElement, SequenceElement, SequenceDelimitationElement, FragmentElement, preambleElement, FragmentsElement} = require("../src/elements");
 
-class TestPart extends parts.MetaPart {
+class TestPart extends MetaPart {
     constructor(id) {
         super();
         this.id = id;
@@ -23,14 +24,14 @@ class PartProbe {
     }
 
     expectPreamble() {
-        assert(this.array[this.offset] instanceof parts.PreamblePart);
+        assert(this.array[this.offset] instanceof PreamblePart);
         this.offset++;
         return this;
     }
 
     expectHeader(tag) {
         let part = this.array[this.offset];
-        assert(part instanceof parts.HeaderPart);
+        assert(part instanceof HeaderPart);
         if (tag !== undefined)
             assert.equal(part.tag, tag);
         this.offset++;
@@ -39,7 +40,7 @@ class PartProbe {
 
     expectValueChunk(length) {
         let part = this.array[this.offset];
-        assert(part instanceof parts.ValueChunk);
+        assert(part instanceof ValueChunk);
         if (length !== undefined)
             assert.equal(part.bytes.length, length);
         this.offset++;
@@ -47,20 +48,20 @@ class PartProbe {
     }
 
     expectDeflatedChunk() {
-        assert(this.array[this.offset] instanceof parts.DeflatedChunk);
+        assert(this.array[this.offset] instanceof DeflatedChunk);
         this.offset++;
         return this;
     }
 
     expectFragments() {
-        assert(this.array[this.offset] instanceof parts.FragmentsPart);
+        assert(this.array[this.offset] instanceof FragmentsPart);
         this.offset++;
         return this;
     }
 
     expectSequence(tag) {
         let part = this.array[this.offset];
-        assert(part instanceof parts.SequencePart);
+        assert(part instanceof SequencePart);
         if (tag !== undefined)
             assert.equal(part.tag, tag);
         this.offset++;
@@ -69,7 +70,7 @@ class PartProbe {
 
     expectItem(index) {
         let part = this.array[this.offset];
-        assert(part instanceof parts.ItemPart);
+        assert(part instanceof ItemPart);
         if (index !== undefined)
             assert.equal(part.index, index);
         this.offset++;
@@ -77,20 +78,20 @@ class PartProbe {
     }
 
     expectItemDelimitation() {
-        assert(this.array[this.offset] instanceof parts.ItemDelimitationPart);
+        assert(this.array[this.offset] instanceof ItemDelimitationPart);
         this.offset++;
         return this;
     }
 
     expectSequenceDelimitation() {
-        assert(this.array[this.offset] instanceof parts.SequenceDelimitationPart);
+        assert(this.array[this.offset] instanceof SequenceDelimitationPart);
         this.offset++;
         return this;
     }
 
     expectFragment(index, length) {
         let part = this.array[this.offset];
-        assert(part instanceof parts.ItemPart);
+        assert(part instanceof ItemPart);
         if (length !== undefined)
             assert.equal(part.length, length);
         if (index !== undefined)
@@ -104,7 +105,15 @@ class PartProbe {
     }
 
     expectUnknownPart() {
-        assert(this.array[this.offset] instanceof parts.UnknownPart);
+        assert(this.array[this.offset] instanceof UnknownPart);
+        this.offset++;
+        return this;
+    }
+
+    expectElements(elementsPart) {
+        let part = this.array[this.offset];
+        assert(part instanceof ElementsPart);
+        assert.deepEqual(part, elementsPart);
         this.offset++;
         return this;
     }

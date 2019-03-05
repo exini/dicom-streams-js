@@ -7,6 +7,12 @@ class DicomPart {
     }
 }
 
+class MetaPart extends DicomPart {
+    constructor() {
+        super(false, base.emptyBuffer);
+    }
+}
+
 const self = module.exports = {
     DicomPart: DicomPart,
 
@@ -155,9 +161,13 @@ const self = module.exports = {
         }
     },
 
-    MetaPart: class extends DicomPart {
-        constructor() {
-            super(false, base.emptyBuffer);
+    MetaPart: MetaPart,
+
+    ElementsPart: class extends MetaPart {
+        constructor(label, elements) {
+            super();
+            this.label = label;
+            this.elements = elements;
         }
     }
 

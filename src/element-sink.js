@@ -56,7 +56,7 @@ function elementSink(callback) {
 
             if (element instanceof ItemElement && sinkData.hasSequence()) {
                 let builder = sinkData.builderStack[0];
-                let sequence = sinkData.sequenceStack[0].addItem(new Item(new Elements(), element.length, element.bigEndian));
+                let sequence = sinkData.sequenceStack[0].addItem(new Item(Elements.empty(), element.length, element.bigEndian));
                 sinkData.pushBuilder(new ElementsBuilder(builder.characterSets, builder.zoneOffset));
                 sinkData.updateSequence(sequence);
             }
@@ -86,7 +86,7 @@ function elementSink(callback) {
     });
     sink.once("finish", () => {
         let builders = sinkData.builderStack;
-        let elements = builders.length === 0 ? new Elements() : builders[0].result();
+        let elements = builders.length === 0 ? Elements.empty() : builders[0].result();
         callback(elements);
     });
     return sink;

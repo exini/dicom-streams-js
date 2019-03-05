@@ -1,7 +1,7 @@
 const pipe = require("multipipe");
 const base = require("../src/base");
 const Tag = require("../src/tag");
-const TagTree = require("../src/tag-tree");
+const {TagTree} = require("../src/tag-tree");
 const {parseFlow} = require("../src/dicom-parser");
 const {groupLengthDiscardFilter, fmiDiscardFilter, blacklistFilter, whitelistFilter, tagFilter, toIndeterminateLengthSequences} = require("../src/dicom-flows");
 const data = require("./test-data");
