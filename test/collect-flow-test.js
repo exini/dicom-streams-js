@@ -5,7 +5,6 @@ const Tag = require("../src/tag");
 const {TagPath} = require("../src/tag-path");
 const {parseFlow} = require("../src/dicom-parser");
 const {collectFlow, collectFromTagPathsFlow} = require("../src/collect-flow");
-const {printFlow} = require("../src/flows");
 const data = require("./test-data");
 const util = require("./util");
 
@@ -84,23 +83,14 @@ describe("A collect elements flow", function () {
     it("should fail if max buffer size is exceeded", function () {
         let bytes = base.concatv(data.studyDate(), data.patientNameJohnDoe(), data.pixelData(2000));
 
-        let cFlow = collectFlow(
+        return util.expectDicomError(() => util.testParts(bytes, pipe(
+            parseFlow(500),
+            collectFlow(
             tagPath => tagPath.tag() === Tag.PatientName,
             tagPath => tagPath.tag() > Tag.PixelData,
             "tag",
-            10);
-
-        let stream = pipe(util.singleSource(bytes), parseFlow(500), cFlow, util.ignoreSink());
-
-        return new Promise((resolve, reject) => {
-            stream.on("finish", () => {
-                reject(new Error("No error thrown"));
-            });
-
-            stream.on("error", e => {
-                resolve("Caught error", e, "as expected");
-            });
-        });
+            1000)
+        ), () => {}));
     });
 
 });

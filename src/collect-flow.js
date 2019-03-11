@@ -18,8 +18,7 @@ function collectFlow(tagCondition, stopCondition, label, maxBufferSize) {
         _elements: { value: Elements.empty() },
 
         elementsAndBuffer: function() {
-            let parts = this._buffer.value.slice();
-            parts.unshift(new ElementsPart(label, this._elements.value));
+            let parts = base.prependToArray(new ElementsPart(label, this._elements.value), this._buffer.value);
 
             this._reachedEnd.value = true;
             this._buffer.value = [];

@@ -5,7 +5,7 @@
   "main": "dist/dicom-streams.js",
   "scripts": {
     "test": "mocha 'test/*-test.js'",
-    "test-one": "mocha 'test/dicom-flow-test.js'",
+    "test-one": "mocha 'test/mixwith-test.js'",
     "build": "browserify src/index.js -s dcm -o dist/dicom-streams.js"
   },
   "keywords": [
@@ -25,7 +25,8 @@
     "readable-stream": "^3.1.1",
     "multipipe": "^3.0.0",
     "iconv-lite": "^0.4.24",
-    "traits.js": "^1.1.5"
+    "traits.js": "^1.1.5",
+    "mixwith": "^0.1.1"
   },
   "devDependencies": {
     "mocha": "^5.2.0"

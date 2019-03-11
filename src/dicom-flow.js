@@ -305,6 +305,36 @@ const TagPathTracking = function(SuperFlow) {
     }, SuperFlow, GuaranteedValueEvent, GuaranteedDelimitationEvents);
 };
 
+const GroupLengthWarnings = function(SuperFlow)  {
+    return flowModel({
+        onHeader: "groupLengthWarnings_onHeader",
+        onSequence: "groupLengthWarnings_onSequence",
+        onItem: "groupLengthWarnings_onItem"
+    }, {
+        _silent: { value: false },
+        setSilent: function(silent) { this._silent.value = silent; },
+
+        onHeader: function(part) {
+            if (!this._silent.value && base.isGroupLength(part.tag) && part.tag !== Tag.FileMetaInformationGroupLength)
+                console.warn("Group length attribute detected, consider removing group lengths to maintain valid DICOM information");
+            return this.groupLengthWarnings_onHeader(part);
+        },
+
+        onSequence: function(part) {
+            if (!this._silent.value && !part.indeterminate && part.length > 0)
+                console.warn("Determinate length sequence detected, consider re-encoding sequences to indeterminate length to maintain valid DICOM information");
+            return this.groupLengthWarnings_onSequence(part);
+        },
+
+        onItem: function(part) {
+            if (!this._silent.value && !this.inFragments() && !part.indeterminate && part.length > 0)
+                console.warn("Determinate length item detected, consider re-encoding items to indeterminate length to maintain valid DICOM information");
+            return this.groupLengthWarnings_onItem(part);
+        }
+    }, SuperFlow, InFragments);
+};
+
+
 module.exports = {
     flowModel: flowModel,
     toFlow: toFlow,
@@ -319,6 +349,7 @@ module.exports = {
     GuaranteedValueEvent: GuaranteedValueEvent,
     GuaranteedDelimitationEvents: GuaranteedDelimitationEvents,
     TagPathTracking: TagPathTracking,
+    GroupLengthWarnings: GroupLengthWarnings,
     dicomStartMarker: dicomStartMarker,
     dicomEndMarker: dicomEndMarker,
     sequenceDelimitationPartMarker: sequenceDelimitationPartMarker,
