@@ -29,20 +29,28 @@ class PartProbe {
         return this;
     }
 
-    expectHeader(tag) {
+    expectHeader(tag, vr, length) {
         let part = this.array[this.offset];
         assert(part instanceof HeaderPart);
+        if (length !== undefined)
+            assert.equal(part.length, length);
+        if (vr !== undefined)
+            assert.equal(part.vr.name, vr.name);
         if (tag !== undefined)
             assert.equal(part.tag, tag);
         this.offset++;
         return this;
     }
 
-    expectValueChunk(length) {
+    expectValueChunk(data) {
         let part = this.array[this.offset];
         assert(part instanceof ValueChunk);
-        if (length !== undefined)
-            assert.equal(part.bytes.length, length);
+        if (data !== undefined) {
+            if (data instanceof Buffer)
+                assert.deepEqual(part.bytes, data);
+            else
+                assert.equal(part.bytes.length, data);
+        }
         this.offset++;
         return this;
     }

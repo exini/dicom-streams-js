@@ -21,7 +21,7 @@ function prependToArray(object, array) {
 }
 function concatArrays(array1, array2) {
     let newArray = array1.slice();
-    array2.forEach(newArray.push);
+    array2.forEach(i => newArray.push(i));
     return newArray;
 }
 

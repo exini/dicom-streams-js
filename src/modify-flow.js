@@ -1,4 +1,5 @@
 const base = require("./base");
+const VR = require("./vr");
 const dictionary = require("./dictionary");
 const {HeaderPart, ValueChunk, SequencePart, MetaPart} = require("./parts");
 const {emptyTagPath} = require("./tag-path");
@@ -37,24 +38,24 @@ class TagModificationsPart extends MetaPart {
 }
 
 function modifyFlow(modifications, insertions, logGroupLengthWarnings) {
-    modifications = modifications === undefined ? [] : modifications;
-    insertions = insertions === undefined ? [] : insertions;
-    logGroupLengthWarnings = logGroupLengthWarnings === undefined ? true : logGroupLengthWarnings;
+    let mods = modifications === undefined ? [] : modifications;
+    let irts = insertions === undefined ? [] : insertions;
+    let wrns = logGroupLengthWarnings === undefined ? true : logGroupLengthWarnings;
 
     let organizeInsertions = function (insertions) {
         let distinct = insertions.filter((a, pos, arr) => {
             return arr.findIndex(b => b.tagPath.isEqualTo(a.tagPath)) === pos;
         }); // distinct by tag path
-        return distinct.sort((a, b) => a.tagPath.isBelow(b.tagPath)); // ordered by tag path
+        return distinct.sort((a, b) => a.tagPath.isBelow(b.tagPath) ? -1 : 1); // ordered by tag path
     };
 
     return create(new class extends TagPathTracking(GuaranteedValueEvent(GuaranteedDelimitationEvents(GroupLengthWarnings(InFragments(EndEvent(DeferToPartFlow)))))) {
         constructor() {
             super();
-            this.silent = !logGroupLengthWarnings;
+            this.silent = !wrns;
 
-            this.currentModifications = modifications;
-            this.currentInsertions = organizeInsertions(insertions);
+            this.currentModifications = mods;
+            this.currentInsertions = organizeInsertions(irts.slice());
 
             this.currentModification = undefined;
             this.currentHeader = undefined;
@@ -121,7 +122,7 @@ function modifyFlow(modifications, insertions, logGroupLengthWarnings) {
             if (part instanceof TagModificationsPart) {
                 if (part.replace) {
                     this.currentModifications = part.modifications;
-                    this.currentInsertions = organizeInsertions(part.insertions);
+                    this.currentInsertions = organizeInsertions(part.insertions.slice());
                 } else {
                     this.currentModifications = base.concatArrays(this.currentModifications, part.modifications);
                     this.currentInsertions = organizeInsertions(base.concatArrays(this.currentInsertions, part.insertions));
@@ -140,7 +141,7 @@ function modifyFlow(modifications, insertions, logGroupLengthWarnings) {
             if (part instanceof SequencePart) {
                 let insertParts = this.findInsertParts();
                 this.latestTagPath = this.tagPath;
-                return base.appendToArray(insertParts, part);
+                return base.appendToArray(part, insertParts);
             }
 
             if (part instanceof ValueChunk) {
@@ -177,5 +178,6 @@ function modifyFlow(modifications, insertions, logGroupLengthWarnings) {
 module.exports = {
     TagModification: TagModification,
     TagInsertion: TagInsertion,
+    TagModificationsPart: TagModificationsPart,
     modifyFlow: modifyFlow
 };
