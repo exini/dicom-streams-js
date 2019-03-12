@@ -2,6 +2,7 @@ const pipe = require("multipipe");
 const assert = require("assert");
 const base = require("../src/base");
 const Tag = require("../src/tag");
+const VR = require("../src/vr");
 const {TagPath} = require("../src/tag-path");
 const {parseFlow} = require("../src/dicom-parser");
 const {modifyFlow, TagInsertion, TagModification} = require("../src/modify-flow");
@@ -21,7 +22,7 @@ describe("The modify flow", function () {
             util.partProbe(parts)
                 .expectHeader(Tag.StudyDate, VR.DA, 0)
                 .expectHeader(Tag.PatientName, VR.PN, mikeBytes.length)
-                .expectValueChunk(mikeBytes)
+                .expectValueChunk(4)
                 .expectDicomComplete()
         });
     });

@@ -4,69 +4,72 @@ const {Elements, ValueElement} = require("./elements");
 const {Value} = require("./value");
 const Tag = require("./tag");
 const {CharacterSets} = require("./character-sets");
-const {valueChunkMarker, sequenceDelimitationPartMarker, ItemDelimitationPartMarker, DeferToPartFlow, EndEvent,
-    TagPathTracking, flow} = require("./dicom-flow");
+const {valueChunkMarker, sequenceDelimitationPartMarker, ItemDelimitationPartMarker, GuaranteedValueEvent,
+    GuaranteedDelimitationEvents, InFragments, DeferToPartFlow, EndEvent, TagPathTracking, create} = require("./dicom-flow");
 
 function collectFlow(tagCondition, stopCondition, label, maxBufferSize) {
     maxBufferSize = maxBufferSize === undefined ? 1000000 : maxBufferSize;
 
-    return flow({}, {
-        _reachedEnd: { value: false },
-        _currentBufferSize: { value: 0 },
-        _currentElement: { value: undefined },
-        _buffer:  { value: [] },
-        _elements: { value: Elements.empty() },
+    return create(new class extends EndEvent(TagPathTracking(GuaranteedDelimitationEvents(GuaranteedValueEvent(InFragments(DeferToPartFlow))))) {
+        constructor() {
+            super();
+            this.reachedEnd = false;
+            this.currentBufferSize = 0;
+            this.currentElement = undefined;
+            this.buffer = [];
+            this.elements = Elements.empty();
+        }
 
-        elementsAndBuffer: function() {
-            let parts = base.prependToArray(new ElementsPart(label, this._elements.value), this._buffer.value);
+        elementsAndBuffer() {
+            let parts = base.prependToArray(new ElementsPart(label, this.elements), this.buffer);
 
-            this._reachedEnd.value = true;
-            this._buffer.value = [];
-            this._currentBufferSize.value = 0;
+            this.reachedEnd = true;
+            this.buffer = [];
+            this.currentBufferSize = 0;
 
             return parts;
-        },
+        }
 
-        onEnd: function() {
-            return this._reachedEnd.value ? [] : this.elementsAndBuffer();
-        },
+        onEnd() {
+            return this.reachedEnd ? [] : this.elementsAndBuffer();
+        }
 
-        onPart: function(part) {
-            if (this._reachedEnd.value)
+        onPart(part) {
+            if (this.reachedEnd)
                 return [part];
             else {
-                if (maxBufferSize > 0 && this._currentBufferSize.value > maxBufferSize)
+                if (maxBufferSize > 0 && this.currentBufferSize > maxBufferSize)
                     throw Error("Error collecting elements: max buffer size exceeded");
 
                 if (part !== valueChunkMarker && part !== sequenceDelimitationPartMarker && !(part instanceof ItemDelimitationPartMarker)) {
-                    this._buffer.value.push(part);
-                    this._currentBufferSize.value += part.bytes.length;
+                    this.buffer.push(part);
+                    this.currentBufferSize += part.bytes.length;
                 }
 
-                if (part instanceof HeaderPart && stopCondition(this.tagPath()))
+                if (part instanceof HeaderPart && stopCondition(this.tagPath))
                     return this.elementsAndBuffer();
 
-                if (part instanceof HeaderPart && (tagCondition(this.tagPath()) || part.tag === Tag.SpecificCharacterSet)) {
-                    this._currentElement.value = new ValueElement(part.tag, part.vr, Value.empty(), part.bigEndian, part.explicitVR);
+                if (part instanceof HeaderPart && (tagCondition(this.tagPath) || part.tag === Tag.SpecificCharacterSet)) {
+                    this.currentElement = new ValueElement(part.tag, part.vr, Value.empty(), part.bigEndian, part.explicitVR);
                     return [];
                 }
 
                 if (part instanceof HeaderPart) {
-                    this._currentElement.value = undefined;
+                    this.currentElement = undefined;
                     return [];
                 }
 
                 if (part instanceof ValueChunk) {
-                    if (this._currentElement.value !== undefined) {
-                        let element = this._currentElement.value;
+                    if (this.currentElement !== undefined) {
+                        let element = this.currentElement;
                         let updatedElement = new ValueElement(element.tag, element.vr, Value.fromBuffer(element.vr, base.concat(element.value.bytes, part.bytes)), element.bigEndian, element.explicitVR);
-                        this._currentElement.value = updatedElement;
+                        this.currentElement = updatedElement;
                         if (part.last) {
                             if (updatedElement.tag === Tag.SpecificCharacterSet)
-                                this._elements.value = this._elements.value.setCharacterSets(CharacterSets.fromBytes(updatedElement.toBytes));
-                            if (tagCondition(this.tagPath()))
-                                this._elements.value = this._elements.value.setElementSet(updatedElement);
-                            this._currentElement.value = undefined;
+                                this.elements = this.elements.setCharacterSets(CharacterSets.fromBytes(updatedElement.toBytes));
+                            if (tagCondition(this.tagPath))
+                                this.elements = this.elements.setElementSet(updatedElement);
+                            this.currentElement = undefined;
                         }
                     }
 
@@ -77,7 +80,7 @@ function collectFlow(tagCondition, stopCondition, label, maxBufferSize) {
             }
         }
 
-    }, DeferToPartFlow, EndEvent, TagPathTracking);
+    });
 }
 
 function collectFromTagPathsFlow(tagPaths, label, maxBufferSize) {

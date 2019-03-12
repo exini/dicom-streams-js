@@ -2,54 +2,56 @@ const base = require("./base");
 const {PreamblePart, HeaderPart, ValueChunk, SequencePart, SequenceDelimitationPart, ItemPart, ItemDelimitationPart,
     FragmentsPart} = require("./parts");
 const {Value} = require("./value");
-const {DeferToPartFlow, GuaranteedDelimitationEvents, GuaranteedValueEvent, sequenceDelimitationPartMarker,
-    ItemDelimitationPartMarker, flow} = require("./dicom-flow");
+const {DeferToPartFlow, GuaranteedDelimitationEvents, GuaranteedValueEvent, InFragments, sequenceDelimitationPartMarker,
+    ItemDelimitationPartMarker, create} = require("./dicom-flow");
 const {preambleElement, FragmentElement, ValueElement, FragmentsElement, SequenceElement, SequenceDelimitationElement,
     ItemElement, ItemDelimitationElement} = require("./elements");
 
 const elementFlow = function () {
-    return flow({}, {
+    return create(new class extends GuaranteedValueEvent(GuaranteedDelimitationEvents(InFragments(DeferToPartFlow))) {
+        constructor() {
+            super();
+            this.bytes = base.emptyBuffer;
+            this.currentValue = undefined;
+            this.currentFragment = undefined;
+        }
 
-        _bytes: { value: base.emptyBuffer },
-        _currentValue: { value: undefined },
-        _currentFragment: { value: undefined },
-
-        onPart: function (part) {
+        onPart(part) {
 
             if (part instanceof PreamblePart)
                 return [preambleElement];
 
             if (part instanceof HeaderPart) {
-                this._currentValue.value = new ValueElement(part.tag, part.vr, Value.empty(), part.bigEndian, part.explicitVR);
-                this._bytes.value = base.emptyBuffer;
+                this.currentValue = new ValueElement(part.tag, part.vr, Value.empty(), part.bigEndian, part.explicitVR);
+                this.bytes = base.emptyBuffer;
                 return [];
             }
 
-            if (part instanceof ItemPart && this.inFragments()) {
-                this._currentFragment.value = new FragmentElement(part.index, part.length, Value.empty(), part.bigEndian);
-                this._bytes.value = base.emptyBuffer;
+            if (part instanceof ItemPart && this.inFragments) {
+                this.currentFragment = new FragmentElement(part.index, part.length, Value.empty(), part.bigEndian);
+                this.bytes = base.emptyBuffer;
                 return [];
             }
 
             if (part instanceof ValueChunk) {
-                this._bytes.value = base.concat(this._bytes.value, part.bytes);
+                this.bytes = base.concat(this.bytes, part.bytes);
                 if (part.last)
-                    if (this.inFragments())
-                        if (this._currentFragment.value === undefined)
+                    if (this.inFragments)
+                        if (this.currentFragment === undefined)
                             return [];
                         else
                             return [new FragmentElement(
-                                this._currentFragment.value.index,
-                                this._currentFragment.value.length,
-                                new Value(this._bytes.value),
-                                this._currentFragment.value.bigEndian)];
+                                this.currentFragment.index,
+                                this.currentFragment.length,
+                                new Value(this.bytes),
+                                this.currentFragment.bigEndian)];
                     else
                         return [new ValueElement(
-                            this._currentValue.value.tag,
-                            this._currentValue.value.vr,
-                            new Value(this._bytes.value),
-                            this._currentValue.value.bigEndian,
-                            this._currentValue.value.explicitVR)];
+                            this.currentValue.tag,
+                            this.currentValue.vr,
+                            new Value(this.bytes),
+                            this.currentValue.bigEndian,
+                            this.currentValue.explicitVR)];
                 else
                     return [];
             }
@@ -77,7 +79,7 @@ const elementFlow = function () {
 
             return [];
         }
-    }, DeferToPartFlow, GuaranteedValueEvent, GuaranteedDelimitationEvents);
+    });
 };
 
 module.exports = {

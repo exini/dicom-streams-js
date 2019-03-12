@@ -2,7 +2,7 @@ const base = require("./base");
 const dictionary = require("./dictionary");
 const {HeaderPart, ValueChunk, SequencePart, MetaPart} = require("./parts");
 const {emptyTagPath} = require("./tag-path");
-const {DeferToPartFlow, EndEvent, TagPathTracking, GroupLengthWarnings, flow} = require("./dicom-flow");
+const {DeferToPartFlow, EndEvent, TagPathTracking, GroupLengthWarnings, GuaranteedValueEvent, GuaranteedDelimitationEvents, InFragments, create} = require("./dicom-flow");
 
 class TagModification {
     constructor(matches, modification) {
@@ -11,7 +11,7 @@ class TagModification {
     }
 
     static equals(tagPath, modification) {
-        return new TagModification(tagPath.equals, modification);
+        return new TagModification(tagPath.isEqualTo.bind(tagPath), modification);
     }
 
     static endsWith(tagPath, modification) {
@@ -48,80 +48,83 @@ function modifyFlow(modifications, insertions, logGroupLengthWarnings) {
         return distinct.sort((a, b) => a.tagPath.isBelow(b.tagPath)); // ordered by tag path
     };
 
-    return flow({}, {
-        _silent: {value: !logGroupLengthWarnings},
+    return create(new class extends TagPathTracking(GuaranteedValueEvent(GuaranteedDelimitationEvents(GroupLengthWarnings(InFragments(EndEvent(DeferToPartFlow)))))) {
+        constructor() {
+            super();
+            this.silent = !logGroupLengthWarnings;
 
-        _currentModifications: {value: modifications},
-        _currentInsertions: {value: organizeInsertions(insertions)},
+            this.currentModifications = modifications;
+            this.currentInsertions = organizeInsertions(insertions);
 
-        _currentModification: {value: undefined},
-        _currentHeader: {value: undefined},
-        _latestTagPath: {value: emptyTagPath},
-        _value: {value: base.emptyBuffer},
-        _bigEndian: {value: false},
-        _explicitVR: {value: true},
+            this.currentModification = undefined;
+            this.currentHeader = undefined;
+            this.latestTagPath = emptyTagPath;
+            this.value = base.emptyBuffer;
+            this.bigEndian = false;
+            this.explicitVR = true;
+        }
 
-        updateSyntax: function (header) {
-            this._bigEndian.value = header.bigEndian;
-            this._explicitVR.value = header.explicitVR;
-        },
+        updateSyntax(header) {
+            this.bigEndian = header.bigEndian;
+            this.explicitVR = header.explicitVR;
+        }
 
-        valueOrNot: function (bytes) {
-            return bytes.length > 0 ? [new ValueChunk(this._bigEndian.value, bytes, true)] : [];
-        },
+        valueOrNot(bytes) {
+            return bytes.length > 0 ? [new ValueChunk(this.bigEndian, bytes, true)] : [];
+        }
 
-        headerAndValueParts: function (tagPath, modification) {
+        headerAndValueParts(tagPath, modification) {
             let valueBytes = modification(base.emptyBuffer);
             let vr = dictionary.vrOf(tagPath.tag());
             if (vr === VR.UN) throw Error("Tag is not present in dictionary, cannot determine value representation");
             if (vr === VR.SQ) throw Error("Cannot insert sequences");
             let isFmi = base.isFileMetaInformation(tagPath.tag());
-            let header = new HeaderPart(tagPath.tag(), vr, valueBytes.length, isFmi, this._bigEndian.value, this._explicitVR.value);
+            let header = new HeaderPart(tagPath.tag(), vr, valueBytes.length, isFmi, this.bigEndian, this.explicitVR);
             return base.prependToArray(header, this.valueOrNot(valueBytes));
-        },
+        }
 
-        isBetween: function (lowerTag, tagToTest, upperTag) {
+        isBetween(lowerTag, tagToTest, upperTag) {
             return lowerTag.isBelow(tagToTest) && tagToTest.isBelow(upperTag);
-        },
+        }
 
-        isInDataset: function (tagToTest, tagPath) {
+        isInDataset(tagToTest, tagPath) {
             return tagToTest.previous().isEqualTo(tagPath.previous());
-        },
+        }
 
-        findInsertParts: function () {
-            return base.flatten(this._currentInsertions.value
-                .filter(i => this.isBetween(this._latestTagPath.value, i.tagPath, this.tagPath()))
-                .filter(i => this.isInDataset(i.tagPath, this.tagPath()))
+        findInsertParts() {
+            return base.flatten(this.currentInsertions
+                .filter(i => this.isBetween(this.latestTagPath, i.tagPath, this.tagPath))
+                .filter(i => this.isInDataset(i.tagPath, this.tagPath))
                 .map(i => this.headerAndValueParts(i.tagPath, () => i.insertion(undefined))));
-        },
+        }
 
-        findModifyPart: function (header) {
-            let mod = this._currentModifications.value.find(m => m.matches(this.tagPath()));
+        findModifyPart(header) {
+            let mod = this.currentModifications.find(m => m.matches(this.tagPath));
             if (mod !== undefined) {
-                this._currentHeader.value = header;
-                this._currentModification.value = mod;
-                this._value.value = base.emptyBuffer;
+                this.currentHeader = header;
+                this.currentModification = mod;
+                this.value = base.emptyBuffer;
                 return [];
             } else {
-                let ins = this._currentInsertions.value.find(i => i.tagPath.isEqualTo(this.tagPath()));
+                let ins = this.currentInsertions.find(i => i.tagPath.isEqualTo(this.tagPath));
                 if (ins !== undefined) {
-                    this._currentHeader.value = header;
-                    this._currentModification.value = new TagModification(tp => tp.isEqualTo(ins.tagPath), v => ins.insertion(v));
-                    this._value.value = base.emptyBuffer;
+                    this.currentHeader = header;
+                    this.currentModification = new TagModification(tp => tp.isEqualTo(ins.tagPath), v => ins.insertion(v));
+                    this.value = base.emptyBuffer;
                     return [];
                 } else
                     return [header];
             }
-        },
+        }
 
-        onPart: function (part) {
+        onPart(part) {
             if (part instanceof TagModificationsPart) {
                 if (part.replace) {
-                    this._currentModifications.value = part.modifications;
-                    this._currentInsertions.value = organizeInsertions(part.insertions);
+                    this.currentModifications = part.modifications;
+                    this.currentInsertions = organizeInsertions(part.insertions);
                 } else {
-                    this._currentModifications.value = base.concatArrays(this._currentModifications.value, part.modifications);
-                    this._currentInsertions.value = organizeInsertions(base.concatArrays(this._currentInsertions.value, part.insertions));
+                    this.currentModifications = base.concatArrays(this.currentModifications, part.modifications);
+                    this.currentInsertions = organizeInsertions(base.concatArrays(this.currentInsertions, part.insertions));
                 }
                 return [];
             }
@@ -130,24 +133,24 @@ function modifyFlow(modifications, insertions, logGroupLengthWarnings) {
                 this.updateSyntax(part);
                 let insertParts = this.findInsertParts();
                 let modifyPart = this.findModifyPart(part);
-                this._latestTagPath.value = this.tagPath();
+                this.latestTagPath = this.tagPath;
                 return base.concatArrays(insertParts, modifyPart);
             }
 
             if (part instanceof SequencePart) {
                 let insertParts = this.findInsertParts();
-                this._latestTagPath.value = this.tagPath();
+                this.latestTagPath = this.tagPath;
                 return base.appendToArray(insertParts, part);
             }
 
             if (part instanceof ValueChunk) {
-                if (this._currentModification.value !== undefined && this._currentHeader.value !== undefined) {
-                    this._value.value = base.concat(this._value.value, part.bytes);
+                if (this.currentModification !== undefined && this.currentHeader !== undefined) {
+                    this.value = base.concat(this.value, part.bytes);
                     if (part.last) {
-                        let newValue = this._currentModification.value.modification(this._value.value);
-                        let newHeader = this._currentHeader.value.withUpdatedLength(newValue.length);
-                        this._currentModification.value = undefined;
-                        this._currentHeader.value = undefined;
+                        let newValue = this.currentModification.modification(this.value);
+                        let newHeader = this.currentHeader.withUpdatedLength(newValue.length);
+                        this.currentModification = undefined;
+                        this.currentHeader = undefined;
                         return base.prependToArray(newHeader, this.valueOrNot(newValue));
                     } else
                         return [];
@@ -155,20 +158,20 @@ function modifyFlow(modifications, insertions, logGroupLengthWarnings) {
                     return [part];
             }
 
-            this._latestTagPath.value = this.tagPath();
+            this.latestTagPath = this.tagPath;
             return [part];
-        },
+        }
 
-        onEnd: function () {
-            if (this._latestTagPath.value.isEmpty())
+        onEnd() {
+            if (this.latestTagPath.isEmpty())
                 return [];
             else
-                return base.flatten(this._currentInsertions.value
+                return base.flatten(this.currentInsertions
                     .filter(i => i.tagPath.isRoot())
-                    .filter(m => this._latestTagPath.value.isBelow(m.tagPath))
+                    .filter(m => this.latestTagPath.isBelow(m.tagPath))
                     .map(m => this.headerAndValueParts(m.tagPath, () => m.insertion(undefined))))
         }
-    }, DeferToPartFlow, GroupLengthWarnings, TagPathTracking, EndEvent);
+    });
 }
 
 module.exports = {
