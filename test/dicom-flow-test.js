@@ -7,7 +7,7 @@ const {TagPath, emptyTagPath} = require("../src/tag-path");
 const {SequencePart} = require("../src/parts");
 const {parseFlow} = require("../src/dicom-parser");
 const {create, IdentityFlow, DeferToPartFlow, StartEvent, EndEvent, InFragments, InSequence, GuaranteedValueEvent,
-    GuaranteedDelimitationEvents, TagPathTracking, dicomStartMarker, dicomEndMarker} = require("../src/dicom-flow");
+    GuaranteedDelimitationEvents, TagPathTracking, GroupLengthWarnings, dicomStartMarker, dicomEndMarker} = require("../src/dicom-flow");
 const {toIndeterminateLengthSequences} = require("../src/dicom-flows");
 const data = require("./test-data");
 const util = require("./util");
@@ -449,7 +449,6 @@ describe("DICOM flows with tag path tracking", function () {
         ];
 
         let check = function (tagPath) {
-            console.log(tagPath, expectedPaths[0], tagPath.isEqualTo(expectedPaths[0]));
             assert(tagPath.isEqualTo(expectedPaths.shift()));
         };
 
@@ -579,6 +578,61 @@ describe("DICOM flows with tag path tracking", function () {
         let testFlow = create(new class extends TagPathTracking(GuaranteedDelimitationEvents(GuaranteedValueEvent(InFragments(IdentityFlow)))) {});
 
         return util.streamPromise(source, pipe(parseFlow(), testFlow), util.arraySink(() => {}));
+    });
+});
+
+describe("The group length warnings flow", function () {
+    it("should issue a warning when a group length attribute is encountered", function () {
+        let bytes = base.concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()), data.transferSyntaxUID(),
+            data.groupLength(8, data.studyDate().length), data.studyDate());
+        let warnFlow = create(new class extends GroupLengthWarnings(InFragments(IdentityFlow)) {});
+
+        return util.testParts(bytes, pipe(parseFlow(), warnFlow), parts => {
+            util.partProbe(parts)
+                .expectPreamble()
+                .expectHeader(Tag.FileMetaInformationGroupLength)
+                .expectValueChunk()
+                .expectHeader(Tag.TransferSyntaxUID)
+                .expectValueChunk()
+                .expectHeader(0x00080000)
+                .expectValueChunk()
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
+    it("should issue a warning when determinate length sequences and items are encountered", function () {
+        let bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence, 24), base.item(16), data.studyDate());
+        let warnFlow = create(new class extends GroupLengthWarnings(InFragments(IdentityFlow)) {});
+
+        return util.testParts(bytes, pipe(parseFlow(), warnFlow), parts => {
+            util.partProbe(parts)
+                .expectSequence(Tag.DerivationCodeSequence, 24)
+                .expectItem(1, 16)
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
+    it("should not warn when silent", function () {
+        let bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence, 24), base.item(16), data.studyDate());
+        let warnFlow = create(new class extends GroupLengthWarnings(InFragments(IdentityFlow)) {
+            constructor() {
+                super();
+                this.silent = true;
+            }
+        });
+
+        return util.testParts(bytes, pipe(parseFlow(), warnFlow), parts => {
+            util.partProbe(parts)
+                .expectSequence(Tag.DerivationCodeSequence, 24)
+                .expectItem(1, 16)
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
     });
 });
 

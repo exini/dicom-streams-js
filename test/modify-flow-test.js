@@ -397,7 +397,7 @@ describe("The modify flow", function () {
 
         return util.testParts(bytes, pipe(
             parseFlow(),
-            prependFlow(new TagModificationsPart([TagModification.equals(TagPath.fromTag(Tag.PatientName), () => mikeBytes)], [], true), true),
+            prependFlow(new TagModificationsPart([TagModification.equals(TagPath.fromTag(Tag.PatientName), () => mikeBytes)], [], true), true)<,
             modifyFlow([
                 TagModification.endsWith(TagPath.fromTag(Tag.StudyDate), () => base.emptyBuffer)
             ])

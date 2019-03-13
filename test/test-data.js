@@ -28,6 +28,13 @@ const self = module.exports = {
         return self.element(Tag.TransferSyntaxUID, uid, bigEndian, explicitVR);
     },
 
+    groupLength: function(groupNumber, length, bigEndian, explicitVR) {
+        bigEndian = bigEndian === undefined ? false : bigEndian;
+        explicitVR = explicitVR === undefined ? true : explicitVR;
+        let vrLength = explicitVR ? base.concat(Buffer.from("UL"), base.shortToBytes(4, bigEndian)) : base.intToBytes(4, bigEndian);
+        return base.concatv(base.shortToBytes(groupNumber, bigEndian), Buffer.from([0, 0]), vrLength, base.intToBytes(length, bigEndian));
+    },
+
     patientNameJohnDoe: function(bigEndian, explicitVR) { return self.element(Tag.PatientName, "John^Doe", bigEndian, explicitVR); },
     emptyPatientName: function(bigEndian, explicitVR) { return self.element(Tag.PatientName, "", bigEndian, explicitVR); },
 
