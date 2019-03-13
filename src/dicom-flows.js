@@ -1,44 +1,38 @@
 const base = require("./base");
 const {SequencePart, SequenceDelimitationPart, ItemPart, ItemDelimitationPart} = require("./parts");
 const {emptyTagPath} = require("./tag-path");
-const {IdentityFlow, DeferToPartFlow, InFragments, GuaranteedValueEvent, GuaranteedDelimitationEvents, TagPathTracking, create} = require("./dicom-flow");
+const {IdentityFlow, DeferToPartFlow, InFragments, GuaranteedValueEvent, GuaranteedDelimitationEvents, TagPathTracking,
+    GroupLengthWarnings, create} = require("./dicom-flow");
 
 const whitelistFilter = function (whitelist) {
-    return tagFilter(() => false, currentPath => whitelist.some(t => t.hasTrunk(currentPath) || t.isTrunkOf(currentPath)))
+    return tagFilter(currentPath => whitelist.some(t => t.hasTrunk(currentPath) || t.isTrunkOf(currentPath)), () => false);
 };
 
 const blacklistFilter = function (blacklist) {
-    return tagFilter(() => true, currentPath => !blacklist.some(t => t.isTrunkOf(currentPath)))
+    return tagFilter(currentPath => !blacklist.some(t => t.isTrunkOf(currentPath)));
 };
 
 const groupLengthDiscardFilter = function() {
-    return tagFilter(() => true, tagPath => !base.isGroupLength(tagPath.tag()) || base.isFileMetaInformation(tagPath.tag()))
+    return tagFilter(tagPath => !base.isGroupLength(tagPath.tag()) || base.isFileMetaInformation(tagPath.tag()));
 };
 
 const fmiDiscardFilter = function() {
-    return tagFilter(() => false, tagPath => !base.isFileMetaInformation(tagPath.tag()))
+    return tagFilter(tagPath => !base.isFileMetaInformation(tagPath.tag()), () => false);
 };
 
-const tagFilter = function (defaultCondition, tagCondition) {
-    return create(new class extends TagPathTracking(GuaranteedDelimitationEvents(GuaranteedValueEvent(InFragments(DeferToPartFlow)))) {
+const tagFilter = function (keepCondition, defaultCondition, logGroupLengthWarnings) {
+    let warnings = logGroupLengthWarnings === undefined ? false : logGroupLengthWarnings;
+    let defCond = defaultCondition === undefined ? () => true : defaultCondition;
+    return create(new class extends TagPathTracking(GuaranteedDelimitationEvents(GuaranteedValueEvent(GroupLengthWarnings(InFragments(DeferToPartFlow))))) {
         constructor() {
             super();
+            this.silent = !warnings;
             this.keeping = false;
         }
 
-        update(part) {
-            let t = this.tagPath;
-            this.keeping = t === emptyTagPath ? defaultCondition(part) : tagCondition(t);
-        }
-        emit(part) {
-            return this.keeping ? [part] : [];
-        }
-        updateThenEmit(part) {
-            this.update(part);
-            return this.emit(part);
-        }
         onPart(part) {
-            return this.updateThenEmit(part);
+            this.keeping = this.tagPath === emptyTagPath ? defCond(part) : keepCondition(this.tagPath);
+            return this.keeping ? [part] : [];
         }
     });
 };

@@ -48,7 +48,7 @@ describe("The tag filter", function () {
         let bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence), base.item(), data.studyDate(), data.patientNameJohnDoe(),
             base.itemDelimitation(), base.sequenceDelimitation());
 
-        return util.testParts(bytes, pipe(parseFlow(), tagFilter(() => true, tagPath => tagPath.tag() !== Tag.PatientName)), parts => {
+        return util.testParts(bytes, pipe(parseFlow(), tagFilter(tagPath => tagPath.tag() !== Tag.PatientName)), parts => {
             util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence)
                 .expectItem(1)
@@ -64,7 +64,7 @@ describe("The tag filter", function () {
         let bytes = base.concatv(data.preamble, data.fmiGroupLength(data.fmiVersion(), data.transferSyntaxUID()),
             data.fmiVersion(), data.transferSyntaxUID(), data.patientNameJohnDoe(), data.studyDate());
 
-        return util.testParts(bytes, pipe(parseFlow(), tagFilter(() => false, tagPath => base.groupNumber(tagPath.tag()) >= 8)), parts => {
+        return util.testParts(bytes, pipe(parseFlow(), tagFilter(tagPath => base.groupNumber(tagPath.tag()) >= 8, () => false)), parts => {
             util.partProbe(parts)
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
@@ -78,7 +78,7 @@ describe("The tag filter", function () {
         let bytes = base.concatv(data.preamble, data.fmiGroupLength(data.fmiVersion(), data.transferSyntaxUID()), data.fmiVersion(),
             data.transferSyntaxUID(), data.studyDate());
 
-        return util.testParts(bytes, pipe(parseFlow(), tagFilter(() => false, tagPath => !base.isFileMetaInformation(tagPath.tag()))), parts => {
+        return util.testParts(bytes, pipe(parseFlow(), tagFilter(tagPath => !base.isFileMetaInformation(tagPath.tag()), () => false)), parts => {
             util.partProbe(parts)
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
