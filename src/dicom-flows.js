@@ -1,5 +1,5 @@
 const base = require("./base");
-const {SequencePart, SequenceDelimitationPart, ItemPart, ItemDelimitationPart} = require("./parts");
+const {HeaderPart, ValueChunk, SequencePart, SequenceDelimitationPart, ItemPart, ItemDelimitationPart} = require("./parts");
 const {emptyTagPath} = require("./tag-path");
 const {IdentityFlow, DeferToPartFlow, InFragments, GuaranteedValueEvent, GuaranteedDelimitationEvents, TagPathTracking,
     GroupLengthWarnings, create} = require("./dicom-flow");
@@ -33,6 +33,28 @@ const tagFilter = function (keepCondition, defaultCondition, logGroupLengthWarni
         onPart(part) {
             this.keeping = this.tagPath === emptyTagPath ? defCond(part) : keepCondition(this.tagPath);
             return this.keeping ? [part] : [];
+        }
+    });
+};
+
+const headerFilter = function (keepCondition, logGroupLengthWarnings) {
+    let warnings = logGroupLengthWarnings === undefined ? false : logGroupLengthWarnings;
+    return create(new class extends GroupLengthWarnings(InFragments(DeferToPartFlow)) {
+        constructor() {
+            super();
+            this.silent = !warnings;
+            this.keeping = true;
+        }
+
+        onPart(part) {
+            if (part instanceof HeaderPart) {
+                this.keeping = keepCondition(part);
+                return this.keeping ? [part] : [];
+            }
+            if (part instanceof ValueChunk)
+                return this.keeping ? [part] : [];
+            this.keeping = true;
+            return [part];
         }
     });
 };
@@ -88,6 +110,7 @@ module.exports = {
     tagFilter: tagFilter,
     whitelistFilter: whitelistFilter,
     blacklistFilter: blacklistFilter,
+    headerFilter: headerFilter,
     groupLengthDiscardFilter: groupLengthDiscardFilter,
     fmiDiscardFilter: fmiDiscardFilter,
     toIndeterminateLengthSequences: toIndeterminateLengthSequences

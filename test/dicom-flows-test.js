@@ -1,10 +1,13 @@
 const pipe = require("multipipe");
 const base = require("../src/base");
 const Tag = require("../src/tag");
+const VR = require("../src/vr");
 const {TagTree} = require("../src/tag-tree");
 const {parseFlow} = require("../src/dicom-parser");
-const {groupLengthDiscardFilter, fmiDiscardFilter, blacklistFilter, whitelistFilter, tagFilter,
-    toIndeterminateLengthSequences} = require("../src/dicom-flows");
+const {
+    groupLengthDiscardFilter, fmiDiscardFilter, blacklistFilter, whitelistFilter, tagFilter, headerFilter,
+    toIndeterminateLengthSequences
+} = require("../src/dicom-flows");
 const data = require("./test-data");
 const util = require("./util");
 
@@ -22,7 +25,7 @@ describe("The DICOM group length discard filter", function () {
                 .expectValueChunk()
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 });
@@ -38,7 +41,7 @@ describe("The DICOM file meta information discard filter", function () {
                 .expectValueChunk()
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 });
@@ -56,7 +59,7 @@ describe("The tag filter", function () {
                 .expectValueChunk()
                 .expectItemDelimitation()
                 .expectSequenceDelimitation()
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 
@@ -70,7 +73,7 @@ describe("The tag filter", function () {
                 .expectValueChunk()
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 
@@ -82,7 +85,7 @@ describe("The tag filter", function () {
             util.partProbe(parts)
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 });
@@ -96,7 +99,7 @@ describe("The whitelist filter", function () {
             util.partProbe(parts)
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 
@@ -106,7 +109,7 @@ describe("The whitelist filter", function () {
 
         return util.testParts(bytes, pipe(parseFlow(), whitelistFilter([TagTree.fromTag(Tag.StudyDate)])), parts => {
             util.partProbe(parts)
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 
@@ -116,7 +119,7 @@ describe("The whitelist filter", function () {
 
         return util.testParts(bytes, pipe(parseFlow(), whitelistFilter([])), parts => {
             util.partProbe(parts)
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 
@@ -132,7 +135,7 @@ describe("The whitelist filter", function () {
                 .expectValueChunk()
                 .expectItemDelimitation()
                 .expectSequenceDelimitation()
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 
@@ -149,7 +152,7 @@ describe("The whitelist filter", function () {
                 .expectValueChunk()
                 .expectItemDelimitation()
                 .expectSequenceDelimitation()
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 });
@@ -168,7 +171,7 @@ describe("The blacklist filter", function () {
                 .expectValueChunk()
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 
@@ -185,7 +188,7 @@ describe("The blacklist filter", function () {
                 .expectValueChunk()
                 .expectItemDelimitation()
                 .expectSequenceDelimitation()
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 
@@ -208,7 +211,30 @@ describe("The blacklist filter", function () {
                 .expectValueChunk()
                 .expectItemDelimitation()
                 .expectSequenceDelimitation()
-                .expectDicomComplete()
+                .expectDicomComplete();
+        });
+    });
+});
+
+describe("The header part filter", function () {
+    it("should discard elements based on its header part", function () {
+        let bytes = base.concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence), base.item(),
+            data.patientNameJohnDoe(), base.itemDelimitation(), base.item(), data.studyDate(), base.itemDelimitation(),
+            base.sequenceDelimitation(), data.patientNameJohnDoe());
+
+        return util.testParts(bytes, pipe(parseFlow(), headerFilter(header => header.vr === VR.PN)), parts => {
+            util.partProbe(parts)
+                .expectSequence(Tag.DerivationCodeSequence)
+                .expectItem(1)
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectItemDelimitation()
+                .expectItem(2)
+                .expectItemDelimitation()
+                .expectSequenceDelimitation()
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectDicomComplete();
         });
     });
 });
@@ -241,7 +267,7 @@ describe("The sequence length filter", function () {
                 .expectValueChunk()
                 .expectItemDelimitation() // inserted
                 .expectSequenceDelimitation()
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 
@@ -257,7 +283,7 @@ describe("The sequence length filter", function () {
                 .expectValueChunk()
                 .expectItemDelimitation()
                 .expectSequenceDelimitation()
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 
@@ -281,7 +307,7 @@ describe("The sequence length filter", function () {
                 .expectFragmentsDelimitation()
                 .expectItemDelimitation()
                 .expectSequenceDelimitation()
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 
@@ -307,7 +333,7 @@ describe("The sequence length filter", function () {
                 .expectSequenceDelimitation()
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 
@@ -330,7 +356,7 @@ describe("The sequence length filter", function () {
                 .expectSequenceDelimitation()
                 .expectItemDelimitation()
                 .expectSequenceDelimitation()
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 });

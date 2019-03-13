@@ -41,6 +41,20 @@ describe("DICOM parse flow", function () {
         });
     });
 
+    it("should read a file with only FMI", function () {
+        let bytes = base.concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()), data.transferSyntaxUID());
+
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
+                .expectPreamble()
+                .expectHeader(Tag.FileMetaInformationGroupLength)
+                .expectValueChunk()
+                .expectHeader(Tag.TransferSyntaxUID)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
     it("should read a file with neither FMI nor preamble", function () {
         let bytes = data.patientNameJohnDoe();
 
