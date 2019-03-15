@@ -232,12 +232,12 @@ class ElementProbe {
 const self = module.exports = {
     TestPart: TestPart,
     singleSource: function (element, after, objectMode) {
-        const readable = new Readable({
+        let readable = new Readable({
             objectMode: objectMode === undefined ? false : objectMode,
             read(size) {
             }
         });
-        after = after || 0;
+        after = after === undefined ? 0 : after;
         setTimeout(() => {
             readable.push(element);
             readable.push(null);
@@ -246,7 +246,7 @@ const self = module.exports = {
     },
     arraySource: function (array, delay, objectMode) {
         let arr = array.slice();
-        const readable = new Readable({
+        let readable = new Readable({
             objectMode: objectMode === undefined ? false : objectMode,
             read(size) {
             }

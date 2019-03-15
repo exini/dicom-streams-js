@@ -1,8 +1,27 @@
+const {Transform} = require("readable-stream");
+const zlib = require("zlib");
+const pipe = require("multipipe");
 const base = require("./base");
-const {HeaderPart, ValueChunk, SequencePart, SequenceDelimitationPart, ItemPart, ItemDelimitationPart} = require("./parts");
+const UID = require("./uid");
+const {Detour} = require("./detour");
+const {
+    HeaderPart, ValueChunk, SequencePart, SequenceDelimitationPart, ItemPart, ItemDelimitationPart, DeflatedChunk
+} = require("./parts");
 const {emptyTagPath} = require("./tag-path");
-const {IdentityFlow, DeferToPartFlow, InFragments, GuaranteedValueEvent, GuaranteedDelimitationEvents, TagPathTracking,
-    GroupLengthWarnings, create} = require("./dicom-flow");
+const {
+    IdentityFlow, DeferToPartFlow, InFragments, GuaranteedValueEvent, GuaranteedDelimitationEvents, TagPathTracking,
+    GroupLengthWarnings, create
+} = require("./dicom-flow");
+
+const toBytesFlow = function () {
+    return new Transform({
+        writableObjectMode: true,
+        transform(chunk, encoding, callback) {
+            this.push(chunk.bytes);
+            process.nextTick(() => callback());
+        }
+    });
+};
 
 const whitelistFilter = function (whitelist) {
     return tagFilter(currentPath => whitelist.some(t => t.hasTrunk(currentPath) || t.isTrunkOf(currentPath)), () => false);
@@ -12,11 +31,11 @@ const blacklistFilter = function (blacklist) {
     return tagFilter(currentPath => !blacklist.some(t => t.isTrunkOf(currentPath)));
 };
 
-const groupLengthDiscardFilter = function() {
+const groupLengthDiscardFilter = function () {
     return tagFilter(tagPath => !base.isGroupLength(tagPath.tag()) || base.isFileMetaInformation(tagPath.tag()));
 };
 
-const fmiDiscardFilter = function() {
+const fmiDiscardFilter = function () {
     return tagFilter(tagPath => !base.isFileMetaInformation(tagPath.tag()), () => false);
 };
 
@@ -59,7 +78,7 @@ const headerFilter = function (keepCondition, logGroupLengthWarnings) {
     });
 };
 
-const toIndeterminateLengthSequences = function() {
+const toIndeterminateLengthSequences = function () {
     return create(new class extends GuaranteedDelimitationEvents(InFragments(IdentityFlow)) {
         constructor() {
             super();
@@ -79,12 +98,14 @@ const toIndeterminateLengthSequences = function() {
                 return p;
             });
         }
+
         onSequenceDelimitation(part) {
             let out = super.onSequenceDelimitation(part);
             if (part.bytes.length <= 0)
                 out.push(new SequenceDelimitationPart(part.bigEndian, base.sequenceDelimitation(part.bigEndian)));
             return out;
         }
+
         onItem(part) {
             return super.onItem(part).map(p => {
                 if (p instanceof ItemPart && !this.inFragments && !p.indeterminate) {
@@ -97,6 +118,7 @@ const toIndeterminateLengthSequences = function() {
                 return p;
             });
         }
+
         onItemDelimitation(part) {
             let out = super.onItemDelimitation(part);
             if (part.bytes.length <= 0)
@@ -106,12 +128,52 @@ const toIndeterminateLengthSequences = function() {
     });
 };
 
+class DeflateDatasetFlow extends Detour {
+    constructor() {
+        super({objectMode: true});
+        this.collectingTs = false;
+        this.tsBytes = base.emptyBuffer;
+    }
+
+    process(part) {
+        if (part instanceof HeaderPart) {
+            if (part.isFmi) {
+                this.collectingTs = part.tag === Tag.TransferSyntaxUID;
+                this.push(part);
+            } else {
+                if (this.tsBytes.toString().trim() === UID.DeflatedExplicitVRLittleEndian) {
+                    let toDeflatedChunk = new Transform({
+                        readableObjectMode: true,
+                        transform(chunk, encoding, cb) {
+                            this.push(new DeflatedChunk(false, chunk));
+                            process.nextTick(() => cb());
+                        }
+                    });
+                    this.setDetourFlow(pipe(toBytesFlow(), zlib.createDeflateRaw(), toDeflatedChunk));
+                    this.setDetour(true, part);
+                } else
+                    this.push(part);
+            }
+        } else if (part instanceof ValueChunk && this.collectingTs) {
+            this.tsBytes = base.concat(this.tsBytes, part.bytes);
+            this.push(part);
+        } else
+            this.push(part);
+    }
+}
+
+const deflateDatasetFlow = function () {
+    return new DeflateDatasetFlow();
+};
+
 module.exports = {
+    toBytesFlow: toBytesFlow,
     tagFilter: tagFilter,
     whitelistFilter: whitelistFilter,
     blacklistFilter: blacklistFilter,
     headerFilter: headerFilter,
     groupLengthDiscardFilter: groupLengthDiscardFilter,
     fmiDiscardFilter: fmiDiscardFilter,
-    toIndeterminateLengthSequences: toIndeterminateLengthSequences
+    toIndeterminateLengthSequences: toIndeterminateLengthSequences,
+    deflateDatasetFlow: deflateDatasetFlow
 };

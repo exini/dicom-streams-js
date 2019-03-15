@@ -2,11 +2,14 @@ const pipe = require("multipipe");
 const base = require("../src/base");
 const Tag = require("../src/tag");
 const VR = require("../src/vr");
+const UID = require("../src/uid");
+const {TagPath} = require("../src/tag-path");
 const {TagTree} = require("../src/tag-tree");
 const {parseFlow} = require("../src/dicom-parser");
+const {TagModification, modifyFlow} = require("../src/modify-flow");
 const {
     groupLengthDiscardFilter, fmiDiscardFilter, blacklistFilter, whitelistFilter, tagFilter, headerFilter,
-    toIndeterminateLengthSequences
+    toIndeterminateLengthSequences, deflateDatasetFlow, toBytesFlow
 } = require("../src/dicom-flows");
 const data = require("./test-data");
 const util = require("./util");
@@ -356,6 +359,72 @@ describe("The sequence length filter", function () {
                 .expectSequenceDelimitation()
                 .expectItemDelimitation()
                 .expectSequenceDelimitation()
+                .expectDicomComplete();
+        });
+    });
+});
+
+describe("The deflate flow", function () {
+    it("should recreate the dicom parts of a dataset which has been deflated and inflated again", function () {
+        let bytes = base.concatv(data.fmiGroupLength(data.transferSyntaxUID()), data.transferSyntaxUID(),
+            data.studyDate(), data.patientNameJohnDoe());
+
+        return util.testParts(bytes, pipe(parseFlow(), modifyFlow([
+            TagModification.equals(TagPath.fromTag(Tag.FileMetaInformationGroupLength), () => data.fmiGroupLength(data.transferSyntaxUID(UID.DeflatedExplicitVRLittleEndian)).slice(8)),
+            TagModification.equals(TagPath.fromTag(Tag.TransferSyntaxUID), () => Buffer.from(UID.DeflatedExplicitVRLittleEndian))
+        ]), deflateDatasetFlow(), toBytesFlow(), parseFlow()), parts => {
+            util.partProbe(parts)
+                .expectHeader(Tag.FileMetaInformationGroupLength)
+                .expectValueChunk()
+                .expectHeader(Tag.TransferSyntaxUID)
+                .expectValueChunk()
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
+    it("should not deflate meta information", function () {
+        let bytes = base.concatv(data.fmiGroupLength(data.transferSyntaxUID()), data.transferSyntaxUID(), data.studyDate(), data.patientNameJohnDoe());
+
+        return util.testParts(bytes, pipe(parseFlow(), modifyFlow([
+            TagModification.equals(TagPath.fromTag(Tag.FileMetaInformationGroupLength), () => data.fmiGroupLength(data.transferSyntaxUID(UID.DeflatedExplicitVRLittleEndian)).slice(8)),
+            TagModification.equals(TagPath.fromTag(Tag.TransferSyntaxUID), () => Buffer.from(UID.DeflatedExplicitVRLittleEndian))
+        ]), deflateDatasetFlow()), parts => {
+            util.partProbe(parts)
+                .expectHeader(Tag.FileMetaInformationGroupLength)
+                .expectValueChunk()
+                .expectHeader(Tag.TransferSyntaxUID)
+                .expectValueChunk()
+                .expectDeflatedChunk();
+        });
+    });
+
+    it("should not deflate data with non-deflated transfer syntax", function () {
+        let bytes = base.concatv(data.fmiGroupLength(data.transferSyntaxUID()), data.transferSyntaxUID(), data.studyDate(), data.patientNameJohnDoe());
+
+        return util.testParts(bytes, pipe(parseFlow(), deflateDatasetFlow()), parts => {
+            util.partProbe(parts)
+                .expectHeader(Tag.FileMetaInformationGroupLength)
+                .expectValueChunk()
+                .expectHeader(Tag.TransferSyntaxUID)
+                .expectValueChunk()
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
+
+    it("should not ouput bytes when the stream is empty", function () {
+        let bytes = base.emptyBuffer;
+
+        return util.testParts(bytes, pipe(parseFlow(), deflateDatasetFlow()), parts => {
+            util.partProbe(parts)
                 .expectDicomComplete();
         });
     });

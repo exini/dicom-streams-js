@@ -16,7 +16,7 @@ const self = module.exports = {
     },
 
     fmiGroupLength: function(...fmis) {
-        return self.element(Tag.FileMetaInformationGroupLength, base.intToBytesLE(fmis.map(fmi => fmi.length).reduce((p, c) => p + c)), false, true);
+        return self.element(Tag.FileMetaInformationGroupLength, base.intToBytesLE(fmis.map(fmi => fmi.length).reduce((p, c) => p + c)));
     },
 
     fmiVersion: function(bigEndian, explicitVR) {
