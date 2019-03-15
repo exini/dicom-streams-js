@@ -46,7 +46,7 @@ function collectFlow(tagCondition, stopCondition, label, maxBufferSize) {
                     this.currentBufferSize += part.bytes.length;
                 }
 
-                if (part instanceof HeaderPart && stopCondition(this.tagPath))
+                if (part.tag !== undefined && stopCondition(this.tagPath))
                     return this.elementsAndBuffer();
 
                 if (part instanceof HeaderPart && (tagCondition(this.tagPath) || part.tag === Tag.SpecificCharacterSet)) {

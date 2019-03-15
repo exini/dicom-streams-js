@@ -9,7 +9,7 @@ const {parseFlow} = require("../src/dicom-parser");
 const {TagModification, modifyFlow} = require("../src/modify-flow");
 const {
     groupLengthDiscardFilter, fmiDiscardFilter, blacklistFilter, whitelistFilter, tagFilter, headerFilter,
-    toIndeterminateLengthSequences, deflateDatasetFlow, toBytesFlow
+    fmiGroupLengthFlow, toIndeterminateLengthSequences, deflateDatasetFlow, toBytesFlow
 } = require("../src/dicom-flows");
 const data = require("./test-data");
 const util = require("./util");
@@ -238,6 +238,94 @@ describe("The header part filter", function () {
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
                 .expectDicomComplete();
+        });
+    });
+});
+
+describe("The FMI group length flow", function () {
+    it("should calculate and emit the correct group length attribute", function () {
+        let correctLength = data.transferSyntaxUID().length;
+        let bytes = base.concatv(data.preamble, data.fmiGroupLength(data.fmiVersion(), data.transferSyntaxUID()),
+            data.fmiVersion(), data.transferSyntaxUID(), data.patientNameJohnDoe());
+
+        return util.testParts(bytes, pipe(
+            parseFlow(),
+            blacklistFilter([TagTree.fromTag(Tag.FileMetaInformationVersion)]),
+            fmiGroupLengthFlow()), parts => {
+            util.partProbe(parts)
+                .expectPreamble()
+                .expectHeader(Tag.FileMetaInformationGroupLength)
+                .expectValueChunk(base.intToBytesLE(correctLength))
+                .expectHeader(Tag.TransferSyntaxUID)
+                .expectValueChunk()
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
+    it("should work also in flows with file meta information only", function () {
+        let correctLength = data.transferSyntaxUID().length;
+        let bytes = base.concatv(data.preamble, data.transferSyntaxUID()); // missing file meta information group length
+
+        return util.testParts(bytes, pipe(parseFlow(), fmiGroupLengthFlow()), parts => {
+            util.partProbe(parts)
+                .expectPreamble()
+                .expectHeader(Tag.FileMetaInformationGroupLength)
+                .expectValueChunk(base.intToBytesLE(correctLength))
+                .expectHeader(Tag.TransferSyntaxUID)
+                .expectValueChunk()
+                .expectDicomComplete()
+        });
+    });
+
+    it("should work in flows without preamble", function () {
+        let correctLength = data.transferSyntaxUID().length;
+        let bytes = base.concatv(data.transferSyntaxUID(), data.patientNameJohnDoe());
+
+        return util.testParts(bytes, pipe(parseFlow(), fmiGroupLengthFlow()), parts => {
+            util.partProbe(parts)
+                .expectHeader(Tag.FileMetaInformationGroupLength)
+                .expectValueChunk(base.intToBytesLE(correctLength))
+                .expectHeader(Tag.TransferSyntaxUID)
+                .expectValueChunk()
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectDicomComplete()
+        });
+    });
+
+    it("should not emit anything in empty flows", function () {
+        let bytes = base.emptyBuffer;
+
+        return util.testParts(bytes, pipe(parseFlow(), fmiGroupLengthFlow()), parts => {
+            util.partProbe(parts)
+                .expectDicomComplete()
+        });
+    });
+
+    it("should not emit a group length attribute when there is no FMI", function () {
+        let bytes = base.concatv(data.preamble, data.patientNameJohnDoe());
+
+        return util.testParts(bytes, pipe(parseFlow(), fmiGroupLengthFlow()), parts => {
+            util.partProbe(parts)
+                .expectPreamble()
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectDicomComplete()
+        });
+    });
+
+    it("should keep a zero length group length attribute", function () {
+        let bytes = base.concatv(data.fmiGroupLength(base.emptyBuffer), data.patientNameJohnDoe());
+
+        return util.testParts(bytes, pipe(parseFlow(), fmiGroupLengthFlow()), parts => {
+            util.partProbe(parts)
+                .expectHeader(Tag.FileMetaInformationGroupLength)
+                .expectValueChunk(Buffer.from([0, 0, 0, 0]))
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectDicomComplete()
         });
     });
 });

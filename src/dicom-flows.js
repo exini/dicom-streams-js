@@ -2,16 +2,19 @@ const {Transform} = require("readable-stream");
 const zlib = require("zlib");
 const pipe = require("multipipe");
 const base = require("./base");
+const VR = require("./vr");
 const UID = require("./uid");
 const {Detour} = require("./detour");
 const {
-    HeaderPart, ValueChunk, SequencePart, SequenceDelimitationPart, ItemPart, ItemDelimitationPart, DeflatedChunk
+    PreamblePart, HeaderPart, ValueChunk, SequencePart, SequenceDelimitationPart, ItemPart, ItemDelimitationPart,
+    DeflatedChunk, ElementsPart
 } = require("./parts");
 const {emptyTagPath} = require("./tag-path");
 const {
     IdentityFlow, DeferToPartFlow, InFragments, GuaranteedValueEvent, GuaranteedDelimitationEvents, TagPathTracking,
-    GroupLengthWarnings, create
+    GroupLengthWarnings, EndEvent, create
 } = require("./dicom-flow");
+const {collectFlow} = require("./collect-flow");
 
 const toBytesFlow = function () {
     return new Transform({
@@ -76,6 +79,53 @@ const headerFilter = function (keepCondition, logGroupLengthWarnings) {
             return [part];
         }
     });
+};
+
+const fmiGroupLengthFlow = function () {
+    return pipe(
+        collectFlow(
+            tagPath => tagPath.isRoot() && base.isFileMetaInformation(tagPath.tag()),
+            tagPath => !base.isFileMetaInformation(tagPath.tag()),
+            "fmigrouplength"
+        ), tagFilter(
+            tagPath => !base.isFileMetaInformation(tagPath.tag()),
+            () => true,
+            false),
+        create(new class extends EndEvent(DeferToPartFlow) {
+            constructor() {
+                super();
+                this.fmi = [];
+                this.hasEmitted = false;
+            }
+
+            onEnd() {
+                return this.hasEmitted ? [] : this.fmi;
+            }
+
+            onPart(part) {
+                if (part instanceof ElementsPart && part.label === "fmigrouplength") {
+                    let elements = part.elements;
+                    if (elements.data.length > 0) {
+                        let bigEndian = elements.data[0].bigEndian;
+                        let explicitVR = elements.data[0].explicitVR;
+                        let fmiElementsNoLength = elements.filter(e => e.tag !== Tag.FileMetaInformationGroupLength);
+                        let length = fmiElementsNoLength.data.map(e => e.toBytes().length).reduce((l1, l2) => l1 + l2, 0);
+                        let lengthHeader = new HeaderPart(Tag.FileMetaInformationGroupLength, VR.UL, 4, true, bigEndian, explicitVR);
+                        let lengthChunk = new ValueChunk(bigEndian, base.intToBytes(length, bigEndian), true);
+                        this.fmi = base.concatArrays([lengthHeader, lengthChunk], fmiElementsNoLength.toParts());
+                    }
+                    return [];
+                }
+                if (!this.hasEmitted) {
+                    this.hasEmitted = true;
+                    return part instanceof PreamblePart
+                        ? base.prependToArray(part, this.fmi)
+                        : base.appendToArray(part, this.fmi);
+                }
+                return [part];
+            }
+        })
+    );
 };
 
 const toIndeterminateLengthSequences = function () {
@@ -174,6 +224,7 @@ module.exports = {
     headerFilter: headerFilter,
     groupLengthDiscardFilter: groupLengthDiscardFilter,
     fmiDiscardFilter: fmiDiscardFilter,
+    fmiGroupLengthFlow: fmiGroupLengthFlow,
     toIndeterminateLengthSequences: toIndeterminateLengthSequences,
     deflateDatasetFlow: deflateDatasetFlow
 };
