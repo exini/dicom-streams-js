@@ -23,7 +23,7 @@ class CharacterSets {
     }
 
     static fromBytes(specificCharacterSetBytes) {
-        return !specificCharacterSetBytes || specificCharacterSetBytes.length === 0 ? CharacterSets.defaultOnly() : new CharacterSets(specificCharacterSetBytes.toString("utf8"));
+        return !specificCharacterSetBytes || specificCharacterSetBytes.length === 0 ? CharacterSets.defaultOnly() : new CharacterSets(specificCharacterSetBytes.toString().split("\\"));
     }
 
     static encode(s) {

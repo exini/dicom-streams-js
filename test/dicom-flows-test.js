@@ -1,15 +1,18 @@
+const assert = require("assert");
 const pipe = require("multipipe");
 const base = require("../src/base");
 const Tag = require("../src/tag");
 const VR = require("../src/vr");
 const UID = require("../src/uid");
+const {MetaPart} = require("../src/parts");
 const {TagPath} = require("../src/tag-path");
 const {TagTree} = require("../src/tag-tree");
 const {parseFlow} = require("../src/dicom-parser");
+const {prependFlow} = require("../src/flows");
 const {TagModification, modifyFlow} = require("../src/modify-flow");
 const {
     groupLengthDiscardFilter, fmiDiscardFilter, blacklistFilter, whitelistFilter, tagFilter, headerFilter,
-    fmiGroupLengthFlow, toIndeterminateLengthSequences, deflateDatasetFlow, toBytesFlow
+    fmiGroupLengthFlow, toIndeterminateLengthSequences, deflateDatasetFlow, toUtf8Flow, toBytesFlow
 } = require("../src/dicom-flows");
 const data = require("./test-data");
 const util = require("./util");
@@ -275,7 +278,7 @@ describe("The FMI group length flow", function () {
                 .expectValueChunk(base.intToBytesLE(correctLength))
                 .expectHeader(Tag.TransferSyntaxUID)
                 .expectValueChunk()
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 
@@ -291,7 +294,7 @@ describe("The FMI group length flow", function () {
                 .expectValueChunk()
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 
@@ -300,7 +303,7 @@ describe("The FMI group length flow", function () {
 
         return util.testParts(bytes, pipe(parseFlow(), fmiGroupLengthFlow()), parts => {
             util.partProbe(parts)
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 
@@ -312,7 +315,7 @@ describe("The FMI group length flow", function () {
                 .expectPreamble()
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
-                .expectDicomComplete()
+                .expectDicomComplete();
         });
     });
 
@@ -325,7 +328,135 @@ describe("The FMI group length flow", function () {
                 .expectValueChunk(Buffer.from([0, 0, 0, 0]))
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
+    it("should ignore DICOM parts of unknown type", function () {
+        class SomePart extends MetaPart {}
+
+        let correctLength = data.transferSyntaxUID().length;
+        let bytes = base.concatv(data.preamble, data.transferSyntaxUID()); // missing file meta information group length
+
+        return util.testParts(bytes, pipe(parseFlow(), prependFlow(new SomePart(), true), fmiGroupLengthFlow()), parts => {
+            assert(parts.shift() instanceof SomePart);
+            util.partProbe(parts)
+                .expectPreamble()
+                .expectHeader(Tag.FileMetaInformationGroupLength)
+                .expectValueChunk(base.intToBytesLE(correctLength))
+                .expectHeader(Tag.TransferSyntaxUID)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
+});
+
+describe("The utf8 flow", function () {
+    it("should transform a japanese patient name encoded with multiple character sets to valid utf8", function () {
+        let specificCharacterSet = base.concatv(base.tagToBytesLE(Tag.SpecificCharacterSet), Buffer.from("CS"),
+            base.shortToBytesLE(0x0010), base.padToEvenLength(Buffer.from("\\ISO 2022 IR 149"), VR.CS));
+        let patientName = base.concatv(base.tagToBytesLE(0x00100010), Buffer.from("PN"), base.shortToBytesLE(0x002C),
+            base.padToEvenLength(Buffer.from([
+                0x48, 0x6F, 0x6E, 0x67, 0x5E, 0x47, 0x69, 0x6C, 0x64, 0x6F, 0x6E, 0x67, 0x3D, 0x1B, 0x24, 0x29, 0x43,
+                0xFB, 0xF3, 0x5E, 0x1B, 0x24, 0x29, 0x43, 0xD1, 0xCE, 0xD4, 0xD7, 0x3D, 0x1B, 0x24, 0x29, 0x43, 0xC8,
+                0xAB, 0x5E, 0x1B, 0x24, 0x29, 0x43, 0xB1, 0xE6, 0xB5, 0xBF]), VR.PN));
+
+        let bytes = base.concat(specificCharacterSet, patientName);
+
+        return util.testParts(bytes, pipe(parseFlow(), toUtf8Flow()), parts => {
+            util.partProbe(parts)
+                .expectHeader(Tag.SpecificCharacterSet)
+                .expectValueChunk()
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk(Buffer.from("Hong^Gildong=洪^吉洞=홍^길동"))
+                .expectDicomComplete();
+        });
+    });
+
+    it("should set specific character set to ISO_IR 192 (UTF-8)", function () {
+        let bytes = base.concatv(base.tagToBytesLE(Tag.SpecificCharacterSet), Buffer.from("CS"),
+            base.shortToBytesLE(0x0010), base.padToEvenLength(Buffer.from("\\ISO 2022 IR 149"), VR.CS));
+
+        return util.testParts(bytes, pipe(parseFlow(), toUtf8Flow()), parts => {
+            util.partProbe(parts)
+                .expectHeader(Tag.SpecificCharacterSet)
+                .expectValueChunk(Buffer.from("ISO_IR 192"))
+                .expectDicomComplete();
+        });
+    });
+
+    it("should transform data without the specific character set attribute, decoding using the default character set", function () {
+        let bytes = data.patientNameJohnDoe();
+
+        return util.testParts(bytes, pipe(parseFlow(), toUtf8Flow()), parts => {
+            util.partProbe(parts)
+                .expectHeader(Tag.SpecificCharacterSet)
+                .expectValueChunk(Buffer.from("ISO_IR 192"))
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk(data.patientNameJohnDoe().slice(8))
                 .expectDicomComplete()
+        });
+    });
+
+    it("should transform data contained in sequences", function () {
+        let specificCharacterSet = base.concatv(base.tagToBytesLE(Tag.SpecificCharacterSet), Buffer.from("CS"),
+            base.shortToBytesLE(0x000A), base.padToEvenLength(Buffer.from("ISO_IR 13"), VR.CS));
+        let patientName = base.concatv(base.tagToBytesLE(0x00100010), Buffer.from("PN"), base.shortToBytesLE(0x0008), base.padToEvenLength(Buffer.from([0xD4, 0xCF, 0xC0, 0xDE, 0x5E, 0xC0, 0xDB, 0xB3]), VR.PN));
+
+        let bytes = base.concatv(specificCharacterSet, data.sequence(Tag.DerivationCodeSequence), base.item(), patientName, base.itemDelimitation(), base.sequenceDelimitation());
+
+        return util.testParts(bytes, pipe(parseFlow(), toUtf8Flow()), parts => {
+            util.partProbe(parts)
+                .expectHeader(Tag.SpecificCharacterSet)
+                .expectValueChunk()
+                .expectSequence(Tag.DerivationCodeSequence)
+                .expectItem(1)
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk(Buffer.from("ﾔﾏﾀﾞ^ﾀﾛｳ"))
+                .expectItemDelimitation()
+                .expectSequenceDelimitation()
+                .expectDicomComplete();
+        });
+    });
+
+    it("should not transform data with VR that doesn't support non-default encodings", function () {
+        let specificCharacterSet = base.concatv(base.tagToBytesLE(Tag.SpecificCharacterSet), Buffer.from("CS"),
+            base.shortToBytesLE(0x0010), base.padToEvenLength(Buffer.from("\\ISO 2022 IR 149"), VR.CS));
+        let patientNameCS = base.concatv(base.tagToBytesLE(0x00100010), Buffer.from("CS"), base.shortToBytesLE(0x0004), base.padToEvenLength(Buffer.from([0xD4, 0xCF, 0xC0, 0xDE]), VR.PN));
+
+        let bytes = base.concat(specificCharacterSet, patientNameCS);
+
+        return util.testParts(bytes, pipe(parseFlow(), toUtf8Flow()), parts => {
+            util.partProbe(parts)
+                .expectHeader(Tag.SpecificCharacterSet)
+                .expectValueChunk()
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk(Buffer.from([0xD4, 0xCF, 0xC0, 0xDE]))
+                .expectDicomComplete();
+        });
+    });
+
+    it("should not change a file already encoded with ISO_IR 192 (UTF-8)", function () {
+        let specificCharacterSet = base.concatv(base.tagToBytesLE(Tag.SpecificCharacterSet), Buffer.from("CS"), base.shortToBytesLE(0x000A), Buffer.from("ISO_IR 192"));
+        let patientName = base.concatv(base.tagToBytesLE(Tag.PatientName), Buffer.from("PN"), base.shortToBytesLE(0x000C), Buffer.from("ABC^ÅÖ^ﾔ"));
+        let bytes = base.concat(specificCharacterSet, patientName);
+
+        return util.testParts(bytes, pipe(parseFlow(), toUtf8Flow()), parts => {
+            let newBytes = parts.map(p => p.bytes).reduce((b1, b2) => base.concat(b1, b2), base.emptyBuffer);
+            assert.deepEqual(newBytes, bytes);
+        });
+    });
+
+    it("should leave and empty element empty", function () {
+        let bytes = data.emptyPatientName();
+
+        return util.testParts(bytes, pipe(parseFlow(), toUtf8Flow()), parts => {
+            util.partProbe(parts)
+                .expectHeader(Tag.SpecificCharacterSet)
+                .expectValueChunk()
+                .expectHeader(Tag.PatientName)
+                .expectDicomComplete();
         });
     });
 });

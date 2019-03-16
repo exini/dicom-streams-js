@@ -4,6 +4,7 @@ const pipe = require("multipipe");
 const base = require("./base");
 const VR = require("./vr");
 const UID = require("./uid");
+const {TagPath} = require("./tag-path");
 const {Detour} = require("./detour");
 const {
     PreamblePart, HeaderPart, ValueChunk, SequencePart, SequenceDelimitationPart, ItemPart, ItemDelimitationPart,
@@ -14,7 +15,9 @@ const {
     IdentityFlow, DeferToPartFlow, InFragments, GuaranteedValueEvent, GuaranteedDelimitationEvents, TagPathTracking,
     GroupLengthWarnings, EndEvent, create
 } = require("./dicom-flow");
-const {collectFlow} = require("./collect-flow");
+const {collectFlow, collectFromTagPathsFlow} = require("./collect-flow");
+const {modifyFlow, TagInsertion} = require("./modify-flow");
+const {CharacterSets} = require("./character-sets");
 
 const toBytesFlow = function () {
     return new Transform({
@@ -116,7 +119,7 @@ const fmiGroupLengthFlow = function () {
                     }
                     return [];
                 }
-                if (!this.hasEmitted) {
+                if (!this.hasEmitted && part.bytes.length > 0) {
                     this.hasEmitted = true;
                     return part instanceof PreamblePart
                         ? base.prependToArray(part, this.fmi)
@@ -178,6 +181,58 @@ const toIndeterminateLengthSequences = function () {
     });
 };
 
+const toUtf8Flow = function () {
+    return pipe(
+        collectFromTagPathsFlow([TagPath.fromTag(Tag.SpecificCharacterSet)], "toutf8"),
+        modifyFlow([], [new TagInsertion(TagPath.fromTag(Tag.SpecificCharacterSet), () => Buffer.from("ISO_IR 192"))]),
+        create(new class extends IdentityFlow {
+            constructor() {
+                super();
+                this.characterSets = base.defaultCharacterSet;
+                this.currentHeader = undefined;
+                this.currentValue = base.emptyBuffer;
+            }
+
+            onHeader(part) {
+                if (part.length > 0 && CharacterSets.isVrAffectedBySpecificCharacterSet(part.vr)) {
+                    this.currentHeader = part;
+                    this.currentValue = base.emptyBuffer;
+                    return [];
+                } else {
+                    this.currentHeader = undefined;
+                    return [part];
+                }
+            }
+
+            onValueChunk(part) {
+                if (this.currentHeader !== undefined) {
+                    this.currentValue = base.concat(this.currentValue, part.bytes);
+                    if (part.last) {
+                        let newValue = Buffer.from(this.characterSets.decode(this.currentValue, this.currentHeader.vr));
+                        let newLength = newValue.length;
+                        return [
+                            this.currentHeader.withUpdatedLength(newLength),
+                            new ValueChunk(this.currentHeader.bigEndian, newValue, true)
+                        ];
+                    } else
+                        return [];
+                } else
+                    return [part];
+            }
+
+            onPart(part) {
+                if (part instanceof ElementsPart && part.label === "toutf8") {
+                    let csNames = part.elements.stringsByTag(Tag.SpecificCharacterSet);
+                    if (csNames.length > 0)
+                        this.characterSets = new CharacterSets(csNames);
+                    return [];
+                }
+                return [part];
+            }
+        })
+    );
+};
+
 class DeflateDatasetFlow extends Detour {
     constructor() {
         super({objectMode: true});
@@ -226,5 +281,6 @@ module.exports = {
     fmiDiscardFilter: fmiDiscardFilter,
     fmiGroupLengthFlow: fmiGroupLengthFlow,
     toIndeterminateLengthSequences: toIndeterminateLengthSequences,
+    toUtf8Flow: toUtf8Flow,
     deflateDatasetFlow: deflateDatasetFlow
 };
