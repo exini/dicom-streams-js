@@ -28,6 +28,18 @@ const self = module.exports = {
         return self.element(Tag.TransferSyntaxUID, uid, bigEndian, explicitVR);
     },
 
+    mediaStorageSOPClassUID: function(bigEndian, explicitVR) {
+        return self.element(Tag.MediaStorageSOPClassUID, UID.CTImageStorage, bigEndian, explicitVR);
+    },
+
+    mediaStorageSOPInstanceUID(bigEndian, explicitVR) {
+        return self.element(Tag.MediaStorageSOPInstanceUID, "1.2.276.0.7230010.3.1.4.1536491920.17152.1480884676.735", bigEndian, explicitVR);
+    },
+
+    sopClassUID(bigEndian, explicitVR) {
+        return self.element(Tag.SOPClassUID, UID.CTImageStorage, bigEndian, explicitVR);
+    },
+
     groupLength: function(groupNumber, length, bigEndian, explicitVR) {
         bigEndian = bigEndian === undefined ? false : bigEndian;
         explicitVR = explicitVR === undefined ? true : explicitVR;

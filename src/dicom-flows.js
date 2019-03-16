@@ -84,6 +84,39 @@ const headerFilter = function (keepCondition, logGroupLengthWarnings) {
     });
 };
 
+class ValidationContext {
+    constructor(sopClassUID, transferSyntaxUID) {
+        this.sopClassUID = sopClassUID;
+        this.transferSyntaxUID = transferSyntaxUID;
+    }
+}
+
+const validateContextFlow = function (contexts) {
+    return pipe(
+        collectFromTagPathsFlow([
+            TagPath.fromTag(Tag.MediaStorageSOPClassUID),
+            TagPath.fromTag(Tag.TransferSyntaxUID),
+            TagPath.fromTag(Tag.SOPClassUID)
+        ], "validatecontext"),
+        create(new class extends DeferToPartFlow {
+            onPart(part) {
+                if (part instanceof ElementsPart && part.label === "validatecontext") {
+                    let scuid = part.elements.singleStringByTag(Tag.MediaStorageSOPClassUID);
+                    if (scuid === undefined) scuid = part.elements.singleStringByTag(Tag.SOPClassUID);
+                    if (scuid === undefined) scuid = "<empty>";
+                    let tsuid = part.elements.singleStringByTag(Tag.TransferSyntaxUID);
+                    if (tsuid === undefined) tsuid = "<empty>";
+                    if (contexts.findIndex(c => c.sopClassUID === scuid && c.transferSyntaxUID === tsuid) >= 0)
+                        return [];
+                    else
+                        throw Error("The presentation context [SOPClassUID = " + scuid + ", TransferSyntaxUID = " + tsuid + "] is not supported");
+                }
+                return [part];
+            }
+        })
+    );
+};
+
 const fmiGroupLengthFlow = function () {
     return pipe(
         collectFlow(
@@ -282,5 +315,7 @@ module.exports = {
     fmiGroupLengthFlow: fmiGroupLengthFlow,
     toIndeterminateLengthSequences: toIndeterminateLengthSequences,
     toUtf8Flow: toUtf8Flow,
+    ValidationContext: ValidationContext,
+    validateContextFlow: validateContextFlow,
     deflateDatasetFlow: deflateDatasetFlow
 };

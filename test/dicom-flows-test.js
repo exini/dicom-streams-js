@@ -12,7 +12,8 @@ const {prependFlow} = require("../src/flows");
 const {TagModification, modifyFlow} = require("../src/modify-flow");
 const {
     groupLengthDiscardFilter, fmiDiscardFilter, blacklistFilter, whitelistFilter, tagFilter, headerFilter,
-    fmiGroupLengthFlow, toIndeterminateLengthSequences, deflateDatasetFlow, toUtf8Flow, toBytesFlow
+    fmiGroupLengthFlow, toIndeterminateLengthSequences, ValidationContext, validateContextFlow, deflateDatasetFlow,
+    toUtf8Flow, toBytesFlow
 } = require("../src/dicom-flows");
 const data = require("./test-data");
 const util = require("./util");
@@ -333,7 +334,8 @@ describe("The FMI group length flow", function () {
     });
 
     it("should ignore DICOM parts of unknown type", function () {
-        class SomePart extends MetaPart {}
+        class SomePart extends MetaPart {
+        }
 
         let correctLength = data.transferSyntaxUID().length;
         let bytes = base.concatv(data.preamble, data.transferSyntaxUID()); // missing file meta information group length
@@ -580,6 +582,86 @@ describe("The sequence length filter", function () {
                 .expectSequenceDelimitation()
                 .expectDicomComplete();
         });
+    });
+});
+
+describe("The context validation flow", function () {
+    it("should accept DICOM data that corresponds to the given contexts", function () {
+        let contexts = [new ValidationContext(UID.CTImageStorage, UID.ExplicitVRLittleEndian)];
+        let bytes = base.concatv(data.preamble,
+            data.fmiGroupLength(data.mediaStorageSOPClassUID(), data.mediaStorageSOPInstanceUID(), data.transferSyntaxUID()),
+            data.mediaStorageSOPClassUID(), data.mediaStorageSOPInstanceUID(), data.transferSyntaxUID());
+
+        return util.testParts(bytes, pipe(parseFlow(), validateContextFlow(contexts)), parts => {
+            util.partProbe(parts)
+                .expectPreamble()
+                .expectHeader(Tag.FileMetaInformationGroupLength)
+                .expectValueChunk()
+                .expectHeader(Tag.MediaStorageSOPClassUID)
+                .expectValueChunk()
+                .expectHeader(Tag.MediaStorageSOPInstanceUID)
+                .expectValueChunk()
+                .expectHeader(Tag.TransferSyntaxUID)
+                .expectValueChunk()
+                .expectDicomComplete()
+        });
+    });
+
+    it("should accept SOP Class UID specified in either file meta information or in the dataset", function () {
+        let contexts = [new ValidationContext(UID.CTImageStorage, UID.ExplicitVRLittleEndian)];
+        let bytes = base.concatv(data.preamble,
+            data.fmiGroupLength(data.mediaStorageSOPInstanceUID(), data.transferSyntaxUID()),
+            data.mediaStorageSOPInstanceUID(), data.transferSyntaxUID(), data.sopClassUID());
+
+        return util.testParts(bytes, pipe(parseFlow(), validateContextFlow(contexts)), parts => {
+            util.partProbe(parts)
+                .expectPreamble()
+                .expectHeader(Tag.FileMetaInformationGroupLength)
+                .expectValueChunk()
+                .expectHeader(Tag.MediaStorageSOPInstanceUID)
+                .expectValueChunk()
+                .expectHeader(Tag.TransferSyntaxUID)
+                .expectValueChunk()
+                .expectHeader(Tag.SOPClassUID)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
+    it("should not accept DICOM data that does not correspond to the given contexts", function () {
+        let contexts = [new ValidationContext(UID.CTImageStorage, "1.2.840.10008.1.2.2")];
+        let bytes = base.concatv(data.preamble,
+            data.fmiGroupLength(data.fmiVersion(), data.mediaStorageSOPClassUID(), data.mediaStorageSOPInstanceUID(), data.transferSyntaxUID()),
+            data.fmiVersion(), data.mediaStorageSOPClassUID(), data.mediaStorageSOPInstanceUID(), data.transferSyntaxUID());
+
+        return util.expectDicomError(() => util.testParts(bytes, pipe(parseFlow(), validateContextFlow(contexts)), parts => {}));
+    });
+
+    it("should not accept a file with no SOPCLassUID if a context is given", function () {
+        let contexts = [new ValidationContext(UID.CTImageStorage, UID.ExplicitVRLittleEndian)];
+        let bytes = base.concatv(data.preamble,
+            data.fmiGroupLength(data.fmiVersion(), data.mediaStorageSOPInstanceUID(), data.transferSyntaxUID()),
+            data.fmiVersion(), data.mediaStorageSOPInstanceUID(), data.transferSyntaxUID());
+
+        return util.expectDicomError(() => util.testParts(bytes, pipe(parseFlow(), validateContextFlow(contexts)), parts => {}));
+    });
+
+    it("should not accept a file with no TransferSyntaxUID if a context is given", function () {
+        let contexts = [new ValidationContext(UID.CTImageStorage, UID.ExplicitVRLittleEndian)];
+        let bytes = base.concatv(data.preamble,
+            data.fmiGroupLength(data.fmiVersion(), data.mediaStorageSOPClassUID(), data.mediaStorageSOPInstanceUID()),
+            data.fmiVersion(), data.mediaStorageSOPClassUID(), data.mediaStorageSOPInstanceUID());
+
+        return util.expectDicomError(() => util.testParts(bytes, pipe(parseFlow(), validateContextFlow(contexts)), parts => {}));
+    });
+
+    it("should not accept DICOM data if no valid contexts are given", function () {
+        let contexts = [];
+        let bytes = base.concatv(data.preamble,
+            data.fmiGroupLength(data.fmiVersion(), data.mediaStorageSOPClassUID(), data.mediaStorageSOPInstanceUID(), data.transferSyntaxUID()),
+            data.fmiVersion(), data.mediaStorageSOPClassUID(), data.mediaStorageSOPInstanceUID(), data.transferSyntaxUID());
+
+        return util.expectDicomError(() => util.testParts(bytes, pipe(parseFlow(), validateContextFlow(contexts)), parts => {}));
     });
 });
 
