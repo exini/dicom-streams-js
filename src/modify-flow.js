@@ -74,8 +74,7 @@ function modifyFlow(modifications, insertions, logGroupLengthWarnings) {
             return bytes.length > 0 ? [new ValueChunk(this.bigEndian, bytes, true)] : [];
         }
 
-        headerAndValueParts(tagPath, modification) {
-            let valueBytes = modification(base.emptyBuffer);
+        headerAndValueParts(tagPath, valueBytes) {
             let vr = dictionary.vrOf(tagPath.tag());
             if (vr === VR.UN) throw Error("Tag is not present in dictionary, cannot determine value representation");
             if (vr === VR.SQ) throw Error("Cannot insert sequences");
@@ -96,7 +95,7 @@ function modifyFlow(modifications, insertions, logGroupLengthWarnings) {
             return base.flatten(this.currentInsertions
                 .filter(i => this.isBetween(this.latestTagPath, i.tagPath, this.tagPath))
                 .filter(i => this.isInDataset(i.tagPath, this.tagPath))
-                .map(i => this.headerAndValueParts(i.tagPath, () => i.insertion(undefined))));
+                .map(i => this.headerAndValueParts(i.tagPath, base.padToEvenLength(i.insertion(undefined), i.tagPath.tag()))));
         }
 
         findModifyPart(header) {
@@ -148,7 +147,7 @@ function modifyFlow(modifications, insertions, logGroupLengthWarnings) {
                 if (this.currentModification !== undefined && this.currentHeader !== undefined) {
                     this.value = base.concat(this.value, part.bytes);
                     if (part.last) {
-                        let newValue = this.currentModification.modification(this.value);
+                        let newValue = base.padToEvenLength(this.currentModification.modification(this.value), this.currentHeader.vr);
                         let newHeader = this.currentHeader.withUpdatedLength(newValue.length);
                         this.currentModification = undefined;
                         this.currentHeader = undefined;
@@ -170,7 +169,7 @@ function modifyFlow(modifications, insertions, logGroupLengthWarnings) {
                 return base.flatten(this.currentInsertions
                     .filter(i => i.tagPath.isRoot())
                     .filter(m => this.latestTagPath.isBelow(m.tagPath))
-                    .map(m => this.headerAndValueParts(m.tagPath, () => m.insertion(undefined))))
+                    .map(m => this.headerAndValueParts(m.tagPath, base.padToEvenLength(m.insertion(undefined), m.tagPath.tag()))))
         }
     });
 }

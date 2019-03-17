@@ -504,7 +504,7 @@ class ElementsBuilder {
 
     addElement(element) {
         if (element instanceof ValueElement && element.tag === Tag.SpecificCharacterSet)
-            this.characterSets = CharacterSets.fromBytes(element.value.toBytes());
+            this.characterSets = CharacterSets.fromBytes(element.value.bytes);
         if (element instanceof ValueElement && element.tag === Tag.TimezoneOffsetFromUTC) {
             let newOffset = parseZoneOffset(element.value.toSingleString(VR.SH, element.bigEndian, this.characterSets));
             this.zoneOffset = isNaN(newOffset) ? this.zoneOffset : newOffset;
