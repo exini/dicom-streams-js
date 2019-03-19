@@ -8,7 +8,7 @@ const {parseFlow} = require("../src/dicom-parser");
 const {modifyFlow, TagInsertion, TagModification, TagModificationsPart} = require("../src/modify-flow");
 const {prependFlow} = require("../src/flows");
 const data = require("./test-data");
-const util = require("./util");
+const util = require("./test-util");
 
 describe("The modify flow", function () {
     it("should modify the value of the specified elements", function () {

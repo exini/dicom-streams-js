@@ -16,7 +16,7 @@ const {
     toUtf8Flow, toBytesFlow
 } = require("../src/dicom-flows");
 const data = require("./test-data");
-const util = require("./util");
+const util = require("./test-util");
 
 describe("The DICOM group length discard filter", function () {
     it("should discard group length elements except 0002,0000", function () {

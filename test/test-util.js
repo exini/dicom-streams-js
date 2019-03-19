@@ -1,5 +1,5 @@
 const {Readable, Writable, pipeline} = require("readable-stream");
-const {promisify} = require("util");
+const {promisify} = require("test/test-util");
 const zlib = require("zlib");
 const assert = require("assert");
 const {PreamblePart, HeaderPart, ItemDelimitationPart, ItemPart, SequenceDelimitationPart, SequencePart, ValueChunk,

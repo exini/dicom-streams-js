@@ -9,7 +9,7 @@ const {parseFlow} = require("../src/dicom-parser");
 const {elementFlow} = require("../src/element-flows");
 const {elementSink} = require("../src/element-sink");
 const data = require("./test-data");
-const util = require("./util");
+const util = require("./test-util");
 
 describe("An element sink", function () {
 

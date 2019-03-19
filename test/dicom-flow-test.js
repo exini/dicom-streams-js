@@ -10,7 +10,7 @@ const {create, IdentityFlow, DeferToPartFlow, StartEvent, EndEvent, InFragments,
     GuaranteedDelimitationEvents, TagPathTracking, GroupLengthWarnings, dicomStartMarker, dicomEndMarker} = require("../src/dicom-flow");
 const {toIndeterminateLengthSequences} = require("../src/dicom-flows");
 const data = require("./test-data");
-const util = require("./util");
+const util = require("./test-util");
 
 describe("The dicom flow", function () {
     it("should call the correct events for streamed dicom parts", function () {

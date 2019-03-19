@@ -6,7 +6,7 @@ const {TagPath} = require("../src/tag-path");
 const {parseFlow} = require("../src/dicom-parser");
 const {collectFlow, collectFromTagPathsFlow} = require("../src/collect-flow");
 const data = require("./test-data");
-const util = require("./util");
+const util = require("./test-util");
 
 describe("A collect elements flow", function () {
     it("should first produce an elements part followed by the input dicom parts", function () {

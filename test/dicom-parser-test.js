@@ -5,7 +5,7 @@ const VR = require("../src/vr");
 const UID = require("../src/uid");
 const {parseFlow} = require("../src/dicom-parser");
 const data = require("./test-data");
-const util = require("./util");
+const util = require("./test-util");
 const {Chunker} = require("./chunker");
 
 describe("DICOM parse flow", function () {

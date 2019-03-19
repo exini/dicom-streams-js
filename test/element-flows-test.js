@@ -3,7 +3,7 @@ const base = require("../src/base");
 const Tag = require("../src/tag");
 const {parseFlow} = require("../src/dicom-parser");
 const data = require("./test-data");
-const util = require("./util");
+const util = require("./test-util");
 const {elementFlow} = require("../src/element-flows");
 const {printFlow} = require("../src/flows");
 
