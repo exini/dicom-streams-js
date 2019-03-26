@@ -7,7 +7,6 @@ module.exports = {
     TagPath: require("./tag-path"),
     TagTree: require("./tag-tree"),
     parts: require("./parts"),
-    parsing: require("./parsing"),
     CharacterSets: require("./character-sets"),
     parser: require("./dicom-parser"),
     flow: require("./dicom-flow"),

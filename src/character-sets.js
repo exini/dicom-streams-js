@@ -7,14 +7,37 @@ class CharacterSets {
             console.warn("Charsets ISO 2022 IR 13, ISO 2022 IR 87 and ISO 2022 IR 159 not supported. Characters may not be displayed correctly.");
         this.charsetExtensionsEnabled = charsetNames.length > 1;
         this.charsetObjs = charsetNames.map(s => charsetsMap[s]).filter(o => o !== undefined);
-        this.initialCharset = this.charsetObjs.length > 0 ? this.charsetObjs[0] : defaultCharsetObj;
+        this.initialCharset = this.charsetObjs.length > 0 ? this.charsetObjs[0] : new CharsetObj("ISO-8859-1", 1);
+    }
+
+    static isVrAffectedBySpecificCharacterSet(vr) {
+        return vr === VR.LO || vr === VR.LT || vr === VR.PN || vr === VR.SH || vr === VR.ST || vr === VR.UT;
+    }
+
+    static fromName(name) {
+        return new CharacterSets([name]);
+    }
+
+    static fromNames(names) {
+        return new CharacterSets(names);
+    }
+
+    static fromBytes(specificCharacterSetBytes) {
+        return !specificCharacterSetBytes || specificCharacterSetBytes.length === 0 ? CharacterSets.defaultOnly() : new CharacterSets(specificCharacterSetBytes.toString().split("\\"));
+    }
+
+    static encode(s) {
+        return Buffer.from(s, "utf8");
+    }
+
+    static defaultOnly() {
+        return new CharacterSets([""]);
     }
 
     decode(bytes, vr) {
-        if (vr)
-            return isVrAffectedBySpecificCharacterSet(vr) ? this.decode(bytes) : defaultOnly.decode(bytes);
-        else
-            return this.charsetExtensionsEnabled ? this.decodeWithExtensions(bytes) : this.initialCharset.isJp ? jconv.decode(bytes, this.initialCharset.charset) : iconv.decode(bytes, this.initialCharset.charset);
+        return vr ?
+            CharacterSets.isVrAffectedBySpecificCharacterSet(vr) ? this.decode(bytes) : CharacterSets.defaultOnly().decode(bytes) :
+            this.charsetExtensionsEnabled ? this.decodeWithExtensions(bytes) : iconv.decode(bytes, this.initialCharset.charset);
     }
 
     decodeWithExtensions(b) {
@@ -113,34 +136,6 @@ const escToCharset = Object.values(charsetsMap)
     }, {});
 escToCharset[0x284a + ""] = escToCharset[0x2949 + ""]; // ISO 2022 IR 13 has two escape sequences
 
-const utf8Charset = "utf8";
-const defaultCharset = "ISO-8859-1";
-const defaultCharsetObj = new CharsetObj(defaultCharset, 1);
-const defaultOnly = new CharacterSets([""]);
-
-const isVrAffectedBySpecificCharacterSet = function (vr) {
-    return vr === VR.LO || vr === VR.LT || vr === VR.PN || vr === VR.SH || vr === VR.ST || vr === VR.UT;
-};
-
-const fromName = function (name) {
-    return new CharacterSets([name]);
-};
-
-const fromNames = function (names) {
-    return new CharacterSets(names);
-};
-
-const fromBytes = function (specificCharacterSetBytes) {
-    return !specificCharacterSetBytes || specificCharacterSetBytes.length === 0 ? defaultOnly : new CharacterSets(specificCharacterSetBytes.toString(utf8Charset));
-};
-
-const encode = function (s) {
-    return Buffer.from(s, utf8Charset);
-};
-
 module.exports = {
-    fromName: fromName,
-    fromNames: fromNames,
-    fromBytes: fromBytes,
-    encode: encode
+    CharacterSets: CharacterSets
 };

@@ -14,7 +14,7 @@ class Detour extends Transform {
 
     setDetour(detour, initialChunk) {
         this.detour = detour;
-        if (this.detourFlow) {
+        if (this.detourFlow !== undefined) {
             if (this.detour) {
                 this.detourFlow.on("data", chunk => this.process(chunk));
                 this.detourFlow.once("end", () => this.cleanup());
@@ -22,29 +22,30 @@ class Detour extends Transform {
             } else
                 this.detourFlow.end();
         }
-        if (initialChunk && initialChunk.length)
-            if (detour && this.detourFlow)
+        if (initialChunk !== undefined && (initialChunk.length === undefined || initialChunk.length > 0))
+            if (detour && this.detourFlow !== undefined)
                 this.detourFlow.write(initialChunk);
             else
                 this.write(initialChunk)
     }
 
     process(chunk) {
-        throw new Error("Must implement process function");
+        throw Error("Must implement process function");
     }
 
     cleanup() {
     }
 
     _transform(chunk, encoding, callback) {
-        if (this.detour && this.detourFlow)
+        if (this.detour !== undefined && this.detourFlow !== undefined) {
             if (!this.detourFlow.write(chunk))
                 this.detourFlow.once("drain", callback);
             else
-                callback();
-        else
+                process.nextTick(() => callback());
+        } else {
             this.process(chunk);
             callback();
+        }
     }
 
     _flush(callback) {
@@ -53,10 +54,12 @@ class Detour extends Transform {
             this.detourFlow.end();
         } else {
             this.cleanup();
-            callback();
+            process.nextTick(() => callback());
         }
     }
 
 }
 
-module.exports = Detour;
+module.exports = {
+    Detour: Detour
+};

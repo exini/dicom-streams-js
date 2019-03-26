@@ -1,5 +1,5 @@
 const base = require("./base");
-const Detour = require("./detour");
+const {Detour} = require("./detour");
 
 class ByteParser extends Detour {
 
@@ -106,15 +106,16 @@ class ParseStep {
     }
 
     onTruncation(reader) {
-        throw new Error(reader.remainingSize() + " bytes remain after finished parsing");
+        throw Error(reader.remainingSize() + " bytes remain after finished parsing");
     }
 }
 
-const finishedParser = new class extends ParseStep {
+class FinishedParser extends ParseStep {
     parse(reader) {
-        throw new Error("No initial parser installed: you must use startWith(...)")
+        throw Error("No initial parser installed: you must use startWith(...)")
     }
-}();
+}
+const finishedParser = new FinishedParser();
 
 class ParseResult {
     constructor(result, nextStep) {

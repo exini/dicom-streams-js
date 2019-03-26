@@ -1,10 +1,10 @@
 class TagPathLike {
 
-    tag() { throw new Error("Not implemented"); };
+    tag() { throw Error("Not implemented"); };
 
-    previous() { throw new Error("Not implemented"); };
+    previous() { throw Error("Not implemented"); };
 
-    isEmpty() { throw new Error("Not implemented"); };
+    isEmpty() { throw Error("Not implemented"); };
 
     isRoot() { return this.previous().isEmpty(); };
 
@@ -40,8 +40,10 @@ class TagPathLike {
         return takeRec(this, this.depth() - n);
     }
 
-   drop(n) { throw new Error("Not implemented"); }
+   drop(n) { throw Error("Not implemented"); }
 
 }
 
-module.exports = TagPathLike;
+module.exports = {
+    TagPathLike: TagPathLike
+};

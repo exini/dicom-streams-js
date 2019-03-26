@@ -1,5 +1,5 @@
 const assert = require("assert");
-const TagPathLike = require("../src/tag-path-like");
+const {TagPathLike} = require("../src/tag-path-like");
 const Tag = require("../src/tag");
 
 class TestTagPath extends TagPathLike {
@@ -13,11 +13,12 @@ class TestTagPath extends TagPathLike {
     isEmpty() { return false; }
 }
 
-const emptyTagPath = new class extends TagPathLike {
-    tag() { throw new Error("Empty tag path"); }
+class EmptyTagPath extends TagPathLike {
+    tag() { throw Error("Empty tag path"); }
     previous() { return this; }
     isEmpty() { return true; }
-}();
+}
+const emptyTagPath = new EmptyTagPath();
 
 
 describe("The tag path depth", function () {

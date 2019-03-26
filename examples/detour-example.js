@@ -1,5 +1,5 @@
 const {Readable, Transform} = require("readable-stream");
-const Detour = require("../src/detour");
+const {Detour} = require("../src/detour");
 const {objectToStringFlow} = require("../src/flows");
 
 class Inner extends Transform {

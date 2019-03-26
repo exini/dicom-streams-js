@@ -1,4 +1,4 @@
-const TagPathLike = require("./tag-path-like");
+const {TagPathLike} = require("./tag-path-like");
 const {TagPathTag, TagPathItem, TagPathItemEnd, TagPathSequence, TagPathSequenceEnd} = require("./tag-path");
 const base = require("./base");
 const dictionary = require("./dictionary");
@@ -8,6 +8,80 @@ class TagTree extends TagPathLike {
         super();
         this._tag = tag;
         this._previous = previous;
+    }
+
+    static fromTag(tag) { return emptyTagTree.thenTag(tag); }
+    static fromAnyItem(tag) { return emptyTagTree.thenAnyItem(tag); }
+    static fromItem(tag, item) { return emptyTagTree.thenItem(tag, item); }
+
+    static fromPath(tagPath) {
+        let root = undefined;
+        let p = tagPath.head();
+        if (p instanceof TagPathTag) root = TagTree.fromTag(p.tag());
+        else if (p instanceof TagPathItem) root = TagTree.fromItem(p.tag(), p.item);
+        else if (p instanceof TagPathItemEnd) root = TagTree.fromItem(p.tag(), p.item);
+        else if (p instanceof TagPathSequence) root = TagTree.fromAnyItem(p.tag());
+        else if (p instanceof TagPathSequenceEnd) root = TagTree.fromAnyItem(p.tag());
+        else root = emptyTagTree;
+
+        return tagPath.drop(1).toList().reduce((t, p) => {
+            if (t instanceof TagTreeTrunk && p instanceof TagPathTag) return t.thenTag(p.tag());
+            if (t instanceof TagTreeTrunk && p instanceof TagPathItem) return t.thenItem(p.tag(), p.item);
+            if (t instanceof TagTreeTrunk && p instanceof TagPathItemEnd) return t.thenItem(p.tag(), p.item);
+            if (t instanceof TagTreeTrunk && p instanceof TagPathSequence) return t.thenAnyItem(p.tag());
+            if (t instanceof TagTreeTrunk && p instanceof TagPathSequenceEnd) return t.thenAnyItem(p.tag());
+            return t;
+        }, root);
+    }
+
+    static parse(s) {
+        let isSeq = function(s) { return s[s.length - 1] === "]"; };
+        let indexPart = function(s) { return s.substring(s.lastIndexOf("[") + 1, s.length - 1); };
+        let tagPart = function(s) { return s.substring(0, s.indexOf("[")); };
+        let parseTag = function(s) {
+            try {
+                return dictionary.tagOf(s);
+            } catch (error) {
+                if (s.length === 11 && s[0] === "(" && s[5] === "," && s[10] === ")") {
+                    let i = parseInt(s.substring(1, 5) + s.substring(6, 10), 16);
+                    if (!isNaN(i)) return i;
+                }
+                throw Error(s + " is not a tag or name string");
+            }
+        };
+        let parseIndex = function(s) {
+            if (s === "*") return undefined;
+            let i = parseInt(s);
+            if (isNaN(i)) throw Error(s + " is not a number");
+            return i;
+        };
+        let createTag = function(s) { return TagTree.fromTag(parseTag(s)); };
+        let addTag = function(s, path) { return path.thenTag(parseTag(s)); };
+        let createSeq = function(s) {
+            let tag = parseTag(tagPart(s));
+            let index = parseIndex(indexPart(s));
+            return index === undefined ? TagTree.fromAnyItem(tag) : TagTree.fromItem(tag, index);
+        };
+        let addSeq = function(s, path) {
+            let tag = parseTag(tagPart(s));
+            let index = parseIndex(indexPart(s));
+            return index === undefined ? path.thenAnyItem(tag) : path.thenItem(tag, index);
+        };
+
+        let tags = s.indexOf(".") > 0 ? s.split(".") : [s];
+        let seqTags = tags.length > 1 ? tags.slice(0, tags.length - 1) : []; // list of sequence tags, if any
+        let lastTag = tags[tags.length - 1]; // tag or sequence
+        try {
+            let first = seqTags.length > 0 ? seqTags[0] : undefined;
+            if (first) {
+                let tree = seqTags.slice(1, seqTags.length).reduce((tree, tag) => addSeq(tag, tree), createSeq(first));
+                if (tree !== undefined) return isSeq(lastTag) ? addSeq(lastTag, tree) : addTag(lastTag, tree);
+                return isSeq(lastTag) ? createSeq(lastTag) : createTag(lastTag);
+            }
+            return createTag(lastTag);
+        } catch (error) {
+            throw Error("Tag tree could not be parsed: " + error.message);
+        }
     }
 
     tag() { return this._tag; }
@@ -108,9 +182,9 @@ class TagTree extends TagPathLike {
                 return emptyTagTree;
             if (i === 0) {
                 if (tree.isEmpty()) return emptyTagTree;
-                if (tree instanceof TagTreeItem) return fromItem(tree.tag(), tree.item);
-                if (tree instanceof TagTreeAnyItem) return fromAnyItem(tree.tag());
-                return fromTag(tree.tag());
+                if (tree instanceof TagTreeItem) return TagTree.fromItem(tree.tag(), tree.item);
+                if (tree instanceof TagTreeAnyItem) return TagTree.fromAnyItem(tree.tag());
+                return TagTree.fromTag(tree.tag());
             }
             let t = dropRec(tree.previous(), i - 1);
             if (tree instanceof TagTreeItem) return t.thenItem(tree.tag(), tree.item);
@@ -145,10 +219,11 @@ class TagTreeTrunk extends TagTree {
     thenItem(tag, item) { return new TagTreeItem(tag, item, this); }
 }
 
-const emptyTagTree = new class extends TagTreeTrunk {
-    tag() { throw new Error("Empty tag tree"); }
+class EmptyTagTree extends TagTreeTrunk {
+    tag() { throw Error("Empty tag tree"); }
     previous() { return emptyTagTree; }
-}();
+}
+const emptyTagTree = new EmptyTagTree(-1, null);
 
 class TagTreeTag extends TagTree {
     constructor(tag, previous) {
@@ -169,89 +244,11 @@ class TagTreeItem extends TagTreeTrunk {
     }
 }
 
-const fromTag = function(tag) { return emptyTagTree.thenTag(tag); };
-const fromAnyItem = function(tag) { return emptyTagTree.thenAnyItem(tag) };
-const fromItem = function(tag, item) { return emptyTagTree.thenItem(tag, item) };
-
-const fromPath = function(tagPath) {
-    let root = undefined;
-    let p = tagPath.head();
-    if (p instanceof TagPathTag) root = fromTag(p.tag());
-    else if (p instanceof TagPathItem) root = fromItem(p.tag(), p.item);
-    else if (p instanceof TagPathItemEnd) root = fromItem(p.tag(), p.item);
-    else if (p instanceof TagPathSequence) root = fromAnyItem(p.tag());
-    else if (p instanceof TagPathSequenceEnd) root = fromAnyItem(p.tag());
-    else root = emptyTagTree;
-
-    return tagPath.drop(1).toList().reduce((t, p) => {
-        if (t instanceof TagTreeTrunk && p instanceof TagPathTag) return t.thenTag(p.tag());
-        if (t instanceof TagTreeTrunk && p instanceof TagPathItem) return t.thenItem(p.tag(), p.item);
-        if (t instanceof TagTreeTrunk && p instanceof TagPathItemEnd) return t.thenItem(p.tag(), p.item);
-        if (t instanceof TagTreeTrunk && p instanceof TagPathSequence) return t.thenAnyItem(p.tag());
-        if (t instanceof TagTreeTrunk && p instanceof TagPathSequenceEnd) return t.thenAnyItem(p.tag());
-        return t;
-    }, root);
-};
-
-const parse = function(s) {
-    let isSeq = function(s) { return s[s.length - 1] === "]"; };
-    let indexPart = function(s) { return s.substring(s.lastIndexOf("[") + 1, s.length - 1); };
-    let tagPart = function(s) { return s.substring(0, s.indexOf("[")); };
-    let parseTag = function(s) {
-        try {
-            return dictionary.tagOf(s);
-        } catch (error) {
-            if (s.length === 11 && s[0] === "(" && s[5] === "," && s[10] === ")") {
-                let i = parseInt(s.substring(1, 5) + s.substring(6, 10), 16);
-                if (!isNaN(i)) return i;
-            }
-            throw new Error(s + " is not a tag or name string");
-        }
-    };
-    let parseIndex = function(s) {
-        if (s === "*") return undefined;
-        let i = parseInt(s);
-        if (isNaN(i)) throw new Error(s + " is not a number");
-        return i;
-    };
-    let createTag = function(s) { return fromTag(parseTag(s)); };
-    let addTag = function(s, path) { return path.thenTag(parseTag(s)); };
-    let createSeq = function(s) {
-        let tag = parseTag(tagPart(s));
-        let index = parseIndex(indexPart(s));
-        return index === undefined ? fromAnyItem(tag) : fromItem(tag, index);
-    };
-    let addSeq = function(s, path) {
-        let tag = parseTag(tagPart(s));
-        let index = parseIndex(indexPart(s));
-        return index === undefined ? path.thenAnyItem(tag) : path.thenItem(tag, index);
-    };
-
-    let tags = s.indexOf(".") > 0 ? s.split(".") : [s];
-    let seqTags = tags.length > 1 ? tags.slice(0, tags.length - 1) : []; // list of sequence tags, if any
-    let lastTag = tags[tags.length - 1]; // tag or sequence
-    try {
-        let first = seqTags.length > 0 ? seqTags[0] : undefined;
-        if (first) {
-            let tree = seqTags.slice(1, seqTags.length).reduce((tree, tag) => addSeq(tag, tree), createSeq(first));
-            if (tree !== undefined) return isSeq(lastTag) ? addSeq(lastTag, tree) : addTag(lastTag, tree);
-            return isSeq(lastTag) ? createSeq(lastTag) : createTag(lastTag);
-        }
-        return createTag(lastTag);
-    } catch (error) {
-        throw new Error("Tag tree could not be parsed: " + error.message);
-    }
-};
-
 module.exports = {
     emptyTagTree: emptyTagTree,
     TagTreeTrunk: TagTreeTrunk,
+    TagTree: TagTree,
     TagTreeTag: TagTreeTag,
     TagTreeItem: TagTreeItem,
-    TagTreeAnyItem: TagTreeAnyItem,
-    fromTag: fromTag,
-    fromItem: fromItem,
-    fromAnyItem: fromAnyItem,
-    fromPath: fromPath,
-    parse: parse
+    TagTreeAnyItem: TagTreeAnyItem
 };

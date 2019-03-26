@@ -1,33 +1,52 @@
 const dictionary = require("./dictionary");
 const Tag = require("./tag");
+const UID = require("./uid");
+const {CharacterSets} = require("./character-sets");
 
 const indeterminateLength = 0xFFFFFFFF;
 const zero4Bytes = Buffer.from([0, 0, 0, 0]);
 
-function concat(a, b) {
-    return Buffer.concat([a, b], a.length + b.length);
+function concat(a, b) { return Buffer.concat([a, b], a.length + b.length); }
+function concatv(...buffers) { return Buffer.concat(buffers); }
+function flatten(array) { return [].concat.apply([], array); }
+function appendToArray(object, array) {
+    let newArray = array.slice();
+    newArray.push(object);
+    return newArray;
+}
+function prependToArray(object, array) {
+    let newArray = array.slice();
+    newArray.unshift(object);
+    return newArray;
+}
+function concatArrays(array1, array2) {
+    let newArray = array1.slice();
+    array2.forEach(i => newArray.push(i));
+    return newArray;
 }
 
-function concatv(...buffers) {
-    return Buffer.concat(buffers);
-}
-
-function intToBytesBE(i) { return Buffer.from([i >> 24, i >> 16, i >> 8, i]); }
-function intToBytesLE(i) { return Buffer.from([i, i >> 8, i >> 16, i >> 24]); }
 function tagToBytesBE(tag) { return intToBytesBE(tag); }
 function tagToBytesLE(tag) { return Buffer.from([tag >> 16, tag >> 24, tag, tag >> 8]); }
+function intToBytesBE(i) { return Buffer.from([i >> 24, i >> 16, i >> 8, i]); }
+function intToBytesLE(i) { return Buffer.from([i, i >> 8, i >> 16, i >> 24]); }
 
 const self = module.exports = {
-    shiftLeftUnsigned: function(num, n) {
-        return num << n >>> 0;
-    },
-    trim: function(s) {
-        return s.replace(/[\x00-\x20]*$/g, "");
-    },
+    multiValueDelimiter: "\\",
+    indeterminateLength: indeterminateLength,
+
+    emptyBuffer: Buffer.alloc(0),
+    zero4Bytes: zero4Bytes,
+
+    toUInt32: function(num) { return num >>> 0 },
+    toInt32: function(num) { return num >> 0 },
+    shiftLeftUnsigned: function(num, n) { return self.toUInt32(num << n); },
+
     concat: concat,
     concatv: concatv,
-
-    indeterminateLength: indeterminateLength,
+    flatten: flatten,
+    appendToArray: appendToArray,
+    prependToArray: prependToArray,
+    concatArrays: concatArrays,
 
     groupNumber: function (tag) { return tag >>> 16; },
     elementNumber: function (tag) { return tag & 0xFFFF; },
@@ -47,6 +66,12 @@ const self = module.exports = {
     bytesToUInt: function (bytes, bigEndian) { return bigEndian ? self.bytesToUIntBE(bytes) : self.bytesToUIntLE(bytes); },
     bytesToUIntBE: function (bytes) { return bytes.readUInt32BE(0); },
     bytesToUIntLE: function (bytes) { return bytes.readUInt32LE(0); },
+    bytesToFloat: function(bytes, bigEndian) { return bigEndian ? self.bytesToFloatBE(bytes) : self.bytesToFloatLE(bytes); },
+    bytesToFloatBE: function(bytes) { return bytes.readFloatBE(0); },
+    bytesToFloatLE: function(bytes) { return bytes.readFloatLE(0); },
+    bytesToDouble: function(bytes, bigEndian) { return bigEndian ? self.bytesToDoubleBE(bytes) : self.bytesToDoubleLE(bytes); },
+    bytesToDoubleBE: function(bytes) { return bytes.readDoubleBE(0); },
+    bytesToDoubleLE: function(bytes) { return bytes.readDoubleLE(0); },
 
     shortToBytes(i, bigEndian) { return bigEndian ? self.shortToBytesBE(i) : self.shortToBytesLE(i); },
     shortToBytesBE: function(i) { return Buffer.from([i >> 8, i]); },
@@ -61,16 +86,27 @@ const self = module.exports = {
     tagToBytesBE: tagToBytesBE,
     tagToBytesLE: tagToBytesLE,
 
-    emptyBuffer: Buffer.alloc(0),
+    floatToBytes: function(f, bigEndian) {
+        const buf = Buffer.allocUnsafe(4);
+        if (bigEndian) buf.writeFloatBE(f, 0); else buf.writeFloatLE(f, 0);
+        return buf;
+    },
+    doubleToBytes: function(f, bigEndian) {
+        const buf = Buffer.allocUnsafe(8);
+        if (bigEndian) buf.writeDoubleBE(f, 0); else buf.writeDoubleLE(f, 0);
+        return buf;
+    },
 
     tagToString: function(tag) {
         let hex = ("00000000" + tag.toString(16)).slice(-8);
         return "(" + hex.slice(0, 4) + "," + hex.slice(4, 8) + ")";
     },
 
+    trim: function(s) { return s.replace(/^[\x00-\x20]*/g, "").replace(/[\x00-\x20]*$/g, ""); },
+
     padToEvenLength(bytes, tagOrVR) {
         let vr = isNaN(tagOrVR) ? tagOrVR : dictionary.vrOf(tagOrVR);
-        return (bytes.length & 1) !== 0 ? concat(bytes, Buffer.from([vr.paddingByte])) : bytes;
+        return (bytes.length & 1) !== 0 ? self.concat(bytes, Buffer.from([vr.paddingByte])) : bytes;
     },
 
     itemLE: concat(tagToBytesLE(Tag.Item), intToBytesLE(indeterminateLength)),
@@ -78,7 +114,7 @@ const self = module.exports = {
     item: function(length, bigEndian) {
         bigEndian = bigEndian === undefined ? false : bigEndian;
         length = length === undefined ? indeterminateLength : length;
-        return length === indeterminateLength ? bigEndian ? self.itemBE : self.itemLE : concat(self.tagToBytes(Tag.Item, bigEndian), self.intToBytes(length, bigEndian));
+        return length === indeterminateLength ? bigEndian ? self.itemBE : self.itemLE : self.concat(self.tagToBytes(Tag.Item, bigEndian), self.intToBytes(length, bigEndian));
     },
 
     itemDelimitationLE: concat(tagToBytesLE(Tag.ItemDelimitationItem), zero4Bytes),
@@ -88,6 +124,12 @@ const self = module.exports = {
     sequenceDelimitationLE: concat(tagToBytesLE(Tag.SequenceDelimitationItem), zero4Bytes),
     sequenceDelimitationBE: concat(tagToBytesBE(Tag.SequenceDelimitationItem), zero4Bytes),
     sequenceDelimitation: function(bigEndian) { return bigEndian ? self.sequenceDelimitationBE : self.sequenceDelimitationLE; },
-    sequenceDelimitationNonZeroLength: function(bigEndian) { return concatv(self.tagToBytes(Tag.SequenceDelimitationItem, bigEndian), self.intToBytes(0x00000010, bigEndian)); }
+    sequenceDelimitationNonZeroLength: function(bigEndian) { return self.concatv(self.tagToBytes(Tag.SequenceDelimitationItem, bigEndian), self.intToBytes(0x00000010, bigEndian)); },
 
+    isFileMetaInformation: function(tag) { return (tag & 0xFFFF0000) === 0x00020000; },
+    isGroupLength: function(tag) { return self.elementNumber(tag) === 0; },
+    isDeflated: function(transferSyntaxUid) { return transferSyntaxUid === UID.DeflatedExplicitVRLittleEndian || transferSyntaxUid === UID.JPIPReferencedDeflate; },
+
+    systemZone: new Date().getTimezoneOffset(),
+    defaultCharacterSet: CharacterSets.defaultOnly()
 };

@@ -5,7 +5,7 @@ function identityFlow(objectMode) {
         objectMode: objectMode === undefined ? false : objectMode,
         transform(chunk, encoding, callback) {
             this.push(chunk);
-            callback();
+            process.nextTick(() => callback());
         }
     });
 }
@@ -16,7 +16,7 @@ function printFlow(objectMode) {
         transform(chunk, encoding, callback) {
             console.log(chunk);
             this.push(chunk);
-            callback();
+            process.nextTick(() => callback());
         }
     });
 }
@@ -31,7 +31,7 @@ function prependFlow(prependChunk, objectMode) {
                 this.hasEmitted = true;
             }
             this.push(chunk);
-            callback();
+            process.nextTick(() => callback());
         }
     });
 }
@@ -41,11 +41,11 @@ function appendFlow(appendChunk, objectMode) {
         objectMode: objectMode === undefined ? false : objectMode,
         transform(chunk, encoding, callback) {
             this.push(chunk);
-            callback();
+            process.nextTick(() => callback());
         },
         flush(callback) {
             this.push(appendChunk);
-            callback();
+            process.nextTick(() => callback());
         }
     });
 }
@@ -55,7 +55,7 @@ function objectToStringFlow(toStringFunction) {
         writableObjectMode: true,
         transform(chunk, encoding, callback) {
             this.push(toStringFunction(chunk) + "\n");
-            callback();
+            process.nextTick(() => callback());
         }
     });
 }
@@ -64,9 +64,13 @@ function mapConcatFlow(toChunks) {
     return new Transform({
         objectMode: true,
         transform(chunk, encoding, callback) {
-            for (let outChunk of toChunks(chunk))
-                this.push(outChunk);
-            callback();
+            try {
+                for (let outChunk of toChunks(chunk))
+                    this.push(outChunk);
+                process.nextTick(() => callback());
+            } catch (error) {
+                process.nextTick(() => this.emit("error", error));
+            }
         }
     });
 }

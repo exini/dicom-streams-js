@@ -3,18 +3,18 @@ const base = require("../src/base");
 const Tag = require("../src/tag");
 const VR = require("../src/vr");
 const UID = require("../src/uid");
-const parser = require("../src/dicom-parser");
+const {parseFlow} = require("../src/dicom-parser");
 const data = require("./test-data");
-const util = require("./util");
-const Chunker = require("./chunker");
+const util = require("./test-util");
+const {Chunker} = require("./chunker");
 
 describe("DICOM parse flow", function () {
 
     it("should produce a preamble, FMI tags and dataset tags for a complete DICOM file", function () {
         let bytes = base.concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()), data.transferSyntaxUID(), data.patientNameJohnDoe());
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectPreamble()
                 .expectHeader(Tag.FileMetaInformationGroupLength)
                 .expectValueChunk()
@@ -29,8 +29,8 @@ describe("DICOM parse flow", function () {
     it("should read files without preamble but with FMI", function () {
         let bytes = base.concatv(data.fmiGroupLength(data.transferSyntaxUID()), data.transferSyntaxUID(), data.patientNameJohnDoe());
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectHeader(Tag.FileMetaInformationGroupLength)
                 .expectValueChunk()
                 .expectHeader(Tag.TransferSyntaxUID)
@@ -41,11 +41,25 @@ describe("DICOM parse flow", function () {
         });
     });
 
+    it("should read a file with only FMI", function () {
+        let bytes = base.concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()), data.transferSyntaxUID());
+
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
+                .expectPreamble()
+                .expectHeader(Tag.FileMetaInformationGroupLength)
+                .expectValueChunk()
+                .expectHeader(Tag.TransferSyntaxUID)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
     it("should read a file with neither FMI nor preamble", function () {
         let bytes = data.patientNameJohnDoe();
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
                 .expectDicomComplete();
@@ -55,8 +69,8 @@ describe("DICOM parse flow", function () {
     it("should not output value chunks when value length is zero", function () {
         let bytes = Buffer.from([8, 0, 32, 0, 68, 65, 0, 0, 16, 0, 16, 0, 80, 78, 0, 0]);
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectHeader(Tag.StudyDate)
                 .expectHeader(Tag.PatientName)
                 .expectDicomComplete();
@@ -66,8 +80,8 @@ describe("DICOM parse flow", function () {
     it("should output a warning id when non-meta information is included in the header", function () {
         let bytes = base.concatv(data.fmiGroupLength(data.transferSyntaxUID(), data.studyDate()), data.transferSyntaxUID(), data.studyDate());
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectHeader(Tag.FileMetaInformationGroupLength)
                 .expectValueChunk()
                 .expectHeader(Tag.TransferSyntaxUID)
@@ -81,8 +95,8 @@ describe("DICOM parse flow", function () {
     it("should treat a preamble alone as a valid DICOM file", function () {
         let bytes = data.preamble;
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectPreamble()
                 .expectDicomComplete();
         });
@@ -98,8 +112,8 @@ describe("DICOM parse flow", function () {
         );
         let bytes = base.concatv(data.fmiGroupLength(malformedTsuid), malformedTsuid, data.patientNameJohnDoe());
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectHeader(Tag.FileMetaInformationGroupLength)
                 .expectValueChunk()
                 .expectHeader(Tag.TransferSyntaxUID)
@@ -112,7 +126,7 @@ describe("DICOM parse flow", function () {
 
     it("should fail reading a truncated DICOM file", function () {
         let bytes = data.patientNameJohnDoe().slice(0, 14);
-        return util.expectDicomError(() => util.testParts(bytes, new parser.ParseFlow(), parts => {}));
+        return util.expectDicomError(() => util.testParts(bytes, parseFlow(), parts => {}));
     });
 
     it("should inflate deflated datasets", function () {
@@ -121,8 +135,8 @@ describe("DICOM parse flow", function () {
             data.transferSyntaxUID(UID.DeflatedExplicitVRLittleEndian),
             util.deflate(base.concatv(data.patientNameJohnDoe(), data.studyDate())));
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectHeader(Tag.FileMetaInformationGroupLength)
                 .expectValueChunk()
                 .expectHeader(Tag.TransferSyntaxUID)
@@ -141,8 +155,8 @@ describe("DICOM parse flow", function () {
             data.transferSyntaxUID(UID.DeflatedExplicitVRLittleEndian),
             util.deflate(base.concatv(data.patientNameJohnDoe(), data.studyDate()), true));
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectHeader(Tag.FileMetaInformationGroupLength)
                 .expectValueChunk()
                 .expectHeader(Tag.TransferSyntaxUID)
@@ -161,8 +175,8 @@ describe("DICOM parse flow", function () {
             data.transferSyntaxUID(UID.DeflatedExplicitVRLittleEndian),
             util.deflate(base.concatv(data.patientNameJohnDoe(), data.studyDate())));
 
-        return util.testParts(bytes, new parser.ParseFlow(8192, undefined, false), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(8192, undefined, false), parts => {
+            util.partProbe(parts)
                 .expectHeader(Tag.FileMetaInformationGroupLength)
                 .expectValueChunk()
                 .expectHeader(Tag.TransferSyntaxUID)
@@ -175,8 +189,8 @@ describe("DICOM parse flow", function () {
     it("should read DICOM data with fragments", function () {
         let bytes = base.concatv(data.pixeDataFragments(), base.item(4), Buffer.from([1, 2, 3, 4]), base.item(4), Buffer.from([5, 6, 7, 8]), base.sequenceDelimitation());
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectFragments()
                 .expectFragment(1, 4)
                 .expectValueChunk()
@@ -190,8 +204,8 @@ describe("DICOM parse flow", function () {
     it("should issue a warning when a fragments delimitation tag has nonzero length", function () {
         let bytes = base.concatv(data.pixeDataFragments(), base.item(4), Buffer.from([1, 2, 3, 4]), base.item(4), Buffer.from([5, 6, 7, 8]), base.sequenceDelimitationNonZeroLength());
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectFragments()
                 .expectFragment(1, 4)
                 .expectValueChunk()
@@ -205,8 +219,8 @@ describe("DICOM parse flow", function () {
     it("should parse a tag which is not an item, item data nor fragments delimitation inside fragments as unknown", function () {
         let bytes = base.concatv(data.pixeDataFragments(), base.item(4), Buffer.from([1, 2, 3, 4]), data.studyDate(), base.item(4), Buffer.from([5, 6, 7, 8]), base.sequenceDelimitation());
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectFragments()
                 .expectFragment(1, 4)
                 .expectValueChunk()
@@ -221,8 +235,8 @@ describe("DICOM parse flow", function () {
     it("should read DICOM data containing a sequence", function () {
         let bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence), base.item(), data.patientNameJohnDoe(), data.studyDate(), base.itemDelimitation(), base.sequenceDelimitation());
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence)
                 .expectItem(1)
                 .expectHeader(Tag.PatientName)
@@ -238,8 +252,8 @@ describe("DICOM parse flow", function () {
     it("should read DICOM data containing a sequence in a sequence", function () {
         let bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence), base.item(), data.sequence(Tag.DerivationCodeSequence), base.item(), data.patientNameJohnDoe(), base.itemDelimitation(), base.sequenceDelimitation(), data.studyDate(), base.itemDelimitation(), base.sequenceDelimitation());
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence)
                 .expectItem(1)
                 .expectSequence(Tag.DerivationCodeSequence)
@@ -260,10 +274,10 @@ describe("DICOM parse flow", function () {
         let bytes = base.concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()), data.transferSyntaxUID(), data.patientNameJohnDoe());
 
         let chunker = new Chunker(1);
-        let flow = pipe(chunker, new parser.ParseFlow());
+        let flow = pipe(chunker, parseFlow());
 
         return util.testParts(bytes, flow, parts => {
-            util.probe(parts)
+            util.partProbe(parts)
                 .expectPreamble()
                 .expectHeader(Tag.FileMetaInformationGroupLength)
                 .expectValueChunk()
@@ -277,14 +291,14 @@ describe("DICOM parse flow", function () {
 
     it("should not accept a non-DICOM file", function () {
         let bytes = Buffer.from([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-        return util.expectDicomError(() => util.testParts(bytes, new parser.ParseFlow(), parts => {}));
+        return util.expectDicomError(() => util.testParts(bytes, parseFlow(), parts => {}));
     });
 
     it("should read DICOM files with explicit VR big-endian transfer syntax", function () {
         let bytes = base.concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID(UID.ExplicitVRBigEndianRetired)), data.transferSyntaxUID(UID.ExplicitVRBigEndianRetired), data.patientNameJohnDoe(true));
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectPreamble()
                 .expectHeader(Tag.FileMetaInformationGroupLength)
                 .expectValueChunk()
@@ -299,8 +313,8 @@ describe("DICOM parse flow", function () {
     it("should read DICOM files with implicit VR little endian transfer syntax", function () {
         let bytes = base.concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID(UID.ImplicitVRLittleEndian)), data.transferSyntaxUID(UID.ImplicitVRLittleEndian), data.patientNameJohnDoe(false, false));
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectPreamble()
                 .expectHeader(Tag.FileMetaInformationGroupLength)
                 .expectValueChunk()
@@ -315,8 +329,8 @@ describe("DICOM parse flow", function () {
     it("should stop reading data when a stop tag is reached", function () {
         let bytes = base.concat(data.studyDate(), data.patientNameJohnDoe());
 
-        return util.testParts(bytes, new parser.ParseFlow(8192, Tag.PatientName), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(8192, Tag.PatientName), parts => {
+            util.partProbe(parts)
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
                 .expectDicomComplete();
@@ -326,8 +340,8 @@ describe("DICOM parse flow", function () {
     it("should stop reading data when a tag number is higher than the stop tag", function () {
         let bytes = base.concat(data.studyDate(), data.patientNameJohnDoe());
 
-        return util.testParts(bytes, new parser.ParseFlow(8192, Tag.StudyDate + 1), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(8192, Tag.StudyDate + 1), parts => {
+            util.partProbe(parts)
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
                 .expectDicomComplete();
@@ -337,8 +351,8 @@ describe("DICOM parse flow", function () {
     it("should chunk value data according to max chunk size", function () {
         let bytes = base.concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()), data.transferSyntaxUID(), data.patientNameJohnDoe());
 
-        return util.testParts(bytes, new parser.ParseFlow(5), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(5), parts => {
+            util.partProbe(parts)
                 .expectPreamble()
                 .expectHeader(Tag.FileMetaInformationGroupLength)
                 .expectValueChunk()
@@ -357,8 +371,8 @@ describe("DICOM parse flow", function () {
     it("should chunk deflated data according to max chunk size", function () {
         let bytes = base.concatv(data.fmiGroupLength(data.transferSyntaxUID(UID.DeflatedExplicitVRLittleEndian)), data.transferSyntaxUID(UID.DeflatedExplicitVRLittleEndian), util.deflate(data.patientNameJohnDoe(), data.studyDate()));
 
-        return util.testParts(bytes, new parser.ParseFlow(22, undefined, false), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(22, undefined, false), parts => {
+            util.partProbe(parts)
                 .expectHeader(Tag.FileMetaInformationGroupLength)
                 .expectValueChunk()
                 .expectHeader(Tag.TransferSyntaxUID)
@@ -372,8 +386,8 @@ describe("DICOM parse flow", function () {
     it("should accept meta information encoded with implicit VR", function () {
         let bytes = base.concatv(data.preamble, data.transferSyntaxUID(UID.ExplicitVRLittleEndian, false, false), data.patientNameJohnDoe());
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectPreamble()
                 .expectHeader(Tag.TransferSyntaxUID)
                 .expectValueChunk()
@@ -387,8 +401,8 @@ describe("DICOM parse flow", function () {
         let length = 0x80000000;
         let bytes = base.concat(Buffer.from([0xe0, 0x7f, 0x10, 0x00, 0x4f, 0x57, 0, 0]), base.longToBytes(length).slice(4, 8));
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectHeader(Tag.PixelData, VR.OW, length)
                 .expectDicomComplete();
         });
@@ -397,8 +411,8 @@ describe("DICOM parse flow", function () {
     it("should handle sequences and items of determinate length", function () {
         let bytes = base.concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence, 8 + 18 + 16), base.item(18 + 16), data.studyDate(), data.patientNameJohnDoe(), data.patientNameJohnDoe());
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
                 .expectSequence(Tag.DerivationCodeSequence)
@@ -416,8 +430,8 @@ describe("DICOM parse flow", function () {
     it("should handle fragments with empty basic offset table (first item)", function () {
         let bytes = base.concatv(data.pixeDataFragments(), base.item(0), base.item(4), Buffer.from([1, 2, 3, 4]), base.sequenceDelimitation());
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectFragments()
                 .expectFragment(1, 0)
                 .expectFragment(2, 4)
@@ -431,8 +445,8 @@ describe("DICOM parse flow", function () {
         let unSequence = base.concatv(base.tagToBytes(Tag.CTExposureSequence), Buffer.from("UN"), Buffer.from([0, 0]), base.intToBytes(24));
         let bytes = base.concatv(data.patientNameJohnDoe(), unSequence, base.item(16), data.studyDate());
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
                 .expectHeader(Tag.CTExposureSequence, VR.UN, 24)
@@ -445,8 +459,8 @@ describe("DICOM parse flow", function () {
         let unSequence = base.concatv(base.tagToBytes(Tag.CTExposureSequence), Buffer.from("UN"), Buffer.from([0, 0]), base.intToBytes(24));
         let bytes = base.concatv(data.patientNameJohnDoe(), unSequence, base.item(16), data.studyDate(false, false));
 
-        return util.testParts(bytes, new parser.ParseFlow(), parts => {
-            util.probe(parts)
+        return util.testParts(bytes, parseFlow(), parts => {
+            util.partProbe(parts)
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
                 .expectHeader(Tag.CTExposureSequence, VR.UN, 24)
