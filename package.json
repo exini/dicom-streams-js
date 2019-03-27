@@ -1,6 +1,6 @@
 {
   "name": "@exini/dicom-streams-js",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Streaming parsing and processing of DICOM data",
   "main": "dist/dicom-streams.js",
   "scripts": {
@@ -14,13 +14,13 @@
     "streams"
   ],
   "author": "karl.sostrand@exini.com",
-  "license": "UNLICENSED",
+  "license": "Apache 2.0",
   "repository": {
     "type": "git",
-    "url": "https://bitbucket.org/exini_dp/dicom-streams-js"
+    "url": "https://github.com/exini/dicom-streams-js"
   },
   "bugs": {
-    "url": "https://exini1.atlassian.net/secure/RapidBoard.jspa?rapidView=2&projectKey=DCMS"
+    "url": "https://github.com/exini/dicom-streams-js/issues"
   },
   "dependencies": {
     "readable-stream": "^3.1.1",
