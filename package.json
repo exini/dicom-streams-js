@@ -1,10 +1,10 @@
 {
   "name": "@exini/dicom-streams-js",
-  "version": "0.0.5",
+  "version": "0.0.8",
   "description": "Streaming parsing and processing of DICOM data",
-  "main": "dist/index.js",
+  "main": "index.js",
   "files": [
-    "dist"
+    "src"
   ],
   "scripts": {
     "test": "mocha 'test/*-test.js'",
