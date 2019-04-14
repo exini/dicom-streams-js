@@ -1,6 +1,8 @@
 const assert = require("assert");
+const joda = require("js-joda");
 const base = require("../src/base");
 const {Value} = require("../src/value");
+const Tag = require("../src/tag");
 const {TagPath} = require("../src/tag-path");
 const {HeaderPart} = require("../src/parts");
 const {Elements, ValueElement, Sequence, Item, Fragment, Fragments, preambleElement, SequenceElement, FragmentElement,
@@ -94,8 +96,8 @@ describe("Elements", function () {
 
     it("should return the first string of a value with VM > 1", function () {
         let elements = create(new ValueElement(Tag.ImageType, VR.CS, Value.fromString(VR.CS,"ORIGINAL\\RECON TOMO")));
-        assert.equal(elements.stringsByTag(Tag.ImageType)[0], "ORIGINAL");
-        assert.equal(elements.stringsByPath(TagPath.fromTag(Tag.ImageType))[0], "ORIGINAL");
+        assert.equal(elements.stringByTag(Tag.ImageType), "ORIGINAL");
+        assert.equal(elements.stringByPath(TagPath.fromTag(Tag.ImageType)), "ORIGINAL");
     });
 
     it("should return sequences", function () {
@@ -170,6 +172,34 @@ describe("Elements", function () {
 
     it("should return the specified seqeunce based on tag path", function () {
         assert.equal(elements.nestedByPath(TagPath.fromItem(Tag.DerivationCodeSequence, 1)), seq.item(1).elements);
+    });
+
+    it("should return dates", function () {
+        let dates = [joda.LocalDate.parse("2005-01-01"), joda.LocalDate.parse("2010-01-01")];
+        let elements = create(new ValueElement(Tag.StudyDate, VR.DA, Value.fromDates(VR.DA, dates)));
+        assert.deepEqual(elements.datesByTag(Tag.StudyDate), dates);
+        assert.deepEqual(elements.dateByTag(Tag.StudyDate), dates[0]);
+        assert.deepEqual(elements.datesByPath(TagPath.fromTag(Tag.StudyDate)), dates);
+        assert.deepEqual(elements.dateByPath(TagPath.fromTag(Tag.StudyDate)), dates[0]);
+    });
+
+    it("should return times", function() {
+        let times = [joda.LocalTime.parse("22:30:10"), joda.LocalTime.parse("12:00:00")];
+        let elements = create(new ValueElement(Tag.AcquisitionTime, VR.TM, Value.fromTimes(VR.TM, times)));
+        assert.deepEqual(elements.timesByTag(Tag.AcquisitionTime), times);
+        assert.deepEqual(elements.timeByTag(Tag.AcquisitionTime), times[0]);
+        assert.deepEqual(elements.timesByPath(TagPath.fromTag(Tag.AcquisitionTime)), times);
+        assert.deepEqual(elements.timeByPath(TagPath.fromTag(Tag.AcquisitionTime)), times[0]);
+    });
+
+    it("should return date times", function () {
+        let dateTimes = [joda.LocalDate.parse("2005-01-01"), joda.LocalDate.parse("2010-01-01")]
+            .map(dt => dt.atStartOfDay(joda.ZoneOffset.ofHoursMinutes(4,0)));
+        let elements = create(new ValueElement(Tag.InstanceCoercionDateTime, VR.DT, Value.fromDateTimes(VR.DT, dateTimes)));
+        assert.deepEqual(elements.dateTimesByTag(Tag.InstanceCoercionDateTime), dateTimes);
+        assert.deepEqual(elements.dateTimeByTag(Tag.InstanceCoercionDateTime), dateTimes[0]);
+        assert.deepEqual(elements.dateTimesByPath(TagPath.fromTag(Tag.InstanceCoercionDateTime)), dateTimes);
+        assert.deepEqual(elements.dateTimeByPath(TagPath.fromTag(Tag.InstanceCoercionDateTime)), dateTimes[0]);
     });
 
 });

@@ -571,14 +571,6 @@ describe("DICOM flows with tag path tracking", function () {
         return util.testParts(bytes, pipe(parseFlow(), testFlow), () => {
         });
     });
-
-    it("should track an entire file without exception", function () {
-        let source = fs.createReadStream("images/example-el.dcm");
-
-        let testFlow = create(new class extends TagPathTracking(GuaranteedDelimitationEvents(GuaranteedValueEvent(InFragments(IdentityFlow)))) {});
-
-        return util.streamPromise(source, pipe(parseFlow(), testFlow), util.arraySink(() => {}));
-    });
 });
 
 describe("The group length warnings flow", function () {

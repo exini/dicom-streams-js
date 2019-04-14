@@ -8,7 +8,7 @@ const {TagPathTag, TagPathItem} = require("./tag-path");
 const {Value} = require("./value");
 const {CharacterSets} = require("./character-sets");
 
-// TODO support for types other than string, support for setters and remove
+// TODO support for types other than string, date, time, support for setters and remove
 
 class Elements {
     constructor(characterSets, zoneOffset, data) {
@@ -72,8 +72,25 @@ class Elements {
     }
     stringsByTag(tag) { return this._valuesByTag(tag, v => v.value.toStrings(v.vr, v.bigEndian, this.characterSets)); }
     stringsByPath(tagPath) { return this._valuesByPath(tagPath, v => v.value.toStrings(v.vr, v.bigEndian, this.characterSets)); }
+    stringByTag(tag) { return this._valueByTag(tag, v => v.value.toString(v.vr, v.bigEndian, this.characterSets)); }
+    stringByPath(tagPath) { return this._valueByPath(tagPath, v => v.value.toString(v.vr, v.bigEndian, this.characterSets)); }
     singleStringByTag(tag) { return this._valueByTag(tag, v => v.value.toSingleString(v.vr, v.bigEndian, this.characterSets)); }
     singleStringByPath(tagPath) { return this._valueByPath(tagPath, v => v.value.toSingleString(v.vr, v.bigEndian, this.characterSets)); }
+
+    datesByTag(tag) { return this._valuesByTag(tag, v => v.value.toDates(v.vr)); }
+    datesByPath(tagPath) { return this._valuesByPath(tagPath, v => v.value.toDates(v.vr)); }
+    dateByTag(tag) { return this._valueByTag(tag, v => v.value.toDate(v.vr)); }
+    dateByPath(tagPath) { return this._valueByPath(tagPath, v => v.value.toDate(v.vr)); }
+
+    timesByTag(tag) { return this._valuesByTag(tag, v => v.value.toTimes(v.vr)); }
+    timesByPath(tagPath) { return this._valuesByPath(tagPath, v => v.value.toTimes(v.vr)); }
+    timeByTag(tag) { return this._valueByTag(tag, v => v.value.toTime(v.vr)); }
+    timeByPath(tagPath) { return this._valueByPath(tagPath, v => v.value.toTime(v.vr)); }
+
+    dateTimesByTag(tag) { return this._valuesByTag(tag, v => v.value.toDateTimes(v.vr)); }
+    dateTimesByPath(tagPath) { return this._valuesByPath(tagPath, v => v.value.toDateTimes(v.vr)); }
+    dateTimeByTag(tag) { return this._valueByTag(tag, v => v.value.toDateTime(v.vr)); }
+    dateTimeByPath(tagPath) { return this._valueByPath(tagPath, v => v.value.toDateTime(v.vr)); }
 
     _traverseTrunk(elems, trunk) {
         if (trunk.isEmpty())
@@ -222,7 +239,7 @@ class Elements {
                 let heading = indent + base.tagToString(e.tag) + space + e.vr.name + space + hDescription + space + space1(hDescription) + " #    na, 1 " + dictionary.keywordOf(e.tag);
                 let offsets = [];
                 if (e.offsets !== undefined) {
-                    let len = e.offsets.length
+                    let len = e.offsets.length;
                     let description = "Offsets table with " + len + " offset(s)";
                     offsets = [indent + space + space + base.tagToString(Tag.Item) + " na " + description + space + space1(description) + " # " + space2(len * 4) + space + len * 4 + ", 1 Item"];
                 }

@@ -60,7 +60,36 @@ function objectToStringFlow(toStringFunction) {
     });
 }
 
-function mapConcatFlow(toChunks) {
+function mapFlow(f) {
+    return new Transform({
+        objectMode: true,
+        transform(chunk, encoding, callback) {
+            try {
+                this.push(f(chunk));
+                process.nextTick(() => callback());
+            } catch (error) {
+                process.nextTick(() => this.emit("error", error));
+            }
+        }
+    });
+}
+
+function filterFlow(f) {
+    return new Transform({
+        objectMode: true,
+        transform(chunk, encoding, callback) {
+            try {
+                if (f(chunk) === true)
+                    this.push(f(chunk));
+                process.nextTick(() => callback());
+            } catch (error) {
+                process.nextTick(() => this.emit("error", error));
+            }
+        }
+    });
+}
+
+function flatMapFlow(toChunks) {
     return new Transform({
         objectMode: true,
         transform(chunk, encoding, callback) {
@@ -81,5 +110,7 @@ module.exports = {
     prependFlow: prependFlow,
     appendFlow: appendFlow,
     objectToStringFlow: objectToStringFlow,
-    mapConcatFlow: mapConcatFlow
+    mapFlow: mapFlow,
+    filterFlow: filterFlow,
+    flatMapFlow: flatMapFlow
 };

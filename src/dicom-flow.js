@@ -6,7 +6,7 @@ const {PreamblePart, HeaderPart, ValueChunk, SequencePart, SequenceDelimitationP
 const {emptyTagPath, TagPathItem} = require("./tag-path");
 
 const create = function (flow) {
-    return pipe(flow.baseFlow(), flows.mapConcatFlow(flow.handlePart.bind(flow)));
+    return pipe(flow.baseFlow(), flows.flatMapFlow(flow.handlePart.bind(flow)));
 };
 
 class DicomFlow {

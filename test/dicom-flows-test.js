@@ -102,7 +102,7 @@ describe("The whitelist filter", function () {
         let bytes = base.concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()), data.transferSyntaxUID(),
             data.patientNameJohnDoe(), data.studyDate());
 
-        return util.testParts(bytes, pipe(parseFlow(), whitelistFilter([TagTree.fromTag(Tag.StudyDate)])), parts => {
+        return util.testParts(bytes, pipe(parseFlow(), whitelistFilter([TagTree.fromTag(Tag.StudyDate)], () => false)), parts => {
             util.partProbe(parts)
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()

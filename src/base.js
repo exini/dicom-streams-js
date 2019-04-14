@@ -1,3 +1,4 @@
+const joda = require("js-joda");
 const dictionary = require("./dictionary");
 const Tag = require("./tag");
 const UID = require("./uid");
@@ -130,6 +131,6 @@ const self = module.exports = {
     isGroupLength: function(tag) { return self.elementNumber(tag) === 0; },
     isDeflated: function(transferSyntaxUid) { return transferSyntaxUid === UID.DeflatedExplicitVRLittleEndian || transferSyntaxUid === UID.JPIPReferencedDeflate; },
 
-    systemZone: new Date().getTimezoneOffset(),
+    systemZone: joda.ZoneId.SYSTEM,
     defaultCharacterSet: CharacterSets.defaultOnly()
 };

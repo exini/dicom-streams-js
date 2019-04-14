@@ -29,12 +29,12 @@ const toBytesFlow = function () {
     });
 };
 
-const whitelistFilter = function (whitelist) {
-    return tagFilter(currentPath => whitelist.some(t => t.hasTrunk(currentPath) || t.isTrunkOf(currentPath)), () => false);
+const whitelistFilter = function (whitelist, defaultCondition, logGroupLengthWarnings) {
+    return tagFilter(currentPath => whitelist.some(t => t.hasTrunk(currentPath) || t.isTrunkOf(currentPath)), defaultCondition, logGroupLengthWarnings);
 };
 
-const blacklistFilter = function (blacklist) {
-    return tagFilter(currentPath => !blacklist.some(t => t.isTrunkOf(currentPath)));
+const blacklistFilter = function (blacklist, defaultCondition, logGroupLengthWarnings) {
+    return tagFilter(currentPath => !blacklist.some(t => t.isTrunkOf(currentPath)), defaultCondition, logGroupLengthWarnings);
 };
 
 const groupLengthDiscardFilter = function () {
@@ -101,10 +101,10 @@ const validateContextFlow = function (contexts) {
         create(new class extends DeferToPartFlow {
             onPart(part) {
                 if (part instanceof ElementsPart && part.label === "validatecontext") {
-                    let scuid = part.elements.singleStringByTag(Tag.MediaStorageSOPClassUID);
-                    if (scuid === undefined) scuid = part.elements.singleStringByTag(Tag.SOPClassUID);
+                    let scuid = part.elements.stringByTag(Tag.MediaStorageSOPClassUID);
+                    if (scuid === undefined) scuid = part.elements.stringByTag(Tag.SOPClassUID);
                     if (scuid === undefined) scuid = "<empty>";
-                    let tsuid = part.elements.singleStringByTag(Tag.TransferSyntaxUID);
+                    let tsuid = part.elements.stringByTag(Tag.TransferSyntaxUID);
                     if (tsuid === undefined) tsuid = "<empty>";
                     if (contexts.findIndex(c => c.sopClassUID === scuid && c.transferSyntaxUID === tsuid) >= 0)
                         return [];
