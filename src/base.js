@@ -1,4 +1,6 @@
 const joda = require("js-joda");
+const uuidv4 = require("uuid/v4");
+const uuidv5 = require("uuid/v5");
 const dictionary = require("./dictionary");
 const Tag = require("./tag");
 const UID = require("./uid");
@@ -30,6 +32,35 @@ function tagToBytesBE(tag) { return intToBytesBE(tag); }
 function tagToBytesLE(tag) { return Buffer.from([tag >> 16, tag >> 24, tag, tag >> 8]); }
 function intToBytesBE(i) { return Buffer.from([i >> 24, i >> 16, i >> 8, i]); }
 function intToBytesLE(i) { return Buffer.from([i, i >> 8, i >> 16, i >> 24]); }
+
+const uidRoot = "2.25";
+const uuidNamespace = "d181d67b-0a1c-45bf-8616-070f1bb0d0cf";
+
+function hexToDec(s) {
+    let i, j, digits = [0], carry;
+    for (i = 0; i < s.length; i += 1) {
+        carry = parseInt(s.charAt(i), 16);
+        for (j = 0; j < digits.length; j += 1) {
+            digits[j] = digits[j] * 16 + carry;
+            carry = digits[j] / 10 | 0;
+            digits[j] %= 10;
+        }
+        while (carry > 0) {
+            digits.push(carry % 10);
+            carry = carry / 10 | 0;
+        }
+    }
+    return digits.reverse().join('');
+}
+
+function toUID(root, uuid) {
+    let hexStr = uuid.replace(/-/g, '');
+    let docStr = hexToDec(hexStr).replace(/^0+/, "");
+    return (root + "." + docStr).substring(0, 64);
+}
+
+function nameBasedUID(name, root) { return toUID(root, uuidv5(name, uuidNamespace)); }
+function randomUID(root) { return toUID(root, uuidv4()); }
 
 const self = module.exports = {
     multiValueDelimiter: "\\",
@@ -80,9 +111,6 @@ const self = module.exports = {
     intToBytes: function(i, bigEndian) { return bigEndian ? self.intToBytesBE(i) : self.intToBytesLE(i); },
     intToBytesBE: intToBytesBE,
     intToBytesLE: intToBytesLE,
-    longToBytes: function(i, bigEndian) { return bigEndian ? self.longToBytesBE(i) : self.longToBytesLE(i); },
-    longToBytesBE: function(i) { return Buffer.from([i >> 56, i >> 48, i >> 40, i >> 32, i >> 24, i >> 16, i >> 8, i]); },
-    longToBytesLE: function(i) { return Buffer.from([i, i >> 8, i >> 16, i >> 24, i >> 32, i >> 40, i >> 48, i >> 56]); },
     tagToBytes: function(tag, bigEndian) { return bigEndian ? self.tagToBytesBE(tag) : self.tagToBytesLE(tag); },
     tagToBytesBE: tagToBytesBE,
     tagToBytesLE: tagToBytesLE,
@@ -132,5 +160,10 @@ const self = module.exports = {
     isDeflated: function(transferSyntaxUid) { return transferSyntaxUid === UID.DeflatedExplicitVRLittleEndian || transferSyntaxUid === UID.JPIPReferencedDeflate; },
 
     systemZone: joda.ZoneId.SYSTEM,
-    defaultCharacterSet: CharacterSets.defaultOnly()
+    defaultCharacterSet: CharacterSets.defaultOnly(),
+
+    createUID: function() { return randomUID(uidRoot); },
+    createUIDFromRoot: function(root) { return randomUID(root); },
+    createNameBasedUID: function(name) { return nameBasedUID(name, uidRoot); },
+    createNameBasedUIDFromRoot: function(name, root) { return nameBasedUID(name, root); }
 };

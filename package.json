@@ -1,11 +1,11 @@
 {
   "name": "@exini/dicom-streams-js",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "description": "Streaming parsing and processing of DICOM data",
   "main": "index.js",
   "scripts": {
     "test": "mocha 'test/*-test.js'",
-    "test-one": "mocha 'test/elements-test.js'",
+    "test-one": "mocha 'test/base-test.js'",
     "test-coverage": "./node_modules/istanbul/lib/cli.js cover -x \"**/tag.js\" -x \"**/tag-to-vr.js\" ./node_modules/mocha/bin/_mocha -- -R spec test/*-test.js",
     "build": "mkdir -p dist; browserify src/index.js -s dcm -o dist/index.js",
     "publish-to-npm": "mkdir -p package; cp src/*.js package.json LICENSE README.md package; npm publish package"
@@ -27,7 +27,8 @@
     "readable-stream": "^3.1.1",
     "multipipe": "^3.0.0",
     "iconv-lite": "^0.4.24",
-    "js-joda": "^1.10.1 "
+    "js-joda": "^1.10.1",
+    "uuid": "^3.3.2"
   },
   "devDependencies": {
     "mocha": "^5.2.0",

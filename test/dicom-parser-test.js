@@ -399,7 +399,7 @@ describe("DICOM parse flow", function () {
 
     it("should handle values with length larger than the signed int range", function () {
         let length = 0x80000000;
-        let bytes = base.concat(Buffer.from([0xe0, 0x7f, 0x10, 0x00, 0x4f, 0x57, 0, 0]), base.longToBytes(length).slice(4, 8));
+        let bytes = base.concat(Buffer.from([0xe0, 0x7f, 0x10, 0x00, 0x4f, 0x57, 0, 0]), base.intToBytes(length, false));
 
         return util.testParts(bytes, parseFlow(), parts => {
             util.partProbe(parts)
