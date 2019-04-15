@@ -80,7 +80,7 @@ function filterFlow(f) {
         transform(chunk, encoding, callback) {
             try {
                 if (f(chunk) === true)
-                    this.push(f(chunk));
+                    this.push(chunk);
                 process.nextTick(() => callback());
             } catch (error) {
                 process.nextTick(() => this.emit("error", error));
