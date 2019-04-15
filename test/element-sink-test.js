@@ -39,7 +39,7 @@ describe("An element sink", function () {
         return util.streamPromise(
             util.arraySource(elementList, 0, true),
             elementSink(elements => {
-                assert.deepEqual(elements.toElements(), elementList);
+                assert.deepStrictEqual(elements.toElements(), elementList);
             }));
     });
 
@@ -66,7 +66,7 @@ describe("An element sink", function () {
         return util.streamPromise(
             util.arraySource(elementList, 0, true),
             elementSink(elements => {
-                assert.deepEqual(elements.toElements(), elementList);
+                assert.deepStrictEqual(elements.toElements(), elementList);
             }));
     });
 
@@ -100,7 +100,7 @@ describe("An element sink", function () {
             elementSink(elements => {
                 let fragments = elements.fragmentsByTag(Tag.PixelData);
                 assert(fragments.offsets !== undefined);
-                assert.deepEqual(fragments.offsets, [1, 2, 3, 4]);
+                assert.deepStrictEqual(fragments.offsets, [1, 2, 3, 4]);
             }));
     });
 });
@@ -116,7 +116,7 @@ describe("Fragments", function () {
             elementFlow(),
             elementSink(elements => {
                 let fragments = elements.fragmentsByTag(Tag.PixelData);
-                assert.equal(fragments.size, 0);
+                assert.strictEqual(fragments.size, 0);
                 assert(fragments.offset === undefined);
             }));
     });
@@ -133,7 +133,7 @@ describe("Fragments", function () {
                 let fragments = elements.fragmentsByTag(Tag.PixelData);
                 assert(fragments.offsets !== undefined);
                 assert(fragments.offsets.length === 0);
-                assert.equal(fragments.size, 1);
+                assert.strictEqual(fragments.size, 1);
             }));
     });
 
@@ -148,7 +148,7 @@ describe("Fragments", function () {
             elementSink(elements => {
                 let fragments = elements.fragmentsByTag(Tag.PixelData);
                 assert(fragments.offsets !== undefined);
-                assert.deepEqual(fragments.offsets, [0, 456]);
+                assert.deepStrictEqual(fragments.offsets, [0, 456]);
             }));
     });
 });

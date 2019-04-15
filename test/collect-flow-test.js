@@ -14,8 +14,8 @@ describe("A collect elements flow", function () {
         let tags = [Tag.StudyDate, Tag.PatientName].map(TagPath.fromTag);
         return util.testParts(bytes, pipe(parseFlow(), collectFromTagPathsFlow(tags, "tag")), parts => {
             let e = parts.shift();
-            assert.equal(e.label, "tag");
-            assert.equal(e.elements.size, 2);
+            assert.strictEqual(e.label, "tag");
+            assert.strictEqual(e.elements.size, 2);
             assert(e.elements.elementByTag(Tag.StudyDate) !== undefined);
             assert(e.elements.elementByTag(Tag.PatientName) !== undefined);
 
@@ -61,8 +61,8 @@ describe("A collect elements flow", function () {
 
         return util.testParts(bytes, pipe(parseFlow(500), collectFromTagPathsFlow([Tag.StudyDate, Tag.PatientName].map(TagPath.fromTag), "tag")), parts => {
             let e = parts.shift();
-            assert.equal(e.label, "tag");
-            assert.equal(e.elements.size, 2);
+            assert.strictEqual(e.label, "tag");
+            assert.strictEqual(e.elements.size, 2);
             assert(e.elements.elementByTag(Tag.StudyDate) !== undefined);
             assert(e.elements.elementByTag(Tag.PatientName) !== undefined);
 

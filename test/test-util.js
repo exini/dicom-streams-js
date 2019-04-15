@@ -33,11 +33,11 @@ class PartProbe {
         let part = this.array[this.offset];
         assert(part instanceof HeaderPart);
         if (length !== undefined)
-            assert.equal(part.length, length);
+            assert.strictEqual(part.length, length);
         if (vr !== undefined)
-            assert.equal(part.vr.name, vr.name);
+            assert.strictEqual(part.vr.name, vr.name);
         if (tag !== undefined)
-            assert.equal(part.tag, tag);
+            assert.strictEqual(part.tag, tag);
         this.offset++;
         return this;
     }
@@ -47,9 +47,9 @@ class PartProbe {
         assert(part instanceof ValueChunk);
         if (data !== undefined) {
             if (data instanceof Buffer)
-                assert.deepEqual(part.bytes, data);
+                assert.deepStrictEqual(part.bytes, data);
             else
-                assert.equal(part.bytes.length, data);
+                assert.strictEqual(part.bytes.length, data);
         }
         this.offset++;
         return this;
@@ -71,7 +71,7 @@ class PartProbe {
         let part = this.array[this.offset];
         assert(part instanceof SequencePart);
         if (tag !== undefined)
-            assert.equal(part.tag, tag);
+            assert.strictEqual(part.tag, tag);
         this.offset++;
         return this;
     }
@@ -80,7 +80,7 @@ class PartProbe {
         let part = this.array[this.offset];
         assert(part instanceof ItemPart);
         if (index !== undefined)
-            assert.equal(part.index, index);
+            assert.strictEqual(part.index, index);
         this.offset++;
         return this;
     }
@@ -101,9 +101,9 @@ class PartProbe {
         let part = this.array[this.offset];
         assert(part instanceof ItemPart);
         if (length !== undefined)
-            assert.equal(part.length, length);
+            assert.strictEqual(part.length, length);
         if (index !== undefined)
-            assert.equal(part.index, index);
+            assert.strictEqual(part.index, index);
         this.offset++;
         return this;
     }
@@ -121,7 +121,7 @@ class PartProbe {
     expectElements(elementsPart) {
         let part = this.array[this.offset];
         assert(part instanceof ElementsPart);
-        assert.deepEqual(part, elementsPart);
+        assert.deepStrictEqual(part, elementsPart);
         this.offset++;
         return this;
     }
@@ -149,15 +149,15 @@ class ElementProbe {
         let part = this.array[this.offset];
         assert(part instanceof ValueElement || part instanceof SequenceElement || part instanceof FragmentsElement);
         if (value !== undefined)
-            assert.deepEqual(part.value.bytes, value);
+            assert.deepStrictEqual(part.value.bytes, value);
         if (tag !== undefined)
-            assert.equal(part.tag, tag);
+            assert.strictEqual(part.tag, tag);
         this.offset++;
         return this;
     }
 
     expectPreamble() {
-        assert.equal(this.array[this.offset], preambleElement);
+        assert.strictEqual(this.array[this.offset], preambleElement);
         this.offset++;
         return this;
     }
@@ -166,7 +166,7 @@ class ElementProbe {
         let part = this.array[this.offset];
         assert(part instanceof FragmentsElement);
         if (tag !== undefined)
-            assert.equal(part.tag, tag);
+            assert.strictEqual(part.tag, tag);
         this.offset++;
         return this;
     }
@@ -175,7 +175,7 @@ class ElementProbe {
         let part = this.array[this.offset];
         assert(part instanceof FragmentElement);
         if (length !== undefined)
-            assert.equal(part.length, length);
+            assert.strictEqual(part.length, length);
         this.offset++;
         return this;
     }
@@ -184,9 +184,9 @@ class ElementProbe {
         let part = this.array[this.offset];
         assert(part instanceof SequenceElement);
         if (length !== undefined)
-            assert.equal(part.length, length);
+            assert.strictEqual(part.length, length);
         if (tag !== undefined)
-            assert.equal(part.tag, tag);
+            assert.strictEqual(part.tag, tag);
         this.offset++;
         return this;
     }
@@ -195,9 +195,9 @@ class ElementProbe {
         let part = this.array[this.offset];
         assert(part instanceof ItemElement);
         if (length !== undefined)
-            assert.equal(part.length, length);
+            assert.strictEqual(part.length, length);
         if (index !== undefined)
-            assert.equal(part.index, index);
+            assert.strictEqual(part.index, index);
         this.offset++;
         return this;
     }
@@ -206,9 +206,9 @@ class ElementProbe {
         let part = this.array[this.offset];
         assert(part instanceof ItemDelimitationElement);
         if (marker !== undefined)
-            assert.equal(part.marker, marker);
+            assert.strictEqual(part.marker, marker);
         if (index !== undefined)
-            assert.equal(part.index, index);
+            assert.strictEqual(part.index, index);
         this.offset++;
         return this;
     }
@@ -217,7 +217,7 @@ class ElementProbe {
         let part = this.array[this.offset];
         assert(part instanceof SequenceDelimitationElement);
         if (marker !== undefined)
-            assert.equal(part.marker, marker);
+            assert.strictEqual(part.marker, marker);
         this.offset++;
         return this;
     }

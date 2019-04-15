@@ -77,6 +77,11 @@ class Elements {
     singleStringByTag(tag) { return this._valueByTag(tag, v => v.value.toSingleString(v.vr, v.bigEndian, this.characterSets)); }
     singleStringByPath(tagPath) { return this._valueByPath(tagPath, v => v.value.toSingleString(v.vr, v.bigEndian, this.characterSets)); }
 
+    numbersByTag(tag) { return this._valuesByTag(tag, v => v.value.toNumbers(v.vr, v.bigEndian)); }
+    numbersByPath(tagPath) { return this._valuesByPath(tagPath, v => v.value.toNumbers(v.vr, v.bigEndian)); }
+    numberByTag(tag) { return this._valueByTag(tag, v => v.value.toNumber(v.vr, v.bigEndian)); }
+    numberByPath(tagPath) { return this._valueByPath(tagPath, v => v.value.toNumber(v.vr, v.bigEndian)); }
+
     datesByTag(tag) { return this._valuesByTag(tag, v => v.value.toDates(v.vr)); }
     datesByPath(tagPath) { return this._valuesByPath(tagPath, v => v.value.toDates(v.vr)); }
     dateByTag(tag) { return this._valueByTag(tag, v => v.value.toDate(v.vr)); }

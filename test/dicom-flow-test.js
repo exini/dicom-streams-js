@@ -82,13 +82,13 @@ describe("The in fragments flow", function () {
 
         let testFlow = create(new class extends InFragments(IdentityFlow) {
             onValueChunk(part) {
-                assert.equal(this.inFragments, expectedInFragments.shift());
+                assert.strictEqual(this.inFragments, expectedInFragments.shift());
                 return super.onValueChunk(part);
             }
         });
 
         return util.testParts(bytes, pipe(parseFlow(), testFlow), () => {
-            assert.equal(expectedInFragments.length, 0);
+            assert.strictEqual(expectedInFragments.length, 0);
         });
     });
 });
@@ -101,13 +101,13 @@ describe("The guaranteed value flow", function () {
 
         let testFlow = create(new class extends GuaranteedValueEvent(IdentityFlow) {
             onValueChunk(part) {
-                assert.equal(part.bytes.length, expectedChunkLengths.shift());
+                assert.strictEqual(part.bytes.length, expectedChunkLengths.shift());
                 return super.onValueChunk(part);
             }
         });
 
         return util.testParts(bytes, pipe(parseFlow(), testFlow), () => {
-            assert.equal(expectedChunkLengths.length, 0);
+            assert.strictEqual(expectedChunkLengths.length, 0);
         });
     });
 
@@ -125,7 +125,7 @@ describe("The guaranteed value flow", function () {
         });
 
         return util.testParts(bytes, pipe(parseFlow(), testFlow1, testFlow2), () => {
-            assert.equal(nEvents, 1);
+            assert.strictEqual(nEvents, 1);
         });
     });
 
@@ -142,8 +142,8 @@ describe("The start event flow", function () {
         });
 
         return util.testParts(bytes, pipe(parseFlow(), testFlow), parts => {
-            assert.equal(parts[0], dicomStartMarker);
-            assert.equal(parts.length, 3);
+            assert.strictEqual(parts[0], dicomStartMarker);
+            assert.strictEqual(parts.length, 3);
         });
 
     });
@@ -161,7 +161,7 @@ describe("The start event flow", function () {
                     return [];
                 }
                 onPart(part) {
-                    assert.equal(this.state, 0);
+                    assert.strictEqual(this.state, 0);
                     return [part];
                 }
             });
@@ -171,8 +171,8 @@ describe("The start event flow", function () {
             util.singleSource(dicomEndMarker, 0, true),
             pipe(createTestFlow(), createTestFlow(), createTestFlow()),
             util.arraySink(parts => {
-                assert.equal(parts.length, 1);
-                assert.equal(parts[0], dicomEndMarker);
+                assert.strictEqual(parts.length, 1);
+                assert.strictEqual(parts[0], dicomEndMarker);
             }));
     });
 
@@ -188,15 +188,15 @@ describe("The start event flow", function () {
                 return [];
             }
             onPart(part) {
-                assert.equal(this.nCalls, 1);
+                assert.strictEqual(this.nCalls, 1);
                 return [part];
             }
         });
 
         return util.streamPromise(
             util.singleSource(dicomEndMarker, 0, true), testFlow, util.arraySink(parts => {
-                assert.equal(parts.length, 1);
-                assert.equal(parts[0], dicomEndMarker);
+                assert.strictEqual(parts.length, 1);
+                assert.strictEqual(parts[0], dicomEndMarker);
             }));
 
     });
@@ -213,8 +213,8 @@ describe("The end event flow", function () {
         });
 
         return util.testParts(bytes, pipe(parseFlow(), testFlow), parts => {
-            assert.equal(parts.length, 3);
-            assert.equal(parts[2], dicomEndMarker);
+            assert.strictEqual(parts.length, 3);
+            assert.strictEqual(parts[2], dicomEndMarker);
         });
     });
 });
@@ -229,11 +229,11 @@ describe("The guaranteed delimitation flow", function () {
 
         let testFlow = create(new class extends GuaranteedDelimitationEvents(InFragments(IdentityFlow)) {
             onItemDelimitation(part) {
-                assert.equal(part.bytes.length, expectedDelimitationLengths.shift());
+                assert.strictEqual(part.bytes.length, expectedDelimitationLengths.shift());
                 return super.onItemDelimitation(part);
             }
             onSequenceDelimitation(part) {
-                assert.equal(part.bytes.length, expectedDelimitationLengths.shift());
+                assert.strictEqual(part.bytes.length, expectedDelimitationLengths.shift());
                 return super.onSequenceDelimitation(part);
             }
         });
@@ -376,8 +376,8 @@ describe("The guaranteed delimitation flow", function () {
         });
 
         return util.testParts(bytes, pipe(parseFlow(), testFlow1, testFlow2), () => {
-            assert.equal(nItemDelims, 1);
-            assert.equal(nSeqDelims, 1);
+            assert.strictEqual(nItemDelims, 1);
+            assert.strictEqual(nSeqDelims, 1);
         });
     });
 });
@@ -387,7 +387,7 @@ describe("The InSequence support", function () {
         let expectedDepths = [0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 0, 0, 0];
 
         let check = function (depth, inSequence) {
-            assert.equal(depth, expectedDepths.shift());
+            assert.strictEqual(depth, expectedDepths.shift());
             if (depth > 0) assert(inSequence); else assert(!inSequence);
         };
 

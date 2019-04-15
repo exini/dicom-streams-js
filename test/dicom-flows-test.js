@@ -446,7 +446,7 @@ describe("The utf8 flow", function () {
 
         return util.testParts(bytes, pipe(parseFlow(), toUtf8Flow()), parts => {
             let newBytes = parts.map(p => p.bytes).reduce((b1, b2) => base.concat(b1, b2), base.emptyBuffer);
-            assert.deepEqual(newBytes, bytes);
+            assert.deepStrictEqual(newBytes, bytes);
         });
     });
 

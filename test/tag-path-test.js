@@ -6,12 +6,12 @@ describe("A tag path", function () {
 
     it("should have a legible string representation", function () {
         let path = TagPath.fromItem(Tag.DerivationCodeSequence, 4).thenItem(Tag.DerivationCodeSequence, 3).thenItem(Tag.DerivationCodeSequence, 2).thenTag(Tag.PatientID);
-        assert.equal(path.toNamedString(false), "(0008,9215)[4].(0008,9215)[3].(0008,9215)[2].(0010,0020)");
+        assert.strictEqual(path.toNamedString(false), "(0008,9215)[4].(0008,9215)[3].(0008,9215)[2].(0010,0020)");
     });
 
     it("should support string representations with keywords instead of tag numbers where possible", function () {
         let path = TagPath.fromItem(Tag.DerivationCodeSequence, 1).thenItem(0x11110100, 3).thenItem(Tag.DetectorInformationSequence, 3).thenTag(Tag.PatientID);
-        assert.equal(path.toNamedString(true), "DerivationCodeSequence[1].(1111,0100)[3].DetectorInformationSequence[3].PatientID");
+        assert.strictEqual(path.toNamedString(true), "DerivationCodeSequence[1].(1111,0100)[3].DetectorInformationSequence[3].PatientID");
     });
 });
 
@@ -131,7 +131,7 @@ describe("Comparing two tag paths", function () {
         let sorted = createPaths().reverse().sort((a, b) => a.isBelow(b) ? -1 : 1);
 
         assert.notDeepEqual(reversed, paths);
-        assert.deepEqual(sorted, paths);
+        assert.deepStrictEqual(sorted, paths);
     });
 });
 

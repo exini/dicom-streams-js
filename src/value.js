@@ -2,9 +2,6 @@ const joda = require("js-joda");
 const base = require("./base");
 const VR = require("./vr");
 
-// TODO support for types other than string, date, time
-// TODO support for encoding
-
 class Value {
     constructor(bytes) {
         this.bytes = bytes;
@@ -24,6 +21,15 @@ class Value {
     static fromBuffer(vr, buffer) { return create(buffer, vr); }
 
     static fromBytes(vr, bytes) { return Value.fromBuffer(vr, Buffer.from(bytes)); }
+
+    static fromNumber(vr, value, bigEndian) {
+        bigEndian = bigEndian === undefined ? false : bigEndian;
+        return create(numberBytes(vr, value, bigEndian), vr) ;
+    }
+    static fromNumbers(vr, values, bigEndian) {
+        bigEndian = bigEndian === undefined ? false : bigEndian;
+        return create(combine(values.map(v => numberBytes(vr, v, bigEndian)), vr), vr);
+    }
 
     static fromDate(vr, value) { return create(dateBytes(vr, value), vr); }
     static fromDates(vr, values) { return create(combine(values.map(v => dateBytes(vr, v)), vr), vr); }
@@ -54,6 +60,7 @@ class Value {
         if (vr === VR.OF) return [parseFL(this.bytes, bigEndian).join(" ")];
         if (vr === VR.OD) return [parseFD(this.bytes, bigEndian).join(" ")];
         if (vr === VR.ST || vr === VR.LT || vr === VR.UT || vr === VR.UR) return [trimPadding(characterSets.decode(this.bytes, vr), vr.paddingByte)];
+        if (vr === VR.DA || vr === VR.TM || vr === VR.DT) return splitString(this.bytes.toString()).map(base.trim);
         if (vr === VR.UC) return splitString(trimPadding(characterSets.decode(this.bytes, vr), vr.paddingByte));
         return splitString(characterSets.decode(this.bytes, vr)).map(base.trim);
     }
@@ -61,6 +68,21 @@ class Value {
     toSingleString(vr, bigEndian, characterSets) {
         let strings = this.toStrings(vr, bigEndian, characterSets);
         return strings.length === 0 ? "" : strings.join(base.multiValueDelimiter);
+    }
+
+    toNumbers(vr, bigEndian) {
+        bigEndian = bigEndian === undefined ? false : bigEndian;
+        if (this.length === 0) return [];
+        if (vr === VR.AT) return parseAT(this.bytes, bigEndian);
+        if (vr === VR.DS) return parseDS(this.bytes).filter(n => !isNaN(n));
+        if (vr === VR.FL) return parseFL(this.bytes, bigEndian);
+        if (vr === VR.FD) return parseFD(this.bytes, bigEndian);
+        if (vr === VR.IS) return parseIS(this.bytes).filter(n => !isNaN(n));
+        if (vr === VR.SL) return parseSL(this.bytes, bigEndian);
+        if (vr === VR.SS) return parseSS(this.bytes, bigEndian);
+        if (vr === VR.UL) return parseUL(this.bytes, bigEndian);
+        if (vr === VR.US) return parseUS(this.bytes, bigEndian);
+        return [];
     }
 
     toDates(vr) {
@@ -86,6 +108,7 @@ class Value {
     }
 
     toString(vr, bigEndian, characterSets) { return Value._headOption(this.toStrings(vr, bigEndian, characterSets)); }
+    toNumber(vr, bigEndian) { return Value._headOption(this.toNumbers(vr, bigEndian)); }
     toDate(vr) { return Value._headOption(this.toDates(vr)); }
     toTime(vr) { return Value._headOption(this.toTimes(vr)); }
     toDateTime(vr, zone) { return Value._headOption(this.toDateTimes(vr, zone)); }
@@ -100,11 +123,9 @@ class Value {
 }
 
 const trimPadding = function(s, paddingByte) {
-    let index = s.length - 1;
-    while (index >= 0 && s[index] <= paddingByte)
-        index -= 1;
-    let n = s.length - 1 - index;
-    return n > 0 ? s.substring(s.length - n, s.length) : s;
+    let index = s.length;
+    while (index > 0 && s.charCodeAt(index - 1) <= paddingByte) index -= 1;
+    return s.substring(0, index);
 };
 
 const combine = function(values, vr) {
@@ -126,6 +147,20 @@ const stringBytes = function(vr, value, bigEndian) {
     if (vr === VR.US) return base.shortToBytes(parseInt(value), bigEndian);
     if (vr === VR.OB || vr === VR.OW || vr === VR.OL || vr === VR.OF || vr === VR.OD) throw Error("Cannot create binary array from string");
     return Buffer.from(value);
+};
+
+const numberBytes = function(vr, value, bigEndian) {
+    if (vr === VR.AT) return base.tagToBytes(value, bigEndian);
+    if (vr === VR.FL) return base.floatToBytes(value, bigEndian);
+    if (vr === VR.FD) return base.doubleToBytes(value, bigEndian);
+    if (vr === VR.SL) return base.intToBytes(value, bigEndian);
+    if (vr === VR.SS) return base.shortToBytes(value, bigEndian);
+    if (vr === VR.UL) return base.intToBytes(value, bigEndian);
+    if (vr === VR.US) return base.shortToBytes(value, bigEndian);
+    if (vr === VR.AT) return base.tagToBytes(value, bigEndian);
+    if (vr === VR.OB || vr === VR.OW || vr === VR.OL || vr === VR.OF || vr === VR.OD)
+        throw Error("Cannot create value of VR " + vr + " from int");
+    return Buffer.from(value + "")
 };
 
 const dateBytes = function(vr, value) {
@@ -166,6 +201,8 @@ const parseUL = function(value, bigEndian) { return splitFixed(value, 4).map(b =
 const parseUS = function(value, bigEndian) { return splitFixed(value, 2).map(b => base.bytesToUShort(b, bigEndian)); };
 const parseFL = function(value, bigEndian) { return splitFixed(value, 4).map(b => base.bytesToFloat(b, bigEndian)); };
 const parseFD = function(value, bigEndian) { return splitFixed(value, 8).map(b => base.bytesToDouble(b, bigEndian)); };
+const parseDS = function(value) { return splitString(value.toString()).map(base.trim).map(s => parseFloat(s)); };
+const parseIS = function(value) { return splitString(value.toString()).map(base.trim).map(s => parseInt(s)); };
 const parseDA = function(value) { return splitString(value.toString()).map(parseDate).filter(d => d !== undefined); };
 const parseTM = function(value) { return splitString(value.toString()).map(parseTime).filter(d => d !== undefined); };
 const parseDT = function(value, zone) { return splitString(value.toString()).map(s => parseDateTime(s, zone)).filter(d => d !== undefined); };
@@ -177,7 +214,7 @@ const timeFormat = new joda.DateTimeFormatterBuilder()
     .appendFraction(joda.ChronoField.MICRO_OF_SECOND, 1, 6, true)
     .appendPattern("]]]")
     .toFormatter(joda.ResolverStyle.LENIENT);
-const timeFormatForEncoding = joda.DateTimeFormatter.ofPattern("HHmmss");
+const timeFormatForEncoding = joda.DateTimeFormatter.ofPattern("HHmmss'.'SSSSSS");
 const dateTimeFormatForEncoding = joda.DateTimeFormatter.ofPattern("uuuuMMddHHmmss'.'SSSSSSZ");
 
 const formatDate = function(date) { return date.format(dateFormat1); };

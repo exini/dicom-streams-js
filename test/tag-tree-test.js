@@ -7,12 +7,12 @@ describe("A tag tree", function () {
 
     it("should have a legible string representation", function () {
         let tree = TagTree.fromAnyItem(Tag.DerivationCodeSequence).thenItem(Tag.DerivationCodeSequence, 3).thenAnyItem(Tag.DerivationCodeSequence).thenTag(Tag.PatientID);
-        assert.equal(tree.toNamedString(false), "(0008,9215)[*].(0008,9215)[3].(0008,9215)[*].(0010,0020)");
+        assert.strictEqual(tree.toNamedString(false), "(0008,9215)[*].(0008,9215)[3].(0008,9215)[*].(0010,0020)");
     });
 
     it("should support string representations with keywords instead of tag numbers where possible", function () {
         let tree = TagTree.fromAnyItem(Tag.DerivationCodeSequence).thenItem(0x11110100, 3).thenAnyItem(Tag.DetectorInformationSequence).thenTag(Tag.PatientID);
-        assert.equal(tree.toNamedString(true), "DerivationCodeSequence[*].(1111,0100)[3].DetectorInformationSequence[*].PatientID");
+        assert.strictEqual(tree.toNamedString(true), "DerivationCodeSequence[*].(1111,0100)[3].DetectorInformationSequence[*].PatientID");
     });
 
     it("should be root when pointing to root dataset", function () {
@@ -253,7 +253,7 @@ describe("The hasTwig test", function () {
 
 describe("Creating a tag path from a tag tree", function () {
     it ("should handle empty tag paths", function () {
-        assert.equal(TagTree.fromPath(emptyTagPath), emptyTagTree);
+        assert.strictEqual(TagTree.fromPath(emptyTagPath), emptyTagTree);
     });
 
     it("should handle simple paths", function () {

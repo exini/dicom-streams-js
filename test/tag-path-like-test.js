@@ -25,17 +25,17 @@ describe("The tag path depth", function () {
 
     it("should be 1 when pointing to a tag in the root dataset", function () {
         let path = new TestTagPath(Tag.PatientID);
-        assert.equal(path.depth(), 1);
+        assert.strictEqual(path.depth(), 1);
     });
 
 
     it("should be 0 for empty tag paths", function () {
-        assert.equal(emptyTagPath.depth(), 0);
+        assert.strictEqual(emptyTagPath.depth(), 0);
     });
 
     it("should be 4 when pointing to a tag in three levels of sequences", function () {
         let path = new TestTagPath(Tag.PatientID, new TestTagPath(Tag.DerivationCodeSequence, new TestTagPath(Tag.DerivationCodeSequence, new TestTagPath(Tag.DerivationCodeSequence))));
-        assert.equal(path.depth(), 4);
+        assert.strictEqual(path.depth(), 4);
     });
 });
 
@@ -55,12 +55,12 @@ describe("A tag path", function () {
 describe("A list representation of tag path tags", function () {
     it("should contain a single entry for a tag in the root dataset", function () {
         let path = new TestTagPath(Tag.PatientID);
-        assert.deepEqual(path.toList(), [path]);
+        assert.deepStrictEqual(path.toList(), [path]);
     });
 
     it("should contain four entries for a path of depth 3", function () {
         let path = new TestTagPath(Tag.PatientID, new TestTagPath(Tag.DerivationCodeSequence, new TestTagPath(Tag.DerivationCodeSequence, new TestTagPath(Tag.DerivationCodeSequence))));
-        assert.deepEqual(path.toList(), [path.previous().previous().previous(), path.previous().previous(), path.previous(), path]);
+        assert.deepStrictEqual(path.toList(), [path.previous().previous().previous(), path.previous().previous(), path.previous(), path]);
     });
 });
 
@@ -77,31 +77,31 @@ describe("The tag path contains test", function () {
 describe("The tag path take operation", function () {
     it("should preserve elements from the left", function () {
         let path = new TestTagPath(4, new TestTagPath(3, new TestTagPath(2, new TestTagPath(1))));
-        assert.equal(path.take(-100), emptyTagPath);
-        assert.equal(path.take(0), emptyTagPath);
-        assert.equal(path.take(1), path.previous().previous().previous());
-        assert.equal(path.take(2), path.previous().previous());
-        assert.equal(path.take(3), path.previous());
-        assert.equal(path.take(4), path);
-        assert.equal(path.take(100), path);
+        assert.strictEqual(path.take(-100), emptyTagPath);
+        assert.strictEqual(path.take(0), emptyTagPath);
+        assert.strictEqual(path.take(1), path.previous().previous().previous());
+        assert.strictEqual(path.take(2), path.previous().previous());
+        assert.strictEqual(path.take(3), path.previous());
+        assert.strictEqual(path.take(4), path);
+        assert.strictEqual(path.take(100), path);
     });
 });
 
 describe("The head of a tag path", function () {
     it("should be the root element of the path", function () {
-        assert.deepEqual(new TestTagPath(1).head(), new TestTagPath(1));
-        assert.deepEqual(new TestTagPath(2, new TestTagPath(1)).head(), new TestTagPath(1));
-        assert.deepEqual(new TestTagPath(3, new TestTagPath(2, new TestTagPath(1))).head(), new TestTagPath(1));
+        assert.deepStrictEqual(new TestTagPath(1).head(), new TestTagPath(1));
+        assert.deepStrictEqual(new TestTagPath(2, new TestTagPath(1)).head(), new TestTagPath(1));
+        assert.deepStrictEqual(new TestTagPath(3, new TestTagPath(2, new TestTagPath(1))).head(), new TestTagPath(1));
     });
 });
 
 /*
 describe("The tail of a tag path", function () {
     it("should be the whole part except the root element", function () {
-        assert.equal(new TestTagPath(1).tail(), emptyTagPath);
-        assert.equal(new TestTagPath(1).tail(), emptyTagPath);
-        assert.deepEqual(new TestTagPath(2, new TestTagPath(1)).tail(), new TestTagPath(2));
-        assert.deepEqual(new TestTagPath(3, new TestTagPath(2, new TestTagPath(3))).tail(), new TestTagPath(1, new TestTagPath(2)));
+        assert.strictEqual(new TestTagPath(1).tail(), emptyTagPath);
+        assert.strictEqual(new TestTagPath(1).tail(), emptyTagPath);
+        assert.deepStrictEqual(new TestTagPath(2, new TestTagPath(1)).tail(), new TestTagPath(2));
+        assert.deepStrictEqual(new TestTagPath(3, new TestTagPath(2, new TestTagPath(3))).tail(), new TestTagPath(1, new TestTagPath(2)));
     });
 });
 */
