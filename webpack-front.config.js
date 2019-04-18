@@ -1,14 +1,13 @@
 const path = require('path');
 const webpack = require('webpack');
 
-
 module.exports = {
     target: "web",
     entry: {
         main: ["./src/index.js"],
     },
     output: {
-        path: path.resolve(__dirname, "dist/front"),
+        path: path.resolve(__dirname, "dist/web"),
         filename: "[name].[contenthash:8].js",
     },
     // externals: {
