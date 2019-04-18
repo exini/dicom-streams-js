@@ -1,7 +1,7 @@
 const {TagPathLike} = require("./tag-path-like");
 const {TagPathTag, TagPathItem, TagPathItemEnd, TagPathSequence, TagPathSequenceEnd} = require("./tag-path");
 const base = require("./base");
-const dictionary = require("./dictionary");
+const Lookup = require("./lookup");
 
 class TagTree extends TagPathLike {
     constructor(tag, previous) {
@@ -40,7 +40,7 @@ class TagTree extends TagPathLike {
         let tagPart = function(s) { return s.substring(0, s.indexOf("[")); };
         let parseTag = function(s) {
             try {
-                return dictionary.tagOf(s);
+                return Lookup.tagOf(s);
             } catch (error) {
                 if (s.length === 11 && s[0] === "(" && s[5] === "," && s[10] === ")") {
                     let i = parseInt(s.substring(1, 5) + s.substring(6, 10), 16);
@@ -198,7 +198,7 @@ class TagTree extends TagPathLike {
     toNamedString(lookup) {
         let toTagString = function(tag) {
             if (lookup) {
-                let keyword = dictionary.keywordOf(tag);
+                let keyword = Lookup.keywordOf(tag);
                 if (keyword.length > 0) return keyword;
             }
             return base.tagToString(tag);

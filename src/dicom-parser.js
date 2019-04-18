@@ -5,7 +5,7 @@ const UID = require("./uid");
 const VR = require("./vr");
 const {PreamblePart, HeaderPart, ValueChunk, SequencePart, SequenceDelimitationPart, ItemPart, ItemDelimitationPart,
     FragmentsPart, UnknownPart, DeflatedChunk} = require("./parts");
-const dictionary = require("./dictionary");
+const Lookup = require("./lookup");
 const {ByteParser, ParseStep, ParseResult, finishedParser} = require("./byte-parser");
 
 class DicomParseStep extends ParseStep {
@@ -69,7 +69,7 @@ class AtBeginning extends DicomParseStep {
     }
     static dicomInfo(data, assumeBigEndian) {
         let tag1 = base.bytesToTag(data, assumeBigEndian);
-        let vr = dictionary.vrOf(tag1);
+        let vr = Lookup.vrOf(tag1);
         if (vr === VR.UN)
             return undefined;
         if (base.bytesToVR(data.slice(4, 6)) === vr.code)
@@ -124,7 +124,7 @@ class InFmiHeader extends DicomParseStep {
             console.warn("Missing or wrong File Meta Information Group Length (0002,0000)");
             return new ParseResult(undefined, toDatasetStep(Buffer.from([0x00, 0x00]), base.emptyBuffer, this.state, this.parser));
         }
-        let updatedVr = header.vr === VR.UN ? dictionary.vrOf(header.tag) : header.vr;
+        let updatedVr = header.vr === VR.UN ? Lookup.vrOf(header.tag) : header.vr;
         let bytes = reader.take(header.headerLength);
         let updatedPos = this.state.pos + header.headerLength + header.valueLength;
         let updatedState = this.state;
@@ -267,7 +267,7 @@ function readTagVr(data, bigEndian, explicitVr) {
         return {tag: tag, vr: null};
     if (explicitVr)
         return {tag: tag, vr: VR.valueOf(base.bytesToVR(data.slice(4, 6)))};
-    return {tag: tag, vr: dictionary.vrOf(tag)};
+    return {tag: tag, vr: Lookup.vrOf(tag)};
 }
 
 function readHeader(reader, state) {

@@ -4,7 +4,7 @@ module.exports = {
     VR: require("./vr"),
     UID: require("./uid"),
     Tag: require("./tag"),
-    Dictionary: require("./dictionary"),
+    Lookup: require("./lookup"),
     TagPath: require("./tag-path"),
     TagTree: require("./tag-tree"),
     Parts: require("./parts"),
