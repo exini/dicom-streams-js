@@ -9,6 +9,8 @@ module.exports = {
     output: {
         path: path.resolve(__dirname, "dist/node"),
         filename: "index.js",
+        library: "DicomStreams",
+        libraryTarget: "commonjs2"
     },
     externals: [nodeExternals()]
 };
