@@ -1,6 +1,6 @@
 const base = require("./base");
 const VR = require("./vr");
-const dictionary = require("./dictionary");
+const Lookup = require("./lookup");
 const {HeaderPart, ValueChunk, SequencePart, MetaPart} = require("./parts");
 const {emptyTagPath} = require("./tag-path");
 const {DeferToPartFlow, EndEvent, TagPathTracking, GroupLengthWarnings, GuaranteedValueEvent, GuaranteedDelimitationEvents, InFragments, create} = require("./dicom-flow");
@@ -75,7 +75,7 @@ function modifyFlow(modifications, insertions, logGroupLengthWarnings) {
         }
 
         headerAndValueParts(tagPath, valueBytes) {
-            let vr = dictionary.vrOf(tagPath.tag());
+            let vr = Lookup.vrOf(tagPath.tag());
             if (vr === VR.UN) throw Error("Tag is not present in dictionary, cannot determine value representation");
             if (vr === VR.SQ) throw Error("Cannot insert sequences");
             let isFmi = base.isFileMetaInformation(tagPath.tag());

@@ -1,7 +1,7 @@
 const joda = require("js-joda");
 const uuidv4 = require("uuid/v4");
 const uuidv5 = require("uuid/v5");
-const dictionary = require("./dictionary");
+const Lookup = require("./lookup");
 const Tag = require("./tag");
 const UID = require("./uid");
 const {CharacterSets} = require("./character-sets");
@@ -134,7 +134,7 @@ const self = module.exports = {
     trim: function(s) { return s.replace(/^[\x00-\x20]*/g, "").replace(/[\x00-\x20]*$/g, ""); },
 
     padToEvenLength(bytes, tagOrVR) {
-        let vr = isNaN(tagOrVR) ? tagOrVR : dictionary.vrOf(tagOrVR);
+        let vr = isNaN(tagOrVR) ? tagOrVR : Lookup.vrOf(tagOrVR);
         return (bytes.length & 1) !== 0 ? self.concat(bytes, Buffer.from([vr.paddingByte])) : bytes;
     },
 

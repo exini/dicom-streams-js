@@ -1,5 +1,5 @@
 const base = require("./base");
-const dictionary = require("./dictionary");
+const Lookup = require("./lookup");
 const {PreamblePart, HeaderPart, ValueChunk, SequencePart, SequenceDelimitationPart, ItemPart,
     ItemDelimitationPart} = require("./parts");
 const VR = require("./vr");
@@ -218,12 +218,12 @@ class Elements {
                 let strings = e.value.toStrings(e.vr, e.bigEndian, this.characterSets);
                 let s = strings.join(base.multiValueDelimiter);
                 let vm = strings.length + "";
-                return [indent + base.tagToString(e.tag) + space + e.vr.name + space + s + space + space1(s) + " # " + space2(e.length) + space + e.length + ", " + vm + space + dictionary.keywordOf(e.tag)];
+                return [indent + base.tagToString(e.tag) + space + e.vr.name + space + s + space + space1(s) + " # " + space2(e.length) + space + e.length + ", " + vm + space + Lookup.keywordOf(e.tag)];
             }
 
             if (e instanceof Sequence) {
                 let hDescription = e.length === base.indeterminateLength ? "Sequence with indeterminate length" : "Sequence with explicit length " + e.length;
-                let heading = indent + base.tagToString(e.tag) + " SQ " + hDescription + space + space1(hDescription) + " # " + space2(base.toInt32(e.length)) + space + base.toInt32(e.length) + ", 1 " + dictionary.keywordOf(e.tag);
+                let heading = indent + base.tagToString(e.tag) + " SQ " + hDescription + space + space1(hDescription) + " # " + space2(base.toInt32(e.length)) + space + base.toInt32(e.length) + ", 1 " + Lookup.keywordOf(e.tag);
                 let items = base.flatten(e.items.map(i => {
                     let iDescription = i.indeterminate ? "Item with indeterminate length" : "Item with explicit length " + i.length;
                     let heading = indent + "  " + base.tagToString(Tag.Item) + " na " + iDescription + space + space1(iDescription) + " # " + space2(base.toInt32(i.length)) + space + base.toInt32(i.length) + ", 1 Item";
@@ -241,7 +241,7 @@ class Elements {
 
             if (e instanceof Fragments) {
                 let hDescription = "Fragments with " + e.size + " fragment(s)";
-                let heading = indent + base.tagToString(e.tag) + space + e.vr.name + space + hDescription + space + space1(hDescription) + " #    na, 1 " + dictionary.keywordOf(e.tag);
+                let heading = indent + base.tagToString(e.tag) + space + e.vr.name + space + hDescription + space + space1(hDescription) + " #    na, 1 " + Lookup.keywordOf(e.tag);
                 let offsets = [];
                 if (e.offsets !== undefined) {
                     let len = e.offsets.length;
@@ -315,7 +315,7 @@ class ValueElement extends ElementSet {
         let strings = this.value.toStrings(this.vr, this.bigEndian, base.defaultCharacterSet);
         let s = strings.join(base.multiValueDelimiter);
         let vm = strings.length + "";
-        return "ValueElement(" + base.tagToString(this.tag) + " " + this.vr.name + " [" + s + "] # " + this.length + ", " + vm + " " + dictionary.keywordOf(this.tag) + ")";
+        return "ValueElement(" + base.tagToString(this.tag) + " " + this.vr.name + " [" + s + "] # " + this.length + ", " + vm + " " + Lookup.keywordOf(this.tag) + ")";
     }
 }
 
@@ -329,7 +329,7 @@ class SequenceElement extends Element {
 
     toBytes() { return new HeaderPart(this.tag, VR.SQ, this.length, false, this.bigEndian, this.explicitVR).bytes; }
     toParts() { return [new SequencePart(this.tag, this.length, this.bigEndian, this.explicitVR, this.toBytes())]; }
-    toString() { return "SequenceElement(" + base.tagToString(this.tag) + " SQ # " + this.length + " " + dictionary.keywordOf(this.tag) + ")"; }
+    toString() { return "SequenceElement(" + base.tagToString(this.tag) + " SQ # " + this.length + " " + Lookup.keywordOf(this.tag) + ")"; }
 }
 
 class FragmentsElement extends Element {
@@ -342,7 +342,7 @@ class FragmentsElement extends Element {
 
     toBytes() { return this.toParts()[0].bytes; }
     toParts() { return [new HeaderPart(this.tag, this.vr, base.indeterminateLength, false, this.bigEndian, this.explicitVR)]; }
-    toString() { return "FragmentsElement(" + base.tagToString(this.tag) + " " + this.vr.name + " # " + dictionary.keywordOf(this.tag) + ")"; }
+    toString() { return "FragmentsElement(" + base.tagToString(this.tag) + " " + this.vr.name + " # " + Lookup.keywordOf(this.tag) + ")"; }
 }
 
 class FragmentElement extends Element {
@@ -434,7 +434,7 @@ class Sequence extends ElementSet {
         newItems[index - 1] = item;
         return new Sequence(this.tag, this.length, newItems, this.bigEndian, this.explicitVR);
     }
-    toString() { return "Sequence(" + base.tagToString(this.tag) + " SQ # " + this.length + " " + this.size + " " + dictionary.keywordOf(this.tag) + ")"; }
+    toString() { return "Sequence(" + base.tagToString(this.tag) + " SQ # " + this.length + " " + this.size + " " + Lookup.keywordOf(this.tag) + ")"; }
 }
 
 class Item {
@@ -509,7 +509,7 @@ class Fragments extends ElementSet {
         newFragments[index - 1] = fragment;
         return new Fragments(this.tag, this.vr, this.offsets, newFragments, this.bigEndian, this.explicitVR);
     }
-    toString() { return "Fragments(" + base.tagToString(this.tag) + " " + this.vr.name + " # " + this.fragments.length + " " + dictionary.keywordOf(this.tag) + ")"; }
+    toString() { return "Fragments(" + base.tagToString(this.tag) + " " + this.vr.name + " # " + this.fragments.length + " " + Lookup.keywordOf(this.tag) + ")"; }
 }
 
 function parseZoneOffset(s) {

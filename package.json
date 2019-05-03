@@ -1,14 +1,15 @@
 {
   "name": "@exini/dicom-streams-js",
-  "version": "0.0.17",
+  "version": "0.0.22",
   "description": "Streaming parsing and processing of DICOM data",
-  "main": "index.js",
+  "main": "node/index.js",
+  "browser": "web/index.js",
   "scripts": {
     "test": "mocha 'test/*-test.js'",
     "test-one": "mocha 'test/elements-test.js'",
     "test-coverage": "./node_modules/istanbul/lib/cli.js cover -x \"**/tag.js\" -x \"**/tag-to-vr.js\" ./node_modules/mocha/bin/_mocha -- -R spec test/*-test.js",
-    "build": "mkdir -p dist; browserify src/index.js -s dcm -o dist/index.js",
-    "publish-to-npm": "mkdir -p package; cp src/*.js package.json LICENSE README.md package; npm publish package"
+    "build": "rm -rf dist; webpack --config webpack-back.config.js; webpack --config webpack-front.config.js;",
+    "publish-to-npm": "npm run build; cp package.json LICENSE README.md dist; npm publish dist"
   },
   "keywords": [
     "dicom",
@@ -33,6 +34,9 @@
   "devDependencies": {
     "mocha": "^5.2.0",
     "istanbul": "^0.4.5",
-    "coveralls": "^3.0.3"
+    "coveralls": "^3.0.3",
+    "webpack": "^4.30.0",
+    "webpack-cli": "^3.3.0",
+    "webpack-node-externals": "^1.7.2"
   }
 }
