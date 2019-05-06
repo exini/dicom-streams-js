@@ -5,9 +5,10 @@
   "main": "node/index.js",
   "browser": "web/index.js",
   "scripts": {
-    "test": "mocha 'test/*-test.js'",
-    "test-one": "mocha 'test/elements-test.js'",
-    "test-coverage": "./node_modules/istanbul/lib/cli.js cover -x \"**/tag.js\" -x \"**/tag-to-vr.js\" ./node_modules/mocha/bin/_mocha -- -R spec test/*-test.js",
+
+    "test": "env NODE_ICU_DATA=node_modules/full-icu mocha 'test/*-test.js'",
+    "test-one": "env NODE_ICU_DATA=node_modules/full-icu mocha 'test/character-sets-test.js'",
+    "test-coverage": "env NODE_ICU_DATA=node_modules/full-icu ./node_modules/istanbul/lib/cli.js cover -x \"**/tag.js\" -x \"**/tag-to-vr.js\" ./node_modules/mocha/bin/_mocha -- -R spec test/*-test.js",
     "build": "rm -rf dist; webpack --config webpack-back.config.js; webpack --config webpack-front.config.js;",
     "publish-to-npm": "npm run build; cp package.json LICENSE README.md dist; npm publish dist"
   },
@@ -27,7 +28,7 @@
   "dependencies": {
     "readable-stream": "^3.1.1",
     "multipipe": "^3.0.0",
-    "iconv-lite": "^0.4.24",
+    "full-icu": "^1.2.1",
     "js-joda": "^1.10.1",
     "uuid": "^3.3.2"
   },

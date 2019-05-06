@@ -12,4 +12,5 @@ module.exports = {
         library: "DicomStreams",
         libraryTarget: "umd"
     },
+    externals: ["full-icu"]
 };

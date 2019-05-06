@@ -4,7 +4,7 @@ const uuidv5 = require("uuid/v5");
 const Lookup = require("./lookup");
 const Tag = require("./tag");
 const UID = require("./uid");
-const {CharacterSets} = require("./character-sets");
+const {CharacterSets, defaultCharacterSet} = require("./character-sets");
 
 const indeterminateLength = 0xFFFFFFFF;
 const zero4Bytes = Buffer.from([0, 0, 0, 0]);
@@ -160,7 +160,7 @@ const self = module.exports = {
     isDeflated: function(transferSyntaxUid) { return transferSyntaxUid === UID.DeflatedExplicitVRLittleEndian || transferSyntaxUid === UID.JPIPReferencedDeflate; },
 
     systemZone: joda.ZoneId.SYSTEM,
-    defaultCharacterSet: CharacterSets.defaultOnly(),
+    defaultCharacterSet: defaultCharacterSet,
 
     createUID: function() { return randomUID(uidRoot); },
     createUIDFromRoot: function(root) { return randomUID(root); },
