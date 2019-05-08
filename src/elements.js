@@ -161,7 +161,7 @@ class Elements {
 
     setElementSet(element) {
         if (element instanceof ValueElement && element.tag === Tag.SpecificCharacterSet)
-            return new Elements(CharacterSets.fromBytes(element.toBytes()), this.zoneOffset, this._insertOrdered(element));
+            return new Elements(CharacterSets.fromBytes(element.value.bytes), this.zoneOffset, this._insertOrdered(element));
         if (element instanceof ValueElement && element.tag === Tag.TimezoneOffsetFromUTC) {
             let newOffset = parseZoneOffset(element.value.toSingleString(VR.SH, element.bigEndian, this.characterSets));
             newOffset = isNaN(newOffset) ? base.systemZone : newOffset;
