@@ -3,6 +3,7 @@ const {HeaderPart, ValueChunk, ElementsPart} = require("./parts");
 const {Elements, ValueElement} = require("./elements");
 const {Value} = require("./value");
 const Tag = require("./tag");
+const VR = require("./vr");
 const {CharacterSets} = require("./character-sets");
 const {valueChunkMarker, sequenceDelimitationPartMarker, ItemDelimitationPartMarker, GuaranteedValueEvent,
     GuaranteedDelimitationEvents, InFragments, DeferToPartFlow, EndEvent, TagPathTracking, create} = require("./dicom-flow");
@@ -66,7 +67,7 @@ function collectFlow(tagCondition, stopCondition, label, maxBufferSize) {
                         this.currentElement = updatedElement;
                         if (part.last) {
                             if (updatedElement.tag === Tag.SpecificCharacterSet)
-                                this.elements = this.elements.setCharacterSets(CharacterSets.fromBytes(updatedElement.toBytes));
+                                this.elements = this.elements.setCharacterSets(CharacterSets.fromNames(updatedElement.value.toSingleString(VR.CS)));
                             if (tagCondition(this.tagPath))
                                 this.elements = this.elements.setElementSet(updatedElement);
                             this.currentElement = undefined;

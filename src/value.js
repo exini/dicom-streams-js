@@ -66,8 +66,16 @@ class Value {
     }
 
     toSingleString(vr, bigEndian, characterSets) {
-        let strings = this.toStrings(vr, bigEndian, characterSets);
-        return strings.length === 0 ? "" : strings.join(base.multiValueDelimiter);
+        characterSets = characterSets === undefined ? base.defaultCharacterSet: characterSets;
+        if (vr === VR.AT || vr === VR.FL || vr === VR.FD || vr === VR.SL || vr === VR.SS || vr === VR.UL ||
+            vr === VR.US || vr === VR.OB || vr === VR.OW || vr === VR.OF || vr === VR.OD) {
+            let strings = this.toStrings(vr, bigEndian, characterSets);
+            return strings.length === 0 ? "" : strings.join(base.multiValueDelimiter);
+        }
+        if (vr === VR.ST || vr === VR.LT || vr === VR.UT || vr === VR.UR) return trimPadding(characterSets.decode(this.bytes, vr), vr.paddingByte);
+        if (vr === VR.DA || vr === VR.TM || vr === VR.DT) return base.trim(this.bytes.toString());
+        if (vr === VR.UC) return trimPadding(characterSets.decode(this.bytes, vr), vr.paddingByte);
+        return base.trim(characterSets.decode(this.bytes, vr));
     }
 
     toNumbers(vr, bigEndian) {
