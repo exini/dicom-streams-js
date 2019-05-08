@@ -67,7 +67,7 @@ function collectFlow(tagCondition, stopCondition, label, maxBufferSize) {
                         this.currentElement = updatedElement;
                         if (part.last) {
                             if (updatedElement.tag === Tag.SpecificCharacterSet)
-                                this.elements = this.elements.setCharacterSets(CharacterSets.fromNames(updatedElement.value.toSingleString(VR.CS)));
+                                this.elements = this.elements.setCharacterSets(CharacterSets.fromBytes(updatedElement.value.bytes));
                             if (tagCondition(this.tagPath))
                                 this.elements = this.elements.setElementSet(updatedElement);
                             this.currentElement = undefined;
