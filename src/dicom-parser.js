@@ -300,7 +300,7 @@ function readHeader(reader, state) {
 
 function readDatasetHeader(reader, state, stopTag) {
     let header = readHeader(reader, state);
-    if (stopTag && header.tag >= stopTag)
+    if (stopTag && header.tag && header.tag >= stopTag && header.tag < Tag.Item)
         return undefined;
     if (header.vr) {
         let bytes = reader.take(header.headerLength);
