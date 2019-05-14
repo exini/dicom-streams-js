@@ -10,6 +10,7 @@ module.exports = {
     Parts: require("./parts"),
     CharacterSets: require("./character-sets"),
     Flows: require("./flows"),
+    Sinks: require("./sinks"),
     DicomParser: require("./dicom-parser"),
     DicomFlow: require("./dicom-flow"),
     DicomFlows: require("./dicom-flows"),
@@ -18,5 +19,6 @@ module.exports = {
     Value: require("./value"),
     Elements: require("./elements"),
     ElementFlows: require("./element-flows"),
-    ElementSink: require("./element-sink")
+    ElementSink: require("./element-sink"),
+    pipe: require("multipipe")
 };

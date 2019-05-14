@@ -3,6 +3,7 @@ const {HeaderPart, ValueChunk, ElementsPart} = require("./parts");
 const {Elements, ValueElement} = require("./elements");
 const {Value} = require("./value");
 const Tag = require("./tag");
+const VR = require("./vr");
 const {CharacterSets} = require("./character-sets");
 const {valueChunkMarker, sequenceDelimitationPartMarker, ItemDelimitationPartMarker, GuaranteedValueEvent,
     GuaranteedDelimitationEvents, InFragments, DeferToPartFlow, EndEvent, TagPathTracking, create} = require("./dicom-flow");

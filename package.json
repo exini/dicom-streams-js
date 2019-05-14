@@ -1,15 +1,15 @@
 {
   "name": "@exini/dicom-streams-js",
-  "version": "0.0.22",
+  "version": "0.0.25",
   "description": "Streaming parsing and processing of DICOM data",
   "main": "node/index.js",
   "browser": "web/index.js",
   "scripts": {
-    "test": "mocha 'test/*-test.js'",
-    "test-one": "mocha 'test/elements-test.js'",
-    "test-coverage": "./node_modules/istanbul/lib/cli.js cover -x \"**/tag.js\" -x \"**/tag-to-vr.js\" ./node_modules/mocha/bin/_mocha -- -R spec test/*-test.js",
-    "build": "rm -rf dist; webpack --config webpack-back.config.js; webpack --config webpack-front.config.js;",
-    "publish-to-npm": "npm run build; cp package.json LICENSE README.md dist; npm publish dist"
+    "test": "cross-env NODE_ICU_DATA=node_modules/full-icu mocha 'test/*-test.js'",
+    "test-one": "cross-env NODE_ICU_DATA=node_modules/full-icu mocha 'test/dicom-parser-test.js'",
+    "test-coverage": "cross-env NODE_ICU_DATA=node_modules/full-icu ./node_modules/istanbul/lib/cli.js cover -x \"**/tag.js\" -x \"**/tag-to-vr.js\" ./node_modules/mocha/bin/_mocha -- -R spec test/*-test.js",
+    "build": "shx rm -rf dist; webpack --config webpack.config.js",
+    "publish-to-npm": "npm run build; shx cp package.json LICENSE README.md dist; npm publish dist"
   },
   "keywords": [
     "dicom",
@@ -27,16 +27,19 @@
   "dependencies": {
     "readable-stream": "^3.1.1",
     "multipipe": "^3.0.0",
-    "iconv-lite": "^0.4.24",
     "js-joda": "^1.10.1",
     "uuid": "^3.3.2"
   },
   "devDependencies": {
+    "full-icu": "^1.2.1",
+    "shx": "^0.2.2",
+    "cross-env": "^5.2.0",
     "mocha": "^5.2.0",
     "istanbul": "^0.4.5",
     "coveralls": "^3.0.3",
     "webpack": "^4.30.0",
     "webpack-cli": "^3.3.0",
-    "webpack-node-externals": "^1.7.2"
+    "webpack-node-externals": "^1.7.2",
+    "webpack-merge": "^4.2.1"
   }
 }

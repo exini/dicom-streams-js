@@ -255,8 +255,8 @@ const toUtf8Flow = function () {
 
             onPart(part) {
                 if (part instanceof ElementsPart && part.label === "toutf8") {
-                    let csNames = part.elements.stringsByTag(Tag.SpecificCharacterSet);
-                    if (csNames.length > 0)
+                    let csNames = part.elements.singleStringByTag(Tag.SpecificCharacterSet);
+                    if (csNames !== undefined && csNames.length > 0)
                         this.characterSets = new CharacterSets(csNames);
                     return [];
                 }

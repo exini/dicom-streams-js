@@ -348,6 +348,25 @@ describe("DICOM parse flow", function () {
         });
     });
 
+    it("should apply stop tag correctly also when preceded by sequence", function () {
+        let bytes = base.concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence), base.item(), data.studyDate(), base.itemDelimitation(), base.sequenceDelimitation(), data.patientNameJohnDoe(), data.pixelData(100));
+
+        return util.testParts(bytes, parseFlow(64, Tag.PatientName + 1), parts => {
+            util.partProbe(parts)
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectSequence()
+                .expectItem()
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectItemDelimitation()
+                .expectSequenceDelimitation()
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
     it("should chunk value data according to max chunk size", function () {
         let bytes = base.concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()), data.transferSyntaxUID(), data.patientNameJohnDoe());
 
