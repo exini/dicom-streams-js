@@ -5,6 +5,7 @@ const {ValueElement, SequenceElement, FragmentElement, FragmentsElement, ItemEle
     SequenceDelimitationElement} = require("../src/elements");
 const VR = require("../src/vr");
 const UID = require("../src/uid");
+const {singleSource, arraySource} = require("../src/sources");
 const {parseFlow} = require("../src/dicom-parser");
 const {elementFlow} = require("../src/element-flows");
 const {elementSink} = require("../src/element-sink");
@@ -37,7 +38,7 @@ describe("An element sink", function () {
         ];
 
         return util.streamPromise(
-            util.arraySource(elementList, 0, true),
+            arraySource(elementList, 0, true),
             elementSink(elements => {
                 assert.deepStrictEqual(elements.toElements(), elementList);
             }));
@@ -64,7 +65,7 @@ describe("An element sink", function () {
         ];
 
         return util.streamPromise(
-            util.arraySource(elementList, 0, true),
+            arraySource(elementList, 0, true),
             elementSink(elements => {
                 assert.deepStrictEqual(elements.toElements(), elementList);
             }));
@@ -79,7 +80,7 @@ describe("An element sink", function () {
         ];
 
         return util.streamPromise(
-            util.arraySource(elementList, 0, true),
+            arraySource(elementList, 0, true),
             elementSink(elements => {
                 let fragments = elements.fragmentsByTag(Tag.PixelData);
                 assert(fragments.offsets !== undefined);
@@ -96,7 +97,7 @@ describe("An element sink", function () {
         ];
 
         return util.streamPromise(
-            util.arraySource(elementList, 0, true),
+            arraySource(elementList, 0, true),
             elementSink(elements => {
                 let fragments = elements.fragmentsByTag(Tag.PixelData);
                 assert(fragments.offsets !== undefined);
@@ -111,7 +112,7 @@ describe("Fragments", function () {
         let bytes = base.concatv(data.pixeDataFragments(), base.sequenceDelimitation());
 
         return util.streamPromise(
-            util.singleSource(bytes),
+            singleSource(bytes),
             parseFlow(),
             elementFlow(),
             elementSink(elements => {
@@ -126,7 +127,7 @@ describe("Fragments", function () {
             Buffer.from([1, 2, 3, 4]), base.sequenceDelimitation());
 
         return util.streamPromise(
-            util.singleSource(bytes),
+            singleSource(bytes),
             parseFlow(),
             elementFlow(),
             elementSink(elements => {
@@ -142,7 +143,7 @@ describe("Fragments", function () {
             base.intToBytesLE(456), base.item(4), Buffer.from([1, 2, 3, 4]), base.sequenceDelimitation());
 
         return util.streamPromise(
-            util.singleSource(bytes),
+            singleSource(bytes),
             parseFlow(),
             elementFlow(),
             elementSink(elements => {
