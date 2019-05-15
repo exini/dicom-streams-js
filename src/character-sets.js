@@ -27,7 +27,11 @@ class CharacterSets {
     }
 
     decode(bytes, vr) {
-        return convertBytes(this.charsets, bytes, {vr: vr.name})
+        try {
+            return convertBytes(this.charsets, bytes, {vr: vr.name})
+        } catch (err) {
+            return defaultCharacterSet.decode(bytes, vr)
+        }
     }
 
     toString() {
