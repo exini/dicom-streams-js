@@ -28,9 +28,10 @@ class CharacterSets {
 
     decode(bytes, vr) {
         try {
-            return convertBytes(this.charsets, bytes, {vr: vr.name})
+            return convertBytes(this.charsets, bytes, {vr: vr.name});
         } catch (err) {
-            return defaultCharacterSet.decode(bytes, vr)
+            console.warn("Invalid character set: " + this.charsets + ", using default instead.");
+            return defaultCharacterSet.decode(bytes, vr);
         }
     }
 
