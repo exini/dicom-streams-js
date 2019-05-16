@@ -9,6 +9,7 @@ module.exports = {
     TagTree: require("./tag-tree"),
     Parts: require("./parts"),
     CharacterSets: require("./character-sets"),
+    Sources: require("./sources"),
     Flows: require("./flows"),
     Sinks: require("./sinks"),
     DicomParser: require("./dicom-parser"),

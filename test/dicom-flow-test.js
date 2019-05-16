@@ -5,6 +5,8 @@ const base = require("../src/base");
 const Tag = require("../src/tag");
 const {TagPath, emptyTagPath} = require("../src/tag-path");
 const {SequencePart} = require("../src/parts");
+const {singleSource} = require("../src/sources");
+const {arraySink} = require("../src/sinks");
 const {parseFlow} = require("../src/dicom-parser");
 const {create, IdentityFlow, DeferToPartFlow, StartEvent, EndEvent, InFragments, InSequence, GuaranteedValueEvent,
     GuaranteedDelimitationEvents, TagPathTracking, GroupLengthWarnings, dicomStartMarker, dicomEndMarker} = require("../src/dicom-flow");
@@ -168,9 +170,9 @@ describe("The start event flow", function () {
         };
 
         return util.streamPromise(
-            util.singleSource(dicomEndMarker, 0, true),
+            singleSource(dicomEndMarker, 0, true),
             pipe(createTestFlow(), createTestFlow(), createTestFlow()),
-            util.arraySink(parts => {
+            arraySink(parts => {
                 assert.strictEqual(parts.length, 1);
                 assert.strictEqual(parts[0], dicomEndMarker);
             }));
@@ -194,7 +196,7 @@ describe("The start event flow", function () {
         });
 
         return util.streamPromise(
-            util.singleSource(dicomEndMarker, 0, true), testFlow, util.arraySink(parts => {
+            singleSource(dicomEndMarker, 0, true), testFlow, arraySink(parts => {
                 assert.strictEqual(parts.length, 1);
                 assert.strictEqual(parts[0], dicomEndMarker);
             }));

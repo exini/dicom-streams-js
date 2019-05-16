@@ -1,7 +1,9 @@
-const {Readable, Writable, pipeline} = require("readable-stream");
+const {pipeline} = require("readable-stream");
 const {promisify} = require("util");
 const zlib = require("zlib");
 const assert = require("assert");
+const {singleSource} = require("../src/sources");
+const {arraySink} = require("../src/sinks");
 const {PreamblePart, HeaderPart, ItemDelimitationPart, ItemPart, SequenceDelimitationPart, SequencePart, ValueChunk,
     FragmentsPart, DeflatedChunk, UnknownPart, MetaPart, ElementsPart} = require("../src/parts");
 const {ValueElement, ItemElement, ItemDelimitationElement, SequenceElement, SequenceDelimitationElement, FragmentElement, preambleElement, FragmentsElement} = require("../src/elements");
@@ -231,57 +233,6 @@ class ElementProbe {
 
 const self = module.exports = {
     TestPart: TestPart,
-    singleSource: function (element, after, objectMode) {
-        let readable = new Readable({
-            objectMode: objectMode === undefined ? false : objectMode,
-            read(size) {
-            }
-        });
-        after = after === undefined ? 0 : after;
-        setTimeout(() => {
-            readable.push(element);
-            readable.push(null);
-        }, after);
-        return readable;
-    },
-    arraySource: function (array, delay, objectMode) {
-        let arr = array.slice();
-        let readable = new Readable({
-            objectMode: objectMode === undefined ? false : objectMode,
-            read(size) {
-            }
-        });
-        delay = delay || 0;
-        let id = setInterval(() => {
-            if (arr.length > 0)
-                readable.push(arr.shift());
-            else {
-                readable.push(null);
-                clearInterval(id);
-            }
-        }, delay);
-        return readable;
-    },
-    ignoreSink: function (objectMode) {
-        return new Writable({
-            objectMode: objectMode === undefined ? false : objectMode,
-            write(chunk, encoding, callback) {
-                process.nextTick(() => callback());
-            }
-        })
-    },
-    arraySink: function (arrayCallback) {
-        let array = [];
-        let sink = new Writable({
-            objectMode: true,
-            write(chunk, encoding, callback) {
-                array.push(chunk);
-                process.nextTick(() => callback());
-            }
-        });
-        sink.once("finish", () => arrayCallback(array));
-        return sink;
-    },
     streamPromise: promisify(pipeline),
     partProbe: function (array) {
         return new PartProbe(array);
@@ -291,9 +242,9 @@ const self = module.exports = {
     },
     testParts: function (bytes, flow, assertParts) {
         return self.streamPromise(
-            self.singleSource(bytes),
+            singleSource(bytes),
             flow,
-            self.arraySink(assertParts)
+            arraySink(assertParts)
         );
     },
     expectDicomError: function (asyncFunction) {
