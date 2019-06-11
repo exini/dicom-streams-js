@@ -10,6 +10,8 @@ const baseConfig = {
         filename: "index.js",
         library: "DicomStreams",
     },
+    mode: 'production',
+    devtool: "source-map",
 };
 
 const nodeConfig = {

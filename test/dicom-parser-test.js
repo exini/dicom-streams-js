@@ -349,7 +349,7 @@ describe("DICOM parse flow", function () {
     });
 
     it("should apply stop tag correctly also when preceded by sequence", function () {
-        let bytes = base.concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence), base.item(), data.studyDate(), base.itemDelimitation(), base.sequenceDelimitation(), data.patientNameJohnDoe(), data.pixelData(100));
+        let bytes = base.concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence), base.item(), data.pixelData(10), base.itemDelimitation(), base.sequenceDelimitation(), data.patientNameJohnDoe(), data.pixelData(100));
 
         return util.testParts(bytes, parseFlow(64, Tag.PatientName + 1), parts => {
             util.partProbe(parts)
@@ -357,7 +357,7 @@ describe("DICOM parse flow", function () {
                 .expectValueChunk()
                 .expectSequence()
                 .expectItem()
-                .expectHeader(Tag.StudyDate)
+                .expectHeader(Tag.PixelData)
                 .expectValueChunk()
                 .expectItemDelimitation()
                 .expectSequenceDelimitation()
