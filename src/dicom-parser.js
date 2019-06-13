@@ -17,9 +17,8 @@ class DicomParseStep extends ParseStep {
 }
 
 class DatasetHeaderState {
-    constructor(itemIndex, depth, bigEndian, explicitVR) {
+    constructor(itemIndex, bigEndian, explicitVR) {
         this.itemIndex = itemIndex;
-        this.depth = depth;
         this.bigEndian = bigEndian;
         this.explicitVR = explicitVR;
     }
@@ -99,7 +98,7 @@ class AtBeginning extends DicomParseStep {
         if (info) {
             let nextState = info.hasFmi ?
                 new InFmiHeader(new FmiHeaderState(undefined, info.bigEndian, info.explicitVR, info.hasFmi, 0, undefined), this.parser) :
-                new InDatasetHeader(new DatasetHeaderState(0, 0, info.bigEndian, info.explicitVR), this.parser);
+                new InDatasetHeader(new DatasetHeaderState(0, info.bigEndian, info.explicitVR), this.parser);
             return new ParseResult(maybePreamble, nextState);
         } else
             this.parser.failStage(new Error("Not a DICOM stream"));
@@ -168,13 +167,13 @@ class InDatasetHeader extends DicomParseStep {
             else if (part instanceof FragmentsPart)
                 nextState = new InFragments(new FragmentsState(0, part.bigEndian, this.state.explicitVR), this.parser);
             else if (part instanceof SequencePart)
-                nextState = new InDatasetHeader(new DatasetHeaderState(0, this.state.depth + 1, this.state.bigEndian, this.state.explicitVR), this.parser);
+                nextState = new InDatasetHeader(new DatasetHeaderState(0, this.state.bigEndian, this.state.explicitVR), this.parser);
             else if (part instanceof ItemPart)
-                nextState = new InDatasetHeader(new DatasetHeaderState(part.index, this.state.depth, this.state.bigEndian, this.state.explicitVR), this.parser);
+                nextState = new InDatasetHeader(new DatasetHeaderState(part.index, this.state.bigEndian, this.state.explicitVR), this.parser);
             else if (part instanceof ItemDelimitationPart)
-                nextState = new InDatasetHeader(new DatasetHeaderState(part.index, this.state.depth, this.state.bigEndian, this.state.explicitVR), this.parser);
+                nextState = new InDatasetHeader(new DatasetHeaderState(part.index, this.state.bigEndian, this.state.explicitVR), this.parser);
             else if (part instanceof SequenceDelimitationPart)
-                nextState = new InDatasetHeader(new DatasetHeaderState(part.index, this.state.depth - 1, this.state.bigEndian, this.state.explicitVR), this.parser);
+                nextState = new InDatasetHeader(new DatasetHeaderState(part.index, this.state.bigEndian, this.state.explicitVR), this.parser);
             else
                 nextState = new InDatasetHeader(this.state, this.parser);
         }
@@ -211,7 +210,7 @@ class InFragments extends DicomParseStep {
             if (header.valueLength !== 0) {
                 console.warn("Unexpected fragments delimitation length " + header.valueLength);
             }
-            return new ParseResult(new SequenceDelimitationPart(this.state.bigEndian, reader.take(header.headerLength)), new InDatasetHeader(new DatasetHeaderState(0, 0, this.state.bigEndian, this.state.explicitVR), this.parser));
+            return new ParseResult(new SequenceDelimitationPart(this.state.bigEndian, reader.take(header.headerLength)), new InDatasetHeader(new DatasetHeaderState(0, this.state.bigEndian, this.state.explicitVR), this.parser));
         }
         console.warn("Unexpected element (" + base.tagToString(header.tag) + ") in fragments with length " + header.valueLength);
         return new ParseResult(new UnknownPart(this.state.bigEndian, reader.take(header.headerLength + header.valueLength)), this);
@@ -261,7 +260,7 @@ function toDatasetStep(reader, valueLength, state, parser) {
         } else
             return new InDeflatedData(state, parser);
     }
-    return new InDatasetHeader(new DatasetHeaderState(0, 0, bigEndian, explicitVR), parser);
+    return new InDatasetHeader(new DatasetHeaderState(0, bigEndian, explicitVR), parser);
 }
 
 function readTagVr(data, bigEndian, explicitVr) {
