@@ -13,7 +13,7 @@ const {
 const {emptyTagPath} = require("./tag-path");
 const {
     IdentityFlow, DeferToPartFlow, InFragments, GuaranteedValueEvent, GuaranteedDelimitationEvents, TagPathTracking,
-    GroupLengthWarnings, EndEvent, create
+    InSequence, GroupLengthWarnings, EndEvent, dicomEndMarker, create
 } = require("./dicom-flow");
 const {collectFlow, collectFromTagPathsFlow} = require("./collect-flow");
 const {modifyFlow, TagInsertion} = require("./modify-flow");
@@ -28,6 +28,30 @@ const toBytesFlow = function () {
         }
     });
 };
+
+const stopTagFlow = function (tag) {
+    return pipe(
+        create(new class extends InSequence(GuaranteedDelimitationEvents(InFragments(IdentityFlow))) {
+            onHeader(part) {
+                return this.inSequence || part.tag < tag ? [part] : [dicomEndMarker];
+            }
+        }),
+        new Transform({
+            objectMode: true,
+            endReached: false,
+            transform(chunk, encoding, callback) {
+                if (!this.endReached) {
+                    if (chunk === dicomEndMarker) {
+                        this.endReached = true;
+                        this.push(null);
+                    } else
+                        this.push(chunk);
+                }
+                process.nextTick(() => callback());
+            }
+        })
+    )
+}
 
 const whitelistFilter = function (whitelist, defaultCondition, logGroupLengthWarnings) {
     return tagFilter(currentPath => whitelist.some(t => t.hasTrunk(currentPath) || t.isTrunkOf(currentPath)), defaultCondition, logGroupLengthWarnings);
@@ -306,6 +330,7 @@ const deflateDatasetFlow = function () {
 
 module.exports = {
     toBytesFlow: toBytesFlow,
+    stopTagFlow, stopTagFlow,
     tagFilter: tagFilter,
     whitelistFilter: whitelistFilter,
     blacklistFilter: blacklistFilter,

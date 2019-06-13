@@ -156,7 +156,7 @@ class InDatasetHeader extends DicomParseStep {
     }
 
     parse(reader) {
-        let part = readDatasetHeader(reader, this.state, this.parser.stopTag);
+        let part = readDatasetHeader(reader, this.state);
         let nextState = finishedParser;
         if (part) {
             if (part instanceof HeaderPart)
@@ -171,6 +171,8 @@ class InDatasetHeader extends DicomParseStep {
             else if (part instanceof ItemPart)
                 nextState = new InDatasetHeader(new DatasetHeaderState(part.index, this.state.bigEndian, this.state.explicitVR), this.parser);
             else if (part instanceof ItemDelimitationPart)
+                nextState = new InDatasetHeader(new DatasetHeaderState(part.index, this.state.bigEndian, this.state.explicitVR), this.parser);
+            else if (part instanceof SequenceDelimitationPart)
                 nextState = new InDatasetHeader(new DatasetHeaderState(part.index, this.state.bigEndian, this.state.explicitVR), this.parser);
             else
                 nextState = new InDatasetHeader(this.state, this.parser);
@@ -298,10 +300,8 @@ function readHeader(reader, state) {
     };
 }
 
-function readDatasetHeader(reader, state, stopTag) {
+function readDatasetHeader(reader, state) {
     let header = readHeader(reader, state);
-    if (stopTag && header.tag && header.tag >= stopTag && header.tag < Tag.Item)
-        return undefined;
     if (header.vr) {
         let bytes = reader.take(header.headerLength);
         if (header.vr === VR.SQ || header.vr === VR.UN && header.valueLength === base.indeterminateLength)
@@ -322,16 +322,15 @@ function readDatasetHeader(reader, state, stopTag) {
 }
 
 class ParseFlow extends ByteParser {
-    constructor(chunkSize, stopTag, inflate) {
+    constructor(chunkSize, inflate) {
         super();
         this.chunkSize = chunkSize || 1024 * 1024;
-        this.stopTag = stopTag;
         this.inflate = inflate === undefined ? true : inflate;
         this.startWith(new AtBeginning(this));
     }
 }
 
-function parseFlow(chunkSize, stopTag, inflate) { return new ParseFlow(chunkSize, stopTag, inflate); }
+function parseFlow(chunkSize, inflate) { return new ParseFlow(chunkSize, inflate); }
 
 module.exports = {
     parseFlow: parseFlow

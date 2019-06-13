@@ -175,7 +175,7 @@ describe("DICOM parse flow", function () {
             data.transferSyntaxUID(UID.DeflatedExplicitVRLittleEndian),
             util.deflate(base.concatv(data.patientNameJohnDoe(), data.studyDate())));
 
-        return util.testParts(bytes, parseFlow(8192, undefined, false), parts => {
+        return util.testParts(bytes, parseFlow(8192, false), parts => {
             util.partProbe(parts)
                 .expectHeader(Tag.FileMetaInformationGroupLength)
                 .expectValueChunk()
@@ -326,47 +326,6 @@ describe("DICOM parse flow", function () {
         });
     });
 
-    it("should stop reading data when a stop tag is reached", function () {
-        let bytes = base.concat(data.studyDate(), data.patientNameJohnDoe());
-
-        return util.testParts(bytes, parseFlow(8192, Tag.PatientName), parts => {
-            util.partProbe(parts)
-                .expectHeader(Tag.StudyDate)
-                .expectValueChunk()
-                .expectDicomComplete();
-        });
-    });
-
-    it("should stop reading data when a tag number is higher than the stop tag", function () {
-        let bytes = base.concat(data.studyDate(), data.patientNameJohnDoe());
-
-        return util.testParts(bytes, parseFlow(8192, Tag.StudyDate + 1), parts => {
-            util.partProbe(parts)
-                .expectHeader(Tag.StudyDate)
-                .expectValueChunk()
-                .expectDicomComplete();
-        });
-    });
-
-    it("should apply stop tag correctly also when preceded by sequence", function () {
-        let bytes = base.concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence), base.item(), data.studyDate(), base.itemDelimitation(), base.sequenceDelimitation(), data.patientNameJohnDoe(), data.pixelData(100));
-
-        return util.testParts(bytes, parseFlow(64, Tag.PatientName + 1), parts => {
-            util.partProbe(parts)
-                .expectHeader(Tag.StudyDate)
-                .expectValueChunk()
-                .expectSequence()
-                .expectItem()
-                .expectHeader(Tag.StudyDate)
-                .expectValueChunk()
-                .expectItemDelimitation()
-                .expectSequenceDelimitation()
-                .expectHeader(Tag.PatientName)
-                .expectValueChunk()
-                .expectDicomComplete();
-        });
-    });
-
     it("should chunk value data according to max chunk size", function () {
         let bytes = base.concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()), data.transferSyntaxUID(), data.patientNameJohnDoe());
 
@@ -390,7 +349,7 @@ describe("DICOM parse flow", function () {
     it("should chunk deflated data according to max chunk size", function () {
         let bytes = base.concatv(data.fmiGroupLength(data.transferSyntaxUID(UID.DeflatedExplicitVRLittleEndian)), data.transferSyntaxUID(UID.DeflatedExplicitVRLittleEndian), util.deflate(data.patientNameJohnDoe(), data.studyDate()));
 
-        return util.testParts(bytes, parseFlow(22, undefined, false), parts => {
+        return util.testParts(bytes, parseFlow(22, false), parts => {
             util.partProbe(parts)
                 .expectHeader(Tag.FileMetaInformationGroupLength)
                 .expectValueChunk()
