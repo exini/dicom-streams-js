@@ -157,8 +157,7 @@ class InDatasetHeader extends DicomParseStep {
     }
 
     parse(reader) {
-        let stopTag = this.state.depth === 0 ? this.parser.stopTag : undefined;
-        let part = readDatasetHeader(reader, this.state, stopTag);
+        let part = readDatasetHeader(reader, this.state);
         let nextState = finishedParser;
         if (part) {
             if (part instanceof HeaderPart)
@@ -302,10 +301,8 @@ function readHeader(reader, state) {
     };
 }
 
-function readDatasetHeader(reader, state, stopTag) {
+function readDatasetHeader(reader, state) {
     let header = readHeader(reader, state);
-    if (stopTag && header.tag && header.tag >= stopTag)
-        return undefined;
     if (header.vr) {
         let bytes = reader.take(header.headerLength);
         if (header.vr === VR.SQ || header.vr === VR.UN && header.valueLength === base.indeterminateLength)
@@ -326,16 +323,15 @@ function readDatasetHeader(reader, state, stopTag) {
 }
 
 class ParseFlow extends ByteParser {
-    constructor(chunkSize, stopTag, inflate) {
+    constructor(chunkSize, inflate) {
         super();
         this.chunkSize = chunkSize || 1024 * 1024;
-        this.stopTag = stopTag;
         this.inflate = inflate === undefined ? true : inflate;
         this.startWith(new AtBeginning(this));
     }
 }
 
-function parseFlow(chunkSize, stopTag, inflate) { return new ParseFlow(chunkSize, stopTag, inflate); }
+function parseFlow(chunkSize, inflate) { return new ParseFlow(chunkSize, inflate); }
 
 module.exports = {
     parseFlow: parseFlow

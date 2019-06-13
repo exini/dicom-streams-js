@@ -13,10 +13,53 @@ const {TagModification, modifyFlow} = require("../src/modify-flow");
 const {
     groupLengthDiscardFilter, fmiDiscardFilter, blacklistFilter, whitelistFilter, tagFilter, headerFilter,
     fmiGroupLengthFlow, toIndeterminateLengthSequences, ValidationContext, validateContextFlow, deflateDatasetFlow,
-    toUtf8Flow, toBytesFlow
+    toUtf8Flow, toBytesFlow, stopTagFlow
 } = require("../src/dicom-flows");
 const data = require("./test-data");
 const util = require("./test-util");
+
+describe("The stop tag flow", function () {
+    it("should stop reading data when a stop tag is reached", function () {
+        let bytes = base.concat(data.studyDate(), data.patientNameJohnDoe());
+
+        return util.testParts(bytes, pipe(parseFlow(), stopTagFlow(Tag.PatientName)), parts => {
+            util.partProbe(parts)
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
+    it("should stop reading data when a tag number is higher than the stop tag", function () {
+        let bytes = base.concat(data.studyDate(), data.patientNameJohnDoe());
+
+        return util.testParts(bytes, pipe(parseFlow(), stopTagFlow(Tag.StudyDate + 1)), parts => {
+            util.partProbe(parts)
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
+    it("should apply stop tag correctly also when preceded by sequence", function () {
+        let bytes = base.concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence), base.item(), data.pixelData(10), base.itemDelimitation(), base.sequenceDelimitation(), data.patientNameJohnDoe(), data.pixelData(100));
+
+        return util.testParts(bytes, pipe(parseFlow(), stopTagFlow(Tag.PatientName + 1)), parts => {
+            util.partProbe(parts)
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectSequence()
+                .expectItem()
+                .expectHeader(Tag.PixelData)
+                .expectValueChunk()
+                .expectItemDelimitation()
+                .expectSequenceDelimitation()
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+});
 
 describe("The DICOM group length discard filter", function () {
     it("should discard group length elements except 0002,0000", function () {
