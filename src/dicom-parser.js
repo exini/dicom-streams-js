@@ -322,15 +322,15 @@ function readDatasetHeader(reader, state) {
 }
 
 class ParseFlow extends ByteParser {
-    constructor(chunkSize, inflate) {
-        super();
+    constructor(chunkSize, inflate, bufferBytes) {
+        super(bufferBytes);
         this.chunkSize = chunkSize || 1024 * 1024;
         this.inflate = inflate === undefined ? true : inflate;
         this.startWith(new AtBeginning(this));
     }
 }
 
-function parseFlow(chunkSize, inflate) { return new ParseFlow(chunkSize, inflate); }
+function parseFlow(chunkSize, inflate, bufferBytes) { return new ParseFlow(chunkSize, inflate, bufferBytes); }
 
 module.exports = {
     parseFlow: parseFlow

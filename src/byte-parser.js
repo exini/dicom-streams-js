@@ -3,8 +3,8 @@ const {Detour} = require("./detour");
 
 class ByteParser extends Detour {
 
-    constructor() {
-        super({readableObjectMode: true});
+    constructor(bufferBytes) {
+        super({writableHighWaterMark: bufferBytes || 1024 * 1024, readableObjectMode: true});
 
         this.buffer = base.emptyBuffer;
         this.current = finishedParser;

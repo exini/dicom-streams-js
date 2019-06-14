@@ -170,7 +170,7 @@ describe("The start event flow", function () {
         };
 
         return util.streamPromise(
-            singleSource(dicomEndMarker, 0, true),
+            singleSource(dicomEndMarker, true),
             pipe(createTestFlow(), createTestFlow(), createTestFlow()),
             arraySink(parts => {
                 assert.strictEqual(parts.length, 1);
@@ -196,7 +196,7 @@ describe("The start event flow", function () {
         });
 
         return util.streamPromise(
-            singleSource(dicomEndMarker, 0, true), testFlow, arraySink(parts => {
+            singleSource(dicomEndMarker, true), testFlow, arraySink(parts => {
                 assert.strictEqual(parts.length, 1);
                 assert.strictEqual(parts[0], dicomEndMarker);
             }));

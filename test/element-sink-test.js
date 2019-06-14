@@ -38,7 +38,7 @@ describe("An element sink", function () {
         ];
 
         return util.streamPromise(
-            arraySource(elementList, 0, true),
+            arraySource(elementList, true),
             elementSink(elements => {
                 assert.deepStrictEqual(elements.toElements(), elementList);
             }));
@@ -65,7 +65,7 @@ describe("An element sink", function () {
         ];
 
         return util.streamPromise(
-            arraySource(elementList, 0, true),
+            arraySource(elementList, true),
             elementSink(elements => {
                 assert.deepStrictEqual(elements.toElements(), elementList);
             }));
@@ -80,7 +80,7 @@ describe("An element sink", function () {
         ];
 
         return util.streamPromise(
-            arraySource(elementList, 0, true),
+            arraySource(elementList, true),
             elementSink(elements => {
                 let fragments = elements.fragmentsByTag(Tag.PixelData);
                 assert(fragments.offsets !== undefined);
@@ -97,7 +97,7 @@ describe("An element sink", function () {
         ];
 
         return util.streamPromise(
-            arraySource(elementList, 0, true),
+            arraySource(elementList, true),
             elementSink(elements => {
                 let fragments = elements.fragmentsByTag(Tag.PixelData);
                 assert(fragments.offsets !== undefined);
