@@ -6,7 +6,7 @@ const {ValueElement, SequenceElement, FragmentElement, FragmentsElement, ItemEle
 const VR = require("../src/vr");
 const UID = require("../src/uid");
 const {singleSource, arraySource} = require("../src/sources");
-const {parseFlow} = require("../src/dicom-parser");
+const {parseFlow} = require("../src/parse-flow");
 const {elementFlow} = require("../src/element-flows");
 const {elementSink} = require("../src/element-sink");
 const data = require("./test-data");

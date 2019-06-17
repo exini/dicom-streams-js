@@ -7,7 +7,7 @@ const {TagPath, emptyTagPath} = require("../src/tag-path");
 const {SequencePart} = require("../src/parts");
 const {singleSource} = require("../src/sources");
 const {arraySink} = require("../src/sinks");
-const {parseFlow} = require("../src/dicom-parser");
+const {parseFlow} = require("../src/parse-flow");
 const {create, IdentityFlow, DeferToPartFlow, StartEvent, EndEvent, InFragments, InSequence, GuaranteedValueEvent,
     GuaranteedDelimitationEvents, TagPathTracking, GroupLengthWarnings, dicomStartMarker, dicomEndMarker} = require("../src/dicom-flow");
 const {toIndeterminateLengthSequences} = require("../src/dicom-flows");

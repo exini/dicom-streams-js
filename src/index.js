@@ -12,7 +12,7 @@ module.exports = {
     Sources: require("./sources"),
     Flows: require("./flows"),
     Sinks: require("./sinks"),
-    DicomParser: require("./dicom-parser"),
+    ParseFlow: require("./parse-flow"),
     DicomFlow: require("./dicom-flow"),
     DicomFlows: require("./dicom-flows"),
     CollectFlow: require("./collect-flow"),

@@ -1,6 +1,6 @@
 const fs = require("fs");
 const pipe = require("multipipe");
-const {parseFlow} = require("../src/dicom-parser");
+const {parseFlow} = require("../src/parse-flow");
 const {elementFlow} = require("../src/element-flows");
 const {elementSink} = require("../src/element-sink");
 

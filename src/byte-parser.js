@@ -1,11 +1,10 @@
 const base = require("./base");
-const {Detour} = require("./detour");
 
-class ByteParser extends Detour {
+class ByteParser {
 
-    constructor(bufferBytes) {
-        super({writableHighWaterMark: bufferBytes || 1024 * 1024, readableObjectMode: true});
-
+    constructor(out) {
+        this.out = out;
+        this.reader = new ByteReader(base.emptyBuffer);
         this.buffer = base.emptyBuffer;
         this.current = finishedParser;
         this.isCompleted = false;
@@ -13,31 +12,35 @@ class ByteParser extends Detour {
     }
 
     completeStage() {
-        this.push(null);
         this.isCompleted = true;
+        this.buffer = base.emptyBuffer;
+        this.reader = null;
+        this.out.complete();
     }
 
     failStage(error) {
         error.message = "Parsing failed: " + error.message;
-        process.nextTick(() => this.emit("error", error));
         this.isCompleted = true;
+        this.buffer = base.emptyBuffer;
+        this.reader = null;
+        this.out.fail(error);
     }
 
-    doParseInner() {
+    _doParseInner() {
         if (this.buffer.length > 0) {
-            let reader = new ByteReader(this.buffer);
+            this.reader.setInput(this.buffer);
             try {
-                let parseResult = this.current.parse(reader);
+                let parseResult = this.current.parse(this.reader);
                 if (parseResult.result)
-                    this.push(parseResult.result);
+                    this.out.next(parseResult.result);
 
                 if (parseResult.nextStep === finishedParser) {
                     this.completeStage();
                     return dontRecurse
                 } else {
-                    this.buffer = reader.remainingData();
+                    this.buffer = this.reader.remainingData();
                     this.current = parseResult.nextStep;
-                    if (!reader.hasRemaining())
+                    if (!this.reader.hasRemaining())
                         this.hasData = false;
 
                     // If this step didn't produce a result, continue parsing.
@@ -62,28 +65,29 @@ class ByteParser extends Detour {
         }
     }
 
-    doParse(remainingRecursions) {
+    _doParse(remainingRecursions) {
         if (remainingRecursions === 0)
             this.failStage(new Error("Parsing logic didn't produce result. Aborting processing to avoid infinite cycles. In the unlikely case that the parsing logic needs more recursion, override ParsingLogic.recursionLimit."));
         else {
-            let recurse = this.doParseInner();
-            if (recurse) this.doParse(remainingRecursions - 1);
+            let recurse = this._doParseInner();
+            if (recurse) this._doParse(remainingRecursions - 1);
         }
     }
 
-    process(chunk) {
+    parse(chunk) {
         this.buffer = base.concat(this.buffer, chunk);
         this.hasData = chunk.length > 0;
 
         while (this.hasData && !this.isCompleted)
-            this.doParse(1000);
+            this._doParse(1000);
     }
 
-    cleanup() {
+    flush() {
         if (!this.isCompleted)
             if (this.buffer.length > 0)
                 try {
-                    this.current.onTruncation(new ByteReader(this.buffer));
+                    this.reader.setInput(this.buffer);
+                    this.current.onTruncation(this.reader);
                     this.completeStage();
                 } catch (error) {
                     this.failStage(error);
