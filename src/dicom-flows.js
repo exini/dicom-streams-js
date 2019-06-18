@@ -172,7 +172,7 @@ const fmiGroupLengthFlow = function () {
                         let length = fmiElementsNoLength.data.map(e => e.toBytes().length).reduce((l1, l2) => l1 + l2, 0);
                         let lengthHeader = new HeaderPart(Tag.FileMetaInformationGroupLength, VR.UL, 4, true, bigEndian, explicitVR);
                         let lengthChunk = new ValueChunk(bigEndian, base.intToBytes(length, bigEndian), true);
-                        this.fmi = base.concatArrays([lengthHeader, lengthChunk], fmiElementsNoLength.toParts());
+                        this.fmi = base.concatArrays([lengthHeader, lengthChunk], fmiElementsNoLength.toParts(false));
                     }
                     return [];
                 }

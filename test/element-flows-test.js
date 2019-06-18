@@ -27,7 +27,7 @@ describe("A DICOM elements flow", function () {
                 .expectFragments(Tag.PixelData)
                 .expectFragment(4)
                 .expectFragment(4)
-                .expectSequenceDelimitation(false)
+                .expectSequenceDelimitation()
                 .expectDicomComplete();
         });
     });
@@ -43,7 +43,7 @@ describe("A DICOM elements flow", function () {
                 .expectFragments(Tag.PixelData)
                 .expectFragment(0)
                 .expectFragment(4)
-                .expectSequenceDelimitation(false)
+                .expectSequenceDelimitation()
                 .expectDicomComplete()
         });
     });
@@ -56,8 +56,6 @@ describe("A DICOM elements flow", function () {
                 .expectSequence(Tag.DerivationCodeSequence, 24)
                 .expectItem(1, 16)
                 .expectElement(Tag.PatientName)
-                .expectItemDelimitation(1, true)
-                .expectSequenceDelimitation(true)
                 .expectDicomComplete();
         });
     });

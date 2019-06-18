@@ -387,7 +387,7 @@ describe("DICOM parse flow", function () {
     });
 
     it("should handle sequences and items of determinate length", function () {
-        let bytes = base.concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence, 8 + 18 + 16), base.item(18 + 16), data.studyDate(), data.patientNameJohnDoe(), data.patientNameJohnDoe());
+        let bytes = base.concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence, 8 + 16 + 16), base.item(16 + 16), data.studyDate(), data.patientNameJohnDoe(), data.patientNameJohnDoe());
 
         return util.testParts(bytes, parseFlow(), parts => {
             util.partProbe(parts)

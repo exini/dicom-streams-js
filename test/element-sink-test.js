@@ -40,8 +40,9 @@ describe("An element sink", function () {
         return util.streamPromise(
             arraySource(elementList, true),
             elementSink(elements => {
-                assert.deepStrictEqual(elements.toElements(), elementList);
-            }));
+                assert.deepStrictEqual(elements.toElements(false), elementList);
+            })
+        );
     });
 
     it("should handle zero length values, fragments, sequences and items", function () {
@@ -50,24 +51,20 @@ describe("An element sink", function () {
             new SequenceElement(Tag.DerivationCodeSequence),
             new SequenceDelimitationElement(),
             new SequenceElement(Tag.DerivationCodeSequence, 0),
-            new SequenceDelimitationElement(true),
             new SequenceElement(Tag.DerivationCodeSequence),
             new ItemElement(1),
             new ItemDelimitationElement(1),
             new ItemElement(2, 0),
-            new ItemDelimitationElement(2, true),
             new SequenceDelimitationElement(),
             new FragmentsElement(Tag.PixelData, VR.OB),
             new FragmentElement(1, 0, Value.empty()),
             new SequenceDelimitationElement(),
-            new FragmentsElement(Tag.PixelData, VR.OB),
-            new SequenceDelimitationElement()
         ];
 
         return util.streamPromise(
             arraySource(elementList, true),
             elementSink(elements => {
-                assert.deepStrictEqual(elements.toElements(), elementList);
+                assert.deepStrictEqual(elements.toElements(false), elementList);
             }));
     });
 

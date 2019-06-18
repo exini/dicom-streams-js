@@ -102,7 +102,7 @@ class AtBeginning extends DicomParseStep {
                 new InDatasetHeader(new DatasetHeaderState(0, info.bigEndian, info.explicitVR), this.flow);
             return new ParseResult(maybePreamble, nextState);
         } else
-            this.flow.parser.failStage(new Error("Not a DICOM stream"));
+            throw new Error("Not a DICOM stream");
     }
 
     onTruncation(reader) {
@@ -123,31 +123,27 @@ class InFmiHeader extends DicomParseStep {
         let header = readHeader(reader, this.state);
         if (base.groupNumber(header.tag) !== 2) {
             console.warn("Missing or wrong File Meta Information Group Length (0002,0000)");
-            return new ParseResult(undefined, toDatasetStep(Buffer.from([0x00, 0x00]), base.emptyBuffer, this.state, this.flow));
+            return new ParseResult(undefined, toDatasetStep(reader, header.valueLength, this.state, this.flow));
         }
         let updatedVr = header.vr === VR.UN ? Lookup.vrOf(header.tag) : header.vr;
         let bytes = reader.take(header.headerLength);
-        let updatedPos = this.state.pos + header.headerLength + header.valueLength;
-        let updatedState = this.state;
-        updatedState.pos = updatedPos;
+        this.state.pos += header.headerLength + header.valueLength;
         if (header.tag === Tag.FileMetaInformationGroupLength) {
             reader.ensure(4);
             let valueBytes = reader.remainingData().slice(0, 4);
-            updatedState.fmiEndPos = updatedPos + base.bytesToInt(valueBytes, this.state.bigEndian);
+            this.state.fmiEndPos = this.state.pos + base.bytesToInt(valueBytes, this.state.bigEndian);
         } else if (header.tag === Tag.TransferSyntaxUID)
             if (header.valueLength < this.transferSyntaxLengthLimit) {
                 reader.ensure(header.valueLength);
                 let valueBytes = reader.remainingData().slice(0, header.valueLength);
-                updatedState.tsuid = base.trim(valueBytes.toString());
+                this.state.tsuid = base.trim(valueBytes.toString());
             } else
                 console.warn("Transfer syntax data is very large, skipping");
-        else
-            updatedState.pos = updatedPos;
         let part = new HeaderPart(header.tag, updatedVr, header.valueLength, true, this.state.bigEndian, this.state.explicitVR, bytes);
-        let nextStep = new InFmiHeader(updatedState, this.flow);
-        if (updatedState.fmiEndPos && updatedState.fmiEndPos <= updatedPos)
-            nextStep = toDatasetStep(reader, header.valueLength, updatedState, this.flow);
-        return new ParseResult(part, new InValue(new ValueState(updatedState.bigEndian, header.valueLength, nextStep), this.flow));
+        let nextStep = new InFmiHeader(this.state, this.flow);
+        if (this.state.fmiEndPos && this.state.fmiEndPos <= this.state.pos)
+            nextStep = toDatasetStep(reader, header.valueLength, this.state, this.flow);
+        return new ParseResult(part, new InValue(new ValueState(this.state.bigEndian, header.valueLength, nextStep), this.flow));
     }
 }
 
@@ -359,6 +355,3 @@ function parseFlow(chunkSize, inflate, bufferBytes) { return new ParseFlow(chunk
 module.exports = {
     parseFlow: parseFlow
 };
-
-
-

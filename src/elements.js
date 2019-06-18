@@ -1,7 +1,7 @@
 const base = require("./base");
 const Lookup = require("./lookup");
 const {PreamblePart, HeaderPart, ValueChunk, SequencePart, SequenceDelimitationPart, ItemPart,
-    ItemDelimitationPart} = require("./parts");
+    ItemDelimitationPart, FragmentsPart} = require("./parts");
 const VR = require("./vr");
 const Tag = require("./tag");
 const {TagPathTag, TagPathItem} = require("./tag-path");
@@ -194,8 +194,12 @@ class Elements {
 
     sorted() { return new Elements(this.characterSets, this.zoneOffset, this.data.slice().sort((e1, e2) => e1.tag - e2.tag)); }
 
-    toElements() { return base.flatten(this.data.map(e => e.toElements())); }
-    toParts() { return base.flatten(this.toElements().map(e => e.toParts())) }
+    toElements(withPreamble) { 
+        withPreamble = withPreamble === undefined ? true : withPreamble;
+        const elements = base.flatten(this.data.map(e => e.toElements()));
+        return withPreamble ? base.prependToArray(preambleElement, elements) : elements;
+    }
+    toParts(withPreamble) { return base.flatten(this.toElements(withPreamble).map(e => e.toParts())) }
     toBytes(withPreamble) {
         withPreamble = withPreamble === undefined ? true : withPreamble;
         return this.data
@@ -228,12 +232,12 @@ class Elements {
                     let iDescription = i.indeterminate ? "Item with indeterminate length" : "Item with explicit length " + i.length;
                     let heading = indent + "  " + base.tagToString(Tag.Item) + " na " + iDescription + space + space1(iDescription) + " # " + space2(base.toInt32(i.length)) + space + base.toInt32(i.length) + ", 1 Item";
                     let elems = i.elements.toStrings(indent + "    ");
-                    let delimitation = indent + "  " + base.tagToString(Tag.ItemDelimitationItem) + " na " + space.repeat(41) + " #     0, 0 ItemDelimitationItem" + (i.indeterminate ? "" : " (marker)");
+                    let delimitation = indent + "  " + base.tagToString(Tag.ItemDelimitationItem) + " na " + space.repeat(41) + " #     0, 0 ItemDelimitationItem";
                     elems.unshift(heading);
                     elems.push(delimitation);
                     return elems;
                 }));
-                let delimitation = indent + base.tagToString(Tag.SequenceDelimitationItem) + " na " + space.repeat(41) + " #     0, 0 SequenceDelimitationItem" + (e.indeterminate ? "" : " (marker)");
+                let delimitation = indent + base.tagToString(Tag.SequenceDelimitationItem) + " na " + space.repeat(41) + " #     0, 0 SequenceDelimitationItem";
                 items.unshift(heading);
                 items.push(delimitation);
                 return items;
@@ -290,6 +294,12 @@ class ElementSet {
     toElements() { return []; }
 }
 
+class UnknownElement extends Element {
+    constructor(bigEndian) {
+        super(bigEndian);
+    }
+}
+
 class PreambleElement extends Element {
     constructor() {
         super(false);
@@ -309,7 +319,13 @@ class ValueElement extends ElementSet {
 
     setValue(value) { return new ValueElement(this.tag, this.vr, value.ensurePadding(this.vr), this.bigEndian, this.explicitVR); }
     toBytes() { return this.toParts().map(p => p.bytes).reduce(base.concat); }
-    toParts() { return [new HeaderPart(this.tag, this.vr, this.length, base.isFileMetaInformation(this.tag), this.bigEndian, this.explicitVR), new ValueChunk(this.bigEndian, this.value.bytes, true)]; }
+    toParts() {
+        const headerPart = new HeaderPart(this.tag, this.vr, this.length, base.isFileMetaInformation(this.tag), this.bigEndian, this.explicitVR);
+        if (this.length > 0)
+            return [headerPart, new ValueChunk(this.bigEndian, this.value.bytes, true)];
+        else
+            return [headerPart];
+    }
     toElements() { return [this]; }
     toString() {
         let strings = this.value.toStrings(this.vr, this.bigEndian, base.defaultCharacterSet);
@@ -325,6 +341,7 @@ class SequenceElement extends Element {
         this.tag = tag;
         this.length = length === undefined ? base.indeterminateLength : length;
         this.explicitVR = explicitVR === undefined ? true : explicitVR;
+        this.indeterminate = this.length === base.indeterminateLength;
     }
 
     toBytes() { return new HeaderPart(this.tag, VR.SQ, this.length, false, this.bigEndian, this.explicitVR).bytes; }
@@ -341,7 +358,10 @@ class FragmentsElement extends Element {
     }
 
     toBytes() { return this.toParts()[0].bytes; }
-    toParts() { return [new HeaderPart(this.tag, this.vr, base.indeterminateLength, false, this.bigEndian, this.explicitVR)]; }
+    toParts() { 
+        return [new FragmentsPart(this.tag, base.indeterminateLength, this.vr, this.bigEndian, this.explicitVR,
+            new HeaderPart(this.tag, this.vr, base.indeterminateLength, false, this.bigEndian, this.explicitVR).bytes)];
+    }
     toString() { return "FragmentsElement(" + base.tagToString(this.tag) + " " + this.vr.name + " # " + Lookup.keywordOf(this.tag) + ")"; }
 }
 
@@ -356,7 +376,8 @@ class FragmentElement extends Element {
     toBytes() { return this.toParts().map(p => p.bytes).reduce(base.concat); }
     toParts() {
         let itemParts = new ItemElement(this.index, this.value.length, this.bigEndian).toParts();
-        itemParts.push(new ValueChunk(this.bigEndian, this.value.bytes, true));
+        if (this.value.length !== 0)
+            itemParts.push(new ValueChunk(this.bigEndian, this.value.bytes, true));
         return itemParts;
     }
     toString() { return "FragmentElement(index = " + this.index + ", length = " + this.length + ")"; }
@@ -367,6 +388,7 @@ class ItemElement extends Element {
         super(bigEndian);
         this.index = index;
         this.length = length === undefined ? base.indeterminateLength : length;
+        this.indeterminate = this.length === base.indeterminateLength;
     }
 
     toBytes() { return base.concat(base.tagToBytes(Tag.Item, this.bigEndian), base.intToBytes(this.length, this.bigEndian)); }
@@ -375,26 +397,24 @@ class ItemElement extends Element {
 }
 
 class ItemDelimitationElement extends Element {
-    constructor(index, marker, bigEndian) {
+    constructor(index, bigEndian) {
         super(bigEndian);
         this.index = index;
-        this.marker = marker === undefined ? false : marker;
     }
 
-    toBytes() { return this.marker ? base.emptyBuffer : base.concat(base.tagToBytes(Tag.ItemDelimitationItem, this.bigEndian), Buffer.from([0, 0, 0, 0])); }
-    toParts() { return this.marker ? [] : [new ItemDelimitationPart(this.index, this.bigEndian, this.toBytes())]; }
-    toString() { return "ItemDelimitationElement(index = " + this.index + ", marker = " + this.marker + ")"; }
+    toBytes() { return base.concat(base.tagToBytes(Tag.ItemDelimitationItem, this.bigEndian), Buffer.from([0, 0, 0, 0])); }
+    toParts() { return [new ItemDelimitationPart(this.index, this.bigEndian, this.toBytes())]; }
+    toString() { return "ItemDelimitationElement(index = " + this.index + ")"; }
 }
 
 class SequenceDelimitationElement extends Element {
-    constructor(marker, bigEndian) {
+    constructor(bigEndian) {
         super(bigEndian);
-        this.marker = marker === undefined ? false : marker;
     }
 
-    toBytes() { return this.marker ? base.emptyBuffer : base.concat(base.tagToBytes(Tag.SequenceDelimitationItem, this.bigEndian), Buffer.from([0, 0, 0, 0])); }
-    toParts() { return this.marker ? [] : [new SequenceDelimitationPart(this.bigEndian, this.toBytes())]; }
-    toString() { return "SequenceDelimitationElement(marker = " + this.marker + ")"; }
+    toBytes() { return base.concat(base.tagToBytes(Tag.SequenceDelimitationItem, this.bigEndian), Buffer.from([0, 0, 0, 0])); }
+    toParts() { return [new SequenceDelimitationPart(this.bigEndian, this.toBytes())]; }
+    toString() { return "SequenceDelimitationElement"; }
 }
 
 class Sequence extends ElementSet {
@@ -426,7 +446,8 @@ class Sequence extends ElementSet {
             let itemElements = this.item(i).toElements(i);
             itemElements.forEach(e => elements.push(e));
         }
-        elements.push(new SequenceDelimitationElement(!this.indeterminate, this.bigEndian));
+        if (this.indeterminate)
+            elements.push(new SequenceDelimitationElement(this.bigEndian));
         return elements;
     }
     setItem(index, item) {
@@ -448,8 +469,9 @@ class Item {
     toElements(index) {
         let elements = [];
         elements.push(new ItemElement(index, this.length, this.bigEndian));
-        this.elements.toElements().forEach(e => elements.push(e));
-        elements.push(new ItemDelimitationElement(index, !this.indeterminate, this.bigEndian));
+        this.elements.toElements(false).forEach(e => elements.push(e));
+        if (this.indeterminate)
+            elements.push(new ItemDelimitationElement(index, this.bigEndian));
         return elements;
     }
     toBytes() { return this.toElements(1).map(e => e.toBytes()).reduce(base.concat); }
@@ -498,6 +520,8 @@ class Fragments extends ElementSet {
         elements.push(new FragmentsElement(this.tag, this.vr, this.bigEndian, this.explicitVR));
         if (this.offsets !== undefined)
             elements.push(new FragmentElement(1, 4 * this.offsets.length, new Value(this.offsets.map(offset => base.intToBytes(offset, this.bigEndian), this.bigEndian).reduce(base.concat, base.emptyBuffer), this.bigEndian)));
+        else
+            elements.push(new FragmentElement(1, 0, Value.empty()));
         for (let i = 1; i <= this.fragments.length; i++) {
             elements.push(this.fragment(i).toElement(i + 1));
         }
@@ -517,31 +541,11 @@ function parseZoneOffset(s) {
     return parseInt(s.slice(0, 1) + (parseInt(s.slice(1,3)) * 60 + parseInt(s.slice(3, 5))));
 }
 
-class ElementsBuilder {
-    constructor(characterSets, zoneOffset) {
-        this.characterSets = characterSets;
-        this.zoneOffset = zoneOffset;
-        this.data = [];
-    }
-
-    addElement(element) {
-        if (element instanceof ValueElement && element.tag === Tag.SpecificCharacterSet)
-            this.characterSets = CharacterSets.fromBytes(element.value.bytes);
-        if (element instanceof ValueElement && element.tag === Tag.TimezoneOffsetFromUTC) {
-            let newOffset = parseZoneOffset(element.value.toSingleString(VR.SH, element.bigEndian, this.characterSets));
-            this.zoneOffset = isNaN(newOffset) ? this.zoneOffset : newOffset;
-        }
-        this.data.push(element);
-        return this;
-    }
-    result() { return new Elements(this.characterSets, this.zoneOffset, this.data); }
-    toString() { return "ElementsBuilder(characterSets = " + this.characterSets + ", zoneOffset = " + this.zoneOffset + ", size = " + this.data.size + ")"; }
-}
-
 module.exports = {
     Elements: Elements,
     Element: Element,
     ElementSet: ElementSet,
+    UnknownElement: UnknownElement,
     preambleElement: preambleElement,
     ValueElement: ValueElement,
     SequenceElement: SequenceElement,
@@ -554,5 +558,4 @@ module.exports = {
     Item: Item,
     Fragment: Fragment,
     Fragments: Fragments,
-    ElementsBuilder: ElementsBuilder
 };
