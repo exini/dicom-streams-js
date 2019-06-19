@@ -10,8 +10,7 @@ const util = require("./test-util");
 function parse(bytes) {
     const parser = new Parser();
     parser.parse(bytes);
-    parser.flush();
-    return parser.elements;
+    return parser.result();
 }
 
 function probe(bytes) {
@@ -101,8 +100,11 @@ describe("DICOM parse flow", function () {
     });
 
     it("should fail reading a truncated DICOM file", function () {
-        let bytes = data.patientNameJohnDoe().slice(0, 14);
-        assert.throws(() => parse(bytes));
+        let bytes = new Buffer(256);
+        assert.throws(() => {
+            const parser = new Parser();
+            parser.parse(bytes);
+        });
     });
 
     it("should inflate deflated datasets", function () {
@@ -223,8 +225,7 @@ describe("DICOM parse flow", function () {
         for (let i = 0; i < bytes.length; i += chunkSize) {
             parser.parse(bytes.slice(i, Math.min(bytes.length, i + chunkSize)));
         }
-        parser.flush();
-        const elements = parser.elements;
+        const elements = parser.result();
     
         util.partProbe(elements.toParts())
             .expectPreamble()
@@ -303,7 +304,6 @@ describe("DICOM parse flow", function () {
     it("should handle fragments with empty basic offset table (first item)", function () {
         let bytes = base.concatv(data.pixeDataFragments(), base.item(0), base.item(4), Buffer.from([1, 2, 3, 4]), base.sequenceDelimitation());
 
-        console.log(parse(bytes).toParts());
         probe(bytes)
             .expectFragments()
             .expectFragment(1, 0)
@@ -334,6 +334,45 @@ describe("DICOM parse flow", function () {
             .expectValueChunk()
             .expectHeader(Tag.CTExposureSequence, VR.UN, 24)
             .expectValueChunk()
+            .expectDicomComplete();
+    });
+
+    it("should filter elements based on the supplied filter condition", function () {
+        let bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence), base.item(), data.patientNameJohnDoe(), data.studyDate(), base.itemDelimitation(), base.sequenceDelimitation(), data.patientNameJohnDoe());
+
+        const stop = (element, depth) => false;
+        const filter = (element, depth) => depth > 0 || element.tag < Tag.PatientName;
+        const parser = new Parser(stop, filter);
+        parser.parse(bytes);
+    
+        util.partProbe(parser.result().toParts(false))
+            .expectSequence(Tag.DerivationCodeSequence)
+            .expectItem(1)
+            .expectHeader(Tag.PatientName)
+            .expectValueChunk()
+            .expectHeader(Tag.StudyDate)
+            .expectValueChunk()
+            .expectItemDelimitation()
+            .expectSequenceDelimitation()
+            .expectDicomComplete();
+    });
+
+    it("should stop parsing early based on the input stop condition", function () {
+        let bytes = base.concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence), base.item(), data.patientNameJohnDoe(), base.itemDelimitation(), base.sequenceDelimitation(), data.patientNameJohnDoe());
+
+        const stop = (element, depth) => depth === 0 && element.tag >= Tag.PatientName;
+        const parser = new Parser(stop);
+        parser.parse(bytes);
+
+        util.partProbe(parser.result().toParts(false))
+            .expectHeader(Tag.StudyDate)
+            .expectValueChunk()
+            .expectSequence(Tag.DerivationCodeSequence)
+            .expectItem(1)
+            .expectHeader(Tag.PatientName)
+            .expectValueChunk()
+            .expectItemDelimitation()
+            .expectSequenceDelimitation()
             .expectDicomComplete();
     });
 });

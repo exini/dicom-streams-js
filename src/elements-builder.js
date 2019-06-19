@@ -116,25 +116,13 @@ class ElementsBuilder {
 
         else if (element instanceof ItemDelimitationElement && this._hasSequence()) {
             this._subtractLength(8);
-            let builder = this._builderStack[0];
-            let sequence = this._sequenceStack[0];
-            let elements = builder.result();
-            let items = sequence.items;
-            if (items.length > 0) {
-                items[items.length - 1] = items[items.length - 1].setElements(elements);
-                let updatedSequence = new Sequence(sequence.tag, sequence.length, items, sequence.bigEndian, sequence.explicitVR);
-                this._popBuilder();
-                this._updateSequence(updatedSequence);
-            }
+            this._endItem();
             this._maybeDelimit();
         }
 
         else if (element instanceof SequenceDelimitationElement && this._hasSequence()) {
             this._subtractLength(8);
-            let sequence = this._sequenceStack[0];
-            let builder = this._builderStack[0];
-            builder.addElementSet(sequence);
-            this._popSequence();
+            this._endSequence();
             this._maybeDelimit();
         }
     }

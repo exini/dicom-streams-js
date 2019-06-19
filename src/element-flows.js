@@ -2,8 +2,7 @@ const base = require("./base");
 const {PreamblePart, HeaderPart, ValueChunk, SequencePart, SequenceDelimitationPart, ItemPart, ItemDelimitationPart,
     FragmentsPart} = require("./parts");
 const {Value} = require("./value");
-const {DeferToPartFlow, GuaranteedDelimitationEvents, GuaranteedValueEvent, InFragments, sequenceDelimitationPartMarker,
-    ItemDelimitationPartMarker, create} = require("./dicom-flow");
+const {DeferToPartFlow, GuaranteedValueEvent, InFragments, create} = require("./dicom-flow");
 const {preambleElement, FragmentElement, ValueElement, FragmentsElement, SequenceElement, SequenceDelimitationElement,
     ItemElement, ItemDelimitationElement} = require("./elements");
 

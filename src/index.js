@@ -17,6 +17,7 @@ module.exports = {
     DicomFlows: require("./dicom-flows"),
     CollectFlow: require("./collect-flow"),
     ModifyFlow: require("./modify-flow"),
+    Parser: require("./parser"),
     Value: require("./value"),
     Elements: require("./elements"),
     ElementFlows: require("./element-flows"),
