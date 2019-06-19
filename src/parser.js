@@ -224,9 +224,8 @@ class InFragments extends DicomParseStep {
 }
 
 class Parser {
-    constructor(stop, filter) {
+    constructor(stop) {
         this.stop = stop;
-        this.filter = filter;
 
         this._builder = new ElementsBuilder();
         this._byteParser = new ByteParser(this);
@@ -252,12 +251,10 @@ class Parser {
     }
 
     /**
-     * Called by byte parser when it is emitting the next parsed element. Check if element should be added
-     * according to the input filter and add the element to the builder if ok.
+     * Called by byte parser when it is emitting the next parsed element.
      */
     next(element) {
-        if (!this.filter || this.filter(element, this._builder.currentDepth()))
-            this._builder.addElement(element);
+        this._builder.addElement(element);
     }
 
     /**

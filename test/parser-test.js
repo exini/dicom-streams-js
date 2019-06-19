@@ -337,26 +337,6 @@ describe("DICOM parse flow", function () {
             .expectDicomComplete();
     });
 
-    it("should filter elements based on the supplied filter condition", function () {
-        let bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence), base.item(), data.patientNameJohnDoe(), data.studyDate(), base.itemDelimitation(), base.sequenceDelimitation(), data.patientNameJohnDoe());
-
-        const stop = (element, depth) => false;
-        const filter = (element, depth) => depth > 0 || element.tag < Tag.PatientName;
-        const parser = new Parser(stop, filter);
-        parser.parse(bytes);
-    
-        util.partProbe(parser.result().toParts(false))
-            .expectSequence(Tag.DerivationCodeSequence)
-            .expectItem(1)
-            .expectHeader(Tag.PatientName)
-            .expectValueChunk()
-            .expectHeader(Tag.StudyDate)
-            .expectValueChunk()
-            .expectItemDelimitation()
-            .expectSequenceDelimitation()
-            .expectDicomComplete();
-    });
-
     it("should stop parsing early based on the input stop condition", function () {
         let bytes = base.concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence), base.item(), data.patientNameJohnDoe(), base.itemDelimitation(), base.sequenceDelimitation(), data.patientNameJohnDoe());
 
