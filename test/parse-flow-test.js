@@ -3,7 +3,7 @@ const base = require("../src/base");
 const Tag = require("../src/tag");
 const VR = require("../src/vr");
 const UID = require("../src/uid");
-const {parseFlow} = require("../src/dicom-parser");
+const {parseFlow} = require("../src/parse-flow");
 const data = require("./test-data");
 const util = require("./test-util");
 const {Chunker} = require("./chunker");
@@ -387,7 +387,7 @@ describe("DICOM parse flow", function () {
     });
 
     it("should handle sequences and items of determinate length", function () {
-        let bytes = base.concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence, 8 + 18 + 16), base.item(18 + 16), data.studyDate(), data.patientNameJohnDoe(), data.patientNameJohnDoe());
+        let bytes = base.concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence, 8 + 16 + 16), base.item(16 + 16), data.studyDate(), data.patientNameJohnDoe(), data.patientNameJohnDoe());
 
         return util.testParts(bytes, parseFlow(), parts => {
             util.partProbe(parts)

@@ -2,13 +2,12 @@ const base = require("./base");
 const {PreamblePart, HeaderPart, ValueChunk, SequencePart, SequenceDelimitationPart, ItemPart, ItemDelimitationPart,
     FragmentsPart} = require("./parts");
 const {Value} = require("./value");
-const {DeferToPartFlow, GuaranteedDelimitationEvents, GuaranteedValueEvent, InFragments, sequenceDelimitationPartMarker,
-    ItemDelimitationPartMarker, create} = require("./dicom-flow");
+const {DeferToPartFlow, GuaranteedValueEvent, InFragments, create} = require("./dicom-flow");
 const {preambleElement, FragmentElement, ValueElement, FragmentsElement, SequenceElement, SequenceDelimitationElement,
     ItemElement, ItemDelimitationElement} = require("./elements");
 
 const elementFlow = function () {
-    return create(new class extends GuaranteedValueEvent(GuaranteedDelimitationEvents(InFragments(DeferToPartFlow))) {
+    return create(new class extends GuaranteedValueEvent(InFragments(DeferToPartFlow)) {
         constructor() {
             super();
             this.bytes = base.emptyBuffer;
@@ -65,17 +64,11 @@ const elementFlow = function () {
             if (part instanceof ItemPart)
                 return [new ItemElement(part.index, part.length, part.bigEndian)];
 
-            if (part instanceof ItemDelimitationPartMarker)
-                return [new ItemDelimitationElement(part.index, true, part.bigEndian)];
-
             if (part instanceof ItemDelimitationPart)
-                return [new ItemDelimitationElement(part.index, false, part.bigEndian)];
-
-            if (part === sequenceDelimitationPartMarker)
-                return [new SequenceDelimitationElement(true, part.bigEndian)];
+                return [new ItemDelimitationElement(part.index, part.bigEndian)];
 
             if (part instanceof SequenceDelimitationPart)
-                return [new SequenceDelimitationElement(false, part.bigEndian)];
+                return [new SequenceDelimitationElement(part.bigEndian)];
 
             return [];
         }

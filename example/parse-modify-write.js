@@ -2,7 +2,7 @@ const fs = require("fs");
 const pipe = require("multipipe");
 const {TagPath} = require("../src/tag-path");
 const {TagTree} = require("../src/tag-tree");
-const {parseFlow} = require("../src/dicom-parser");
+const {parseFlow} = require("../src/parse-flow");
 const {toBytesFlow, whitelistFilter, blacklistFilter, toUtf8Flow, toIndeterminateLengthSequences} = require("../src/dicom-flows");
 const {modifyFlow, TagModification, TagInsertion} = require("../src/modify-flow");
 

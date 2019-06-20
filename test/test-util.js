@@ -204,22 +204,18 @@ class ElementProbe {
         return this;
     }
 
-    expectItemDelimitation(index, marker) {
+    expectItemDelimitation(index) {
         let part = this.array[this.offset];
         assert(part instanceof ItemDelimitationElement);
-        if (marker !== undefined)
-            assert.strictEqual(part.marker, marker);
         if (index !== undefined)
             assert.strictEqual(part.index, index);
         this.offset++;
         return this;
     }
 
-    expectSequenceDelimitation(marker) {
+    expectSequenceDelimitation() {
         let part = this.array[this.offset];
         assert(part instanceof SequenceDelimitationElement);
-        if (marker !== undefined)
-            assert.strictEqual(part.marker, marker);
         this.offset++;
         return this;
     }

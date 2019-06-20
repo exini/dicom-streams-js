@@ -7,7 +7,7 @@ const UID = require("../src/uid");
 const {MetaPart} = require("../src/parts");
 const {TagPath} = require("../src/tag-path");
 const {TagTree} = require("../src/tag-tree");
-const {parseFlow} = require("../src/dicom-parser");
+const {parseFlow} = require("../src/parse-flow");
 const {prependFlow} = require("../src/flows");
 const {TagModification, modifyFlow} = require("../src/modify-flow");
 const {

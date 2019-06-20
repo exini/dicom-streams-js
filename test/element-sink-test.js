@@ -6,7 +6,7 @@ const {ValueElement, SequenceElement, FragmentElement, FragmentsElement, ItemEle
 const VR = require("../src/vr");
 const UID = require("../src/uid");
 const {singleSource, arraySource} = require("../src/sources");
-const {parseFlow} = require("../src/dicom-parser");
+const {parseFlow} = require("../src/parse-flow");
 const {elementFlow} = require("../src/element-flows");
 const {elementSink} = require("../src/element-sink");
 const data = require("./test-data");
@@ -38,10 +38,11 @@ describe("An element sink", function () {
         ];
 
         return util.streamPromise(
-            arraySource(elementList, 0, true),
+            arraySource(elementList, true),
             elementSink(elements => {
-                assert.deepStrictEqual(elements.toElements(), elementList);
-            }));
+                assert.deepStrictEqual(elements.toElements(false), elementList);
+            })
+        );
     });
 
     it("should handle zero length values, fragments, sequences and items", function () {
@@ -50,24 +51,20 @@ describe("An element sink", function () {
             new SequenceElement(Tag.DerivationCodeSequence),
             new SequenceDelimitationElement(),
             new SequenceElement(Tag.DerivationCodeSequence, 0),
-            new SequenceDelimitationElement(true),
             new SequenceElement(Tag.DerivationCodeSequence),
             new ItemElement(1),
             new ItemDelimitationElement(1),
             new ItemElement(2, 0),
-            new ItemDelimitationElement(2, true),
             new SequenceDelimitationElement(),
             new FragmentsElement(Tag.PixelData, VR.OB),
             new FragmentElement(1, 0, Value.empty()),
             new SequenceDelimitationElement(),
-            new FragmentsElement(Tag.PixelData, VR.OB),
-            new SequenceDelimitationElement()
         ];
 
         return util.streamPromise(
-            arraySource(elementList, 0, true),
+            arraySource(elementList, true),
             elementSink(elements => {
-                assert.deepStrictEqual(elements.toElements(), elementList);
+                assert.deepStrictEqual(elements.toElements(false), elementList);
             }));
     });
 
@@ -80,7 +77,7 @@ describe("An element sink", function () {
         ];
 
         return util.streamPromise(
-            arraySource(elementList, 0, true),
+            arraySource(elementList, true),
             elementSink(elements => {
                 let fragments = elements.fragmentsByTag(Tag.PixelData);
                 assert(fragments.offsets !== undefined);
@@ -97,7 +94,7 @@ describe("An element sink", function () {
         ];
 
         return util.streamPromise(
-            arraySource(elementList, 0, true),
+            arraySource(elementList, true),
             elementSink(elements => {
                 let fragments = elements.fragmentsByTag(Tag.PixelData);
                 assert(fragments.offsets !== undefined);

@@ -1,35 +1,31 @@
 const {Readable} = require("readable-stream");
 
-const singleSource = function (element, after, objectMode) {
-    let readable = new Readable({
+const singleSource = function (element, objectMode) {
+    return new Readable({
         objectMode: objectMode === undefined ? false : objectMode,
         read(size) {
+            this.push(element);
+            this.push(null);
         }
     });
-    after = after === undefined ? 0 : after;
-    setTimeout(() => {
-        readable.push(element);
-        readable.push(null);
-    }, after);
-    return readable;
 };
 
-const arraySource = function (array, delay, objectMode) {
-    let arr = array.slice();
+const arraySource = function (array, objectMode) {
+    let pos = 0;
     let readable = new Readable({
+        highWaterMark: 1,
         objectMode: objectMode === undefined ? false : objectMode,
         read(size) {
+            size = size || 1;
+            const maxPos = Math.min(pos + size, array.length);
+            let i = pos;
+            while (i < maxPos && this.push(array[i++]));
+            if (i === array.length) {
+                this.push(null);
+            }
+            pos = i;
         }
     });
-    delay = delay || 0;
-    let id = setInterval(() => {
-        if (arr.length > 0)
-            readable.push(arr.shift());
-        else {
-            readable.push(null);
-            clearInterval(id);
-        }
-    }, delay);
     return readable;
 };
 
