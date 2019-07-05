@@ -26,7 +26,7 @@ export class TestPart extends MetaPart {
     }
 }
 
-class PartProbe {
+export class PartProbe {
 
     private offset: number = 0;
 
@@ -282,6 +282,6 @@ export function testParts(bytes: Buffer, flow: Transform, assertParts: (parts: a
 export function expectDicomError(asyncFunction: () => Promise<any>) {
     return assert.rejects(asyncFunction);
 }
-export function deflate(buffer: Buffer, gzip: boolean) {
+export function deflate(buffer: Buffer, gzip: boolean = false) {
     return gzip ? zlib.deflateSync(buffer) : zlib.deflateRawSync(buffer);
 }

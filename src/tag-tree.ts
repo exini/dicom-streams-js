@@ -270,11 +270,11 @@ export class TagTreeTrunk extends TagTree {
     public thenItem(tag: number, item: number) { return new TagTreeItem(tag, item, this); }
 }
 
-export class EmptyTagTree extends TagTreeTrunk {
+class EmptyTagTree extends TagTreeTrunk {
     public tag(): number { throw Error("Empty tag tree"); }
     public previous(): TagTreeTrunk { return emptyTagTree; }
 }
-const emptyTagTree = new EmptyTagTree(-1, null);
+export const emptyTagTree = new EmptyTagTree(-1, null);
 
 export class TagTreeTag extends TagTree {
     constructor(tag: number, previous: TagTreeTrunk) {

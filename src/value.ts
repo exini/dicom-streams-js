@@ -136,9 +136,9 @@ export class Value {
         bigEndian: boolean = false): number {
             return Value.headOption(this.toNumbers(vr, bigEndian));
     }
-    public toDate(vr: VR.VR): LocalDate { return Value.headOption(this.toDates(vr)); }
-    public toTime(vr: VR.VR): LocalTime { return Value.headOption(this.toTimes(vr)); }
-    public toDateTime(vr: VR.VR, zone: ZoneId): ZonedDateTime { return Value.headOption(this.toDateTimes(vr, zone)); }
+    public toDate(vr?: VR.VR): LocalDate { return Value.headOption(this.toDates(vr)); }
+    public toTime(vr?: VR.VR): LocalTime { return Value.headOption(this.toTimes(vr)); }
+    public toDateTime(vr?: VR.VR, zone?: ZoneId): ZonedDateTime { return Value.headOption(this.toDateTimes(vr, zone)); }
 
     public append(bytes: Buffer): Value {
         return new Value(base.concat(this.bytes, bytes));
@@ -298,7 +298,7 @@ function parseTime(s: string): LocalTime {
     try { return LocalTime.parse(s.trim(), timeFormat); } catch (error) { return undefined; }
 }
 
-function parseDateTime(s: string, zone: ZoneId): ZonedDateTime {
+function parseDateTime(s: string, zone: ZoneId = base.systemZone): ZonedDateTime {
     s = s.trim();
     let len = s.length;
     let zoneStart = Math.max(s.indexOf("+"), s.indexOf("-"));
@@ -316,7 +316,6 @@ function parseDateTime(s: string, zone: ZoneId): ZonedDateTime {
         let minute = 0;
         let second = 0;
         let nanoOfSecond = 0;
-        let zn: ZoneId;
         if (len >= 6) {
             month = parseInt(s.substring(4, 6), 10);
             if (len >= 8) {
@@ -337,7 +336,7 @@ function parseDateTime(s: string, zone: ZoneId): ZonedDateTime {
         }
         zoneStart = Math.max(s.indexOf("+"), s.indexOf("-"));
         if (zoneStart >= 4) {
-            zn = ZoneOffset.ofHoursMinutes(
+            zone = ZoneOffset.ofHoursMinutes(
                 parseInt(s.substring(zoneStart + 1, zoneStart + 3), 10),
                 parseInt(s.substring(zoneStart + 3, zoneStart + 5), 10));
         }

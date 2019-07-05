@@ -7,8 +7,8 @@
   "types": "dist/node/index.d.ts",
   "scripts": {
     "test": "cross-env NODE_ICU_DATA=node_modules/full-icu mocha -r ts-node/register test/**/*-test.ts",
-    "test-one": "cross-env NODE_ICU_DATA=node_modules/full-icu mocha 'test/parser-test.js'",
-    "test-coverage": "cross-env NODE_ICU_DATA=node_modules/full-icu ./node_modules/istanbul/lib/cli.js cover -x \"**/tag.js\" -x \"**/tag-to-vr.js\" ./node_modules/mocha/bin/_mocha -- -R spec test/*-test.js",
+    "test-one": "cross-env NODE_ICU_DATA=node_modules/full-icu mocha -r ts-node/register 'test/parser-test.js'",
+    "test-coverage": "cross-env NODE_ICU_DATA=node_modules/full-icu ./node_modules/istanbul/lib/cli.js cover -x \"**/tag.js\" -x \"**/tag-to-vr.js\" ./node_modules/mocha/bin/_mocha -r ts-node/register -- -R spec test/*-test.js",
     "build": "shx rm -rf dist; webpack --config webpack.config.js",
     "publish-to-npm": "npm run build; shx cp package.json LICENSE README.md dist; npm publish dist"
   },

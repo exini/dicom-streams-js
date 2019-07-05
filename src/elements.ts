@@ -117,10 +117,10 @@ export class Elements {
     }
 
     public dateTimesByTag(tag: number): ZonedDateTime[] {
-        return this._valuesByTag(tag, (v) => v.value.toDateTimes(v.vr));
+        return this._valuesByTag(tag, (v) => v.value.toDateTimes(v.vr, this.zoneOffset));
     }
     public dateTimesByPath(tagPath: TagPathTag): ZonedDateTime[] {
-        return this._valuesByPath(tagPath, (v) => v.value.toDateTimes(v.vr));
+        return this._valuesByPath(tagPath, (v) => v.value.toDateTimes(v.vr, this.zoneOffset));
     }
     public dateTimeByTag(tag: number): ZonedDateTime {
         return this._valueByTag(tag, (v) => v.value.toDateTime(v.vr, this.zoneOffset));
@@ -200,12 +200,11 @@ export class Elements {
         return new Elements(this.characterSets, this.zoneOffset, this.data.slice().sort((e1, e2) => e1.tag - e2.tag));
     }
 
-    public toElements(withPreamble: boolean): Element[] {
-        withPreamble = withPreamble === undefined ? true : withPreamble;
+    public toElements(withPreamble: boolean = true): Element[] {
         const elements = base.flatten(this.data.map((e) => e.toElements()));
         return withPreamble ? base.prependToArray(preambleElement, elements) : elements;
     }
-    public toParts(withPreamble: boolean): DicomPart[] {
+    public toParts(withPreamble?: boolean): DicomPart[] {
         return base.flatten(this.toElements(withPreamble).map((e) => e.toParts()));
     }
     public toBytes(withPreamble: boolean = true): Buffer {

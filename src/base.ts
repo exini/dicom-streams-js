@@ -71,17 +71,17 @@ export function shiftLeftUnsigned(num: number, n: number): number { return toUIn
 
 export function groupNumber(tag: number): number { return tag >>> 16; }
 export function elementNumber(tag: number): number { return tag & 0xFFFF; }
-export function bytesToShort(bytes: Buffer, bigEndian: boolean): number {
+export function bytesToShort(bytes: Buffer, bigEndian: boolean = false): number {
     return bigEndian ? bytesToShortBE(bytes) : bytesToShortLE(bytes);
 }
 export function bytesToShortBE(bytes: Buffer): number { return bytes.readInt16BE(0); }
 export function bytesToShortLE(bytes: Buffer): number { return bytes.readInt16LE(0); }
-export function bytesToUShort(bytes: Buffer, bigEndian: boolean): number {
+export function bytesToUShort(bytes: Buffer, bigEndian: boolean = false): number {
     return bigEndian ? bytesToUShortBE(bytes) : bytesToUShortLE(bytes);
 }
 export function bytesToUShortBE(bytes: Buffer): number { return bytes.readUInt16BE(0); }
 export function bytesToUShortLE(bytes: Buffer): number {return bytes.readUInt16LE(0); }
-export function bytesToTag(bytes: Buffer, bigEndian: boolean): number {
+export function bytesToTag(bytes: Buffer, bigEndian: boolean = false): number {
     return bigEndian ? bytesToTagBE(bytes) : bytesToTagLE(bytes);
 }
 export function bytesToTagBE(bytes: Buffer): number { return bytesToUIntBE(bytes); }
@@ -89,22 +89,22 @@ export function bytesToTagLE(bytes: Buffer): number {
     return shiftLeftUnsigned(bytes.readUInt16LE(0), 16) + bytes.readUInt16LE(2);
 }
 export function bytesToVR(bytes: Buffer): number { return bytesToUShortBE(bytes); }
-export function bytesToInt(bytes: Buffer, bigEndian: boolean): number {
+export function bytesToInt(bytes: Buffer, bigEndian: boolean = false): number {
     return bigEndian ? bytesToIntBE(bytes) : bytesToIntLE(bytes);
 }
 export function bytesToIntBE(bytes: Buffer): number { return bytes.readInt32BE(0); }
 export function bytesToIntLE(bytes: Buffer): number { return bytes.readInt32LE(0); }
-export function bytesToUInt(bytes: Buffer, bigEndian: boolean): number {
+export function bytesToUInt(bytes: Buffer, bigEndian: boolean = false): number {
     return bigEndian ? bytesToUIntBE(bytes) : bytesToUIntLE(bytes);
 }
 export function bytesToUIntBE(bytes: Buffer): number { return bytes.readUInt32BE(0); }
 export function bytesToUIntLE(bytes: Buffer): number { return bytes.readUInt32LE(0); }
-export function bytesToFloat(bytes: Buffer, bigEndian: boolean): number {
+export function bytesToFloat(bytes: Buffer, bigEndian: boolean = false): number {
     return bigEndian ? bytesToFloatBE(bytes) : bytesToFloatLE(bytes);
 }
 export function bytesToFloatBE(bytes: Buffer): number { return bytes.readFloatBE(0); }
 export function bytesToFloatLE(bytes: Buffer): number { return bytes.readFloatLE(0); }
-export function bytesToDouble(bytes: Buffer, bigEndian: boolean): number {
+export function bytesToDouble(bytes: Buffer, bigEndian: boolean = false): number {
     return bigEndian ? bytesToDoubleBE(bytes) : bytesToDoubleLE(bytes);
 }
 export function bytesToDoubleBE(bytes: Buffer): number { return bytes.readDoubleBE(0); }
@@ -114,19 +114,19 @@ export function tagToBytesBE(tag: number): Buffer { return intToBytesBE(tag); }
 export function tagToBytesLE(tag: number): Buffer { return Buffer.from([tag >> 16, tag >> 24, tag, tag >> 8]); }
 export function intToBytesBE(i: number): Buffer { return Buffer.from([i >> 24, i >> 16, i >> 8, i]); }
 export function intToBytesLE(i: number): Buffer { return Buffer.from([i, i >> 8, i >> 16, i >> 24]); }
-export function shortToBytes(i: number, bigEndian: boolean): Buffer {
+export function shortToBytes(i: number, bigEndian: boolean = false): Buffer {
     return bigEndian ? shortToBytesBE(i) : shortToBytesLE(i);
 }
 export function shortToBytesBE(i: number): Buffer { return Buffer.from([i >> 8, i]); }
 export function shortToBytesLE(i: number): Buffer { return Buffer.from([i, i >> 8]); }
-export function intToBytes(i: number, bigEndian: boolean): Buffer {
+export function intToBytes(i: number, bigEndian: boolean = false): Buffer {
     return bigEndian ? intToBytesBE(i) : intToBytesLE(i);
 }
-export function tagToBytes(tag: number, bigEndian: boolean): Buffer {
+export function tagToBytes(tag: number, bigEndian: boolean = false): Buffer {
     return bigEndian ? tagToBytesBE(tag) : tagToBytesLE(tag);
 }
 
-export function floatToBytes(f: number, bigEndian: boolean): Buffer {
+export function floatToBytes(f: number, bigEndian: boolean = false): Buffer {
     const buf = Buffer.allocUnsafe(4);
     if (bigEndian) {
         buf.writeFloatBE(f, 0);
@@ -135,7 +135,7 @@ export function floatToBytes(f: number, bigEndian: boolean): Buffer {
     }
     return buf;
 }
-export function doubleToBytes(f: number, bigEndian: boolean): Buffer {
+export function doubleToBytes(f: number, bigEndian: boolean = false): Buffer {
     const buf = Buffer.allocUnsafe(8);
     if (bigEndian) {
         buf.writeDoubleBE(f, 0);
@@ -176,7 +176,7 @@ export const sequenceDelimitationBE = concat(tagToBytesBE(Tag.SequenceDelimitati
 export function sequenceDelimitation(bigEndian: boolean = false): Buffer {
     return bigEndian ? sequenceDelimitationBE : sequenceDelimitationLE;
 }
-export function sequenceDelimitationNonZeroLength(bigEndian: boolean): Buffer {
+export function sequenceDelimitationNonZeroLength(bigEndian: boolean = false): Buffer {
     return concatv(tagToBytes(Tag.SequenceDelimitationItem, bigEndian), intToBytes(0x00000010, bigEndian));
 }
 

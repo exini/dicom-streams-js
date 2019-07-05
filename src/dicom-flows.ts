@@ -105,7 +105,7 @@ export function tagFilter(
     }());
 }
 
-export function headerFilter(keepCondition: (p: DicomPart) => boolean, logGroupLengthWarnings: boolean = false) {
+export function headerFilter(keepCondition: (p: HeaderPart) => boolean, logGroupLengthWarnings: boolean = false) {
     return create(new class extends GroupLengthWarnings(InFragments(DeferToPartFlow)) {
 
         private keeping = false;
@@ -346,3 +346,4 @@ class DeflateDatasetFlow extends Detour {
         }
     }
 }
+export function deflateDatasetFlow() { return new DeflateDatasetFlow(); }

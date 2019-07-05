@@ -185,7 +185,7 @@ export class TagPathTrunk extends TagPath {
     public thenItemEnd(tag: number, item: number) { return new TagPathItemEnd(tag, item, this); }
 }
 
-export class EmptyTagPath extends TagPathTrunk {
+class EmptyTagPath extends TagPathTrunk {
     public tag(): number { throw Error("Empty tag path"); }
     public previous(): TagPathTrunk { return emptyTagPath; }
 }

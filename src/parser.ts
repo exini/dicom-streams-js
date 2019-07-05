@@ -235,7 +235,7 @@ export class Parser {
     private builder = new ElementsBuilder();
     private byteParser: ByteParser = new ByteParser(this);
 
-    constructor(public readonly stop: (e: Element, depth: number) => boolean) {
+    constructor(public readonly stop?: (e: Element, depth: number) => boolean) {
         this.byteParser.startWith(atBeginning);
     }
 
@@ -246,7 +246,7 @@ export class Parser {
     public parse(chunk: Buffer): void {
         const step: DicomParseStep = this.byteParser.current instanceof DicomParseStep ?
             this.byteParser.current as DicomParseStep : undefined;
-        if (step && "inflater" in step.state) {
+        if (step && step.state && step.state.inflater) {
             chunk = step.state.inflater.inflate(chunk);
         }
         this.byteParser.parse(chunk);
