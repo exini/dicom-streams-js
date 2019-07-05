@@ -1,15 +1,14 @@
 {
   "name": "@exini/dicom-streams-js",
-  "version": "0.0.34",
+  "version": "0.0.35",
   "description": "Streaming parsing and processing of DICOM data",
-  "main": "dist/node/index.js",
-  "browser": "dist/web/index.js",
-  "types": "dist/node/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "test": "cross-env NODE_ICU_DATA=node_modules/full-icu mocha",
     "test-coverage": "cross-env NODE_ICU_DATA=node_modules/full-icu nyc mocha",
-    "build": "shx rm -rf dist; webpack --config webpack.config.js",
-    "publish-to-npm": "npm run build; shx cp package.json LICENSE README.md dist; npm publish dist"
+    "build": "shx rm -rf target; node_modules/typescript/bin/tsc",
+    "publish-to-npm": "npm run build; shx rm -rf dist; shx mkdir dist; shx cp target/src/* package.json LICENSE README.md dist; npm publish dist"
   },
   "nyc": {
     "extension": [
