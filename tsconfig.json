@@ -9,7 +9,7 @@
         "removeComments": true,
         "preserveConstEnums": true,
         "sourceMap": true,
-        "outDir": "dist",
+        "outDir": "target",
         "typeRoots" : ["./node_modules/@types", "./typings"]
     },
     "lib": ["es6"],

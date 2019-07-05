@@ -6,11 +6,29 @@
   "browser": "dist/web/index.js",
   "types": "dist/node/index.d.ts",
   "scripts": {
-    "test": "cross-env NODE_ICU_DATA=node_modules/full-icu mocha -r ts-node/register test/**/*-test.ts",
-    "test-one": "cross-env NODE_ICU_DATA=node_modules/full-icu mocha -r ts-node/register 'test/parser-test.js'",
-    "test-coverage": "cross-env NODE_ICU_DATA=node_modules/full-icu ./node_modules/istanbul/lib/cli.js cover -x \"**/tag.js\" -x \"**/tag-to-vr.js\" ./node_modules/mocha/bin/_mocha -r ts-node/register -- -R spec test/*-test.js",
+    "test": "cross-env NODE_ICU_DATA=node_modules/full-icu mocha",
+    "test-coverage": "cross-env NODE_ICU_DATA=node_modules/full-icu nyc mocha",
     "build": "shx rm -rf dist; webpack --config webpack.config.js",
     "publish-to-npm": "npm run build; shx cp package.json LICENSE README.md dist; npm publish dist"
+  },
+  "nyc": {
+    "extension": [
+      ".ts"
+    ],
+    "exclude": [
+      "**/tag.ts",
+      "**/tag-to-vr.ts",
+      "**/dicom-character-set.*"
+    ],
+    "reporter": [
+      "html"
+    ],
+    "sourceMap": true,
+    "cache": false,
+    "require": [
+      "ts-node/register",
+      "source-map-support/register"
+    ]
   },
   "keywords": [
     "dicom",
@@ -44,6 +62,8 @@
     "cross-env": "^5.2.0",
     "mocha": "^5.2.0",
     "istanbul": "^0.4.5",
+    "nyc": "^14.1.1",
+    "source-map-support": "^0.5.12",
     "coveralls": "^3.0.3",
     "webpack": "^4.30.0",
     "webpack-cli": "^3.3.0",

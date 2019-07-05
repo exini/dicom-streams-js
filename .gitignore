@@ -1,7 +1,9 @@
 .DS_Store
 .idea
 .vscode
+.nyc_output
 dist/
+target/
 package/
 npm-debug.log
 node_modules
