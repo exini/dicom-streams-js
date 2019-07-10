@@ -1,6 +1,6 @@
 // tslint:disable: object-literal-sort-keys
 
-const uids: { [key: string]: string } = {
+export const UID: { [key: string]: string } = {
     VerificationSOPClass: "1.2.840.10008.1.1",
     ImplicitVRLittleEndian: "1.2.840.10008.1.2",
     ExplicitVRLittleEndian: "1.2.840.10008.1.2.1",
@@ -399,5 +399,3 @@ const uids: { [key: string]: string } = {
     dicomTransferCapability: "1.2.840.10008.15.0.4.8",
     UniversalCoordinatedTime: "1.2.840.10008.15.1.1",
 };
-
-export default uids;

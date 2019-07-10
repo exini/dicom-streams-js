@@ -1,12 +1,12 @@
 import {Writable} from "readable-stream";
-import * as base from "./base";
+import { concat, emptyBuffer } from "./base";
 
 export function byteSink(callback: (b: Buffer) => any) {
-    let buffer = base.emptyBuffer;
+    let buffer = emptyBuffer;
 
     const sink = new Writable({
         write(chunk, encoding, cb) {
-            buffer = base.concat(buffer, chunk);
+            buffer = concat(buffer, chunk);
             process.nextTick(() => cb());
         },
     });

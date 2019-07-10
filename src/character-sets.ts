@@ -1,8 +1,8 @@
 import { convertBytes } from "../lib/dicom-character-set.min";
-import * as VR from "./vr";
+import {VR} from "./vr";
 
 export class CharacterSets {
-    public static isVrAffectedBySpecificCharacterSet(vr: VR.VR): boolean {
+    public static isVrAffectedBySpecificCharacterSet(vr: VR): boolean {
         return vr === VR.LO || vr === VR.LT || vr === VR.PN || vr === VR.SH || vr === VR.ST || vr === VR.UT;
     }
 
@@ -25,7 +25,7 @@ export class CharacterSets {
 
     constructor(public readonly charsets: string) {}
 
-    public decode(bytes: Buffer, vr: VR.VR): string {
+    public decode(bytes: Buffer, vr: VR): string {
         try {
             return convertBytes(this.charsets, bytes, {vr: vr.name});
         } catch (err) {

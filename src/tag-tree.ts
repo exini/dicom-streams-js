@@ -1,5 +1,5 @@
-import * as base from "./base";
-import * as Lookup from "./lookup";
+import { tagToString } from "./base";
+import {Lookup} from "./lookup";
 import {TagPath, TagPathItem, TagPathItemEnd, TagPathSequence, TagPathSequenceEnd, TagPathTag} from "./tag-path";
 import {TagPathLike} from "./tag-path-like";
 
@@ -251,7 +251,7 @@ export class TagTree extends TagPathLike<TagTree> {
                 const keyword = Lookup.keywordOf(tag);
                 if (keyword.length > 0) { return keyword; }
             }
-            return base.tagToString(tag);
+            return tagToString(tag);
         };
         const toTagTreeString = (tree: TagTree, tail: string): string => {
             const itemIndexSuffix = tree instanceof TagTreeAnyItem ? "[*]" :

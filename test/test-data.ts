@@ -1,20 +1,23 @@
-import * as base from "../src/base";
-import * as Lookup from "../src/lookup";
+import {
+    concat, concatv, emptyBuffer, indeterminateLength, intToBytes, intToBytesLE, padToEvenLength, shortToBytes,
+    tagToBytes,
+} from "../src/base";
+import {Lookup} from "../src/lookup";
 import {HeaderPart} from "../src/parts";
-import Tag from "../src/tag";
-import UID from "../src/uid";
+import {Tag} from "../src/tag";
+import {UID} from "../src/uid";
 
-export const preamble = base.concat(Buffer.from(new Array(128).fill(0)), Buffer.from("DICM"));
+export const preamble = concat(Buffer.from(new Array(128).fill(0)), Buffer.from("DICM"));
 
 export function element(tag: number, value: Buffer | string, bigEndian: boolean = false, explicitVR: boolean = true) {
     const bytes = value instanceof Buffer ? Buffer.from(value as Buffer) : Buffer.from(value as string);
-    const valueBytes = base.padToEvenLength(bytes, tag);
+    const valueBytes = padToEvenLength(bytes, tag);
     const headerBytes = HeaderPart.create(tag, Lookup.vrOf(tag), valueBytes.length, bigEndian, explicitVR).bytes;
-    return base.concat(headerBytes, valueBytes);
+    return concat(headerBytes, valueBytes);
 }
 
 export function fmiGroupLength(...fmis: Buffer[]) {
-    return element(Tag.FileMetaInformationGroupLength, base.intToBytesLE(fmis.map((fmi) => fmi.length)
+    return element(Tag.FileMetaInformationGroupLength, intToBytesLE(fmis.map((fmi) => fmi.length)
         .reduce((p, c) => p + c)));
 }
 
@@ -46,9 +49,9 @@ export function groupLength(
     bigEndian: boolean = false,
     explicitVR: boolean = true) {
     const vrLength = explicitVR ?
-        base.concat(Buffer.from("UL"), base.shortToBytes(4, bigEndian)) : base.intToBytes(4, bigEndian);
-    return base.concatv(base.shortToBytes(groupNumber, bigEndian), Buffer.from([0, 0]), vrLength,
-        base.intToBytes(length, bigEndian));
+        concat(Buffer.from("UL"), shortToBytes(4, bigEndian)) : intToBytes(4, bigEndian);
+    return concatv(shortToBytes(groupNumber, bigEndian), Buffer.from([0, 0]), vrLength,
+        intToBytes(length, bigEndian));
 }
 
 export function patientNameJohnDoe(bigEndian?: boolean, explicitVR?: boolean) {
@@ -68,18 +71,18 @@ export function studyDate(bigEndian?: boolean, explicitVR?: boolean) {
 
 export function sequence(
     tag: number,
-    length: number = base.indeterminateLength,
+    length: number = indeterminateLength,
     bigEndian: boolean = false,
     explicitVR: boolean = true) {
-    length = length === undefined ? base.indeterminateLength : length;
-    const vrBytes = explicitVR ? base.concat(Buffer.from("SQ"), Buffer.from([0, 0])) : base.emptyBuffer;
-    return base.concatv(base.tagToBytes(tag, bigEndian), vrBytes, base.intToBytes(length, bigEndian));
+    length = length === undefined ? indeterminateLength : length;
+    const vrBytes = explicitVR ? concat(Buffer.from("SQ"), Buffer.from([0, 0])) : emptyBuffer;
+    return concatv(tagToBytes(tag, bigEndian), vrBytes, intToBytes(length, bigEndian));
 }
 
 export function pixelData(length: number, bigEndian?: boolean, explicitVR?: boolean) {
     return element(Tag.PixelData, Buffer.from(new Array(length).fill(0)), bigEndian, explicitVR);
 }
 export function pixeDataFragments(bigEndian?: boolean) {
-    return base.concatv(base.tagToBytes(Tag.PixelData, bigEndian), Buffer.from("OW"), Buffer.from([0, 0]),
+    return concatv(tagToBytes(Tag.PixelData, bigEndian), Buffer.from("OW"), Buffer.from([0, 0]),
         Buffer.from([0xFF, 0xFF, 0xFF, 0xFF]));
 }

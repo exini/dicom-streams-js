@@ -1,5 +1,5 @@
 import assert from "assert";
-import * as base from "../src/base";
+import { concatv, intToBytesLE, item, sequenceDelimitation } from "../src/base";
 import {elementFlow} from "../src/element-flows";
 import {elementSink} from "../src/element-sink";
 import {FragmentElement, FragmentsElement, ItemDelimitationElement, ItemElement, SequenceDelimitationElement,
@@ -7,10 +7,10 @@ import {FragmentElement, FragmentsElement, ItemDelimitationElement, ItemElement,
 } from "../src/elements";
 import {parseFlow} from "../src/parse-flow";
 import {arraySource, singleSource} from "../src/sources";
-import Tag from "../src/tag";
-import UID from "../src/uid";
+import {Tag} from "../src/tag";
+import {UID} from "../src/uid";
 import {Value} from "../src/value";
-import * as VR from "../src/vr";
+import {VR} from "../src/vr";
 import * as data from "./test-data";
 import * as util from "./test-util";
 
@@ -86,8 +86,8 @@ describe("An element sink", () => {
     it("should map an offsets table to a list of offsets", () => {
         const elementList = [
             new FragmentsElement(Tag.PixelData, VR.OB),
-            new FragmentElement(1, 0, Value.fromBuffer(VR.OB, base.concatv(base.intToBytesLE(1), base.intToBytesLE(2),
-                base.intToBytesLE(3), base.intToBytesLE(4)))),
+            new FragmentElement(1, 0, Value.fromBuffer(VR.OB, concatv(intToBytesLE(1), intToBytesLE(2),
+                intToBytesLE(3), intToBytesLE(4)))),
             new SequenceDelimitationElement()];
 
         return util.streamPromise(
@@ -103,7 +103,7 @@ describe("An element sink", () => {
 describe("Fragments", () => {
 
     it("should be empty", () => {
-        const bytes = base.concatv(data.pixeDataFragments(), base.sequenceDelimitation());
+        const bytes = concatv(data.pixeDataFragments(), sequenceDelimitation());
 
         return util.streamPromise(
             singleSource(bytes),
@@ -117,8 +117,8 @@ describe("Fragments", () => {
     });
 
     it("should convert an empty first item to an empty offsets list", () => {
-        const bytes = base.concatv(data.pixeDataFragments(), base.item(0), base.item(4),
-            Buffer.from([1, 2, 3, 4]), base.sequenceDelimitation());
+        const bytes = concatv(data.pixeDataFragments(), item(0), item(4),
+            Buffer.from([1, 2, 3, 4]), sequenceDelimitation());
 
         return util.streamPromise(
             singleSource(bytes),
@@ -133,8 +133,8 @@ describe("Fragments", () => {
     });
 
     it("should convert first item to offsets", () => {
-        const bytes = base.concatv(data.pixeDataFragments(), base.item(8), base.intToBytesLE(0),
-            base.intToBytesLE(456), base.item(4), Buffer.from([1, 2, 3, 4]), base.sequenceDelimitation());
+        const bytes = concatv(data.pixeDataFragments(), item(8), intToBytesLE(0),
+            intToBytesLE(456), item(4), Buffer.from([1, 2, 3, 4]), sequenceDelimitation());
 
         return util.streamPromise(
             singleSource(bytes),

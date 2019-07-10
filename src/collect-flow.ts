@@ -1,5 +1,5 @@
 import {Transform} from "readable-stream";
-import * as base from "./base";
+import {concat, prependToArray} from "./base";
 import {CharacterSets} from "./character-sets";
 import {
     create, DeferToPartFlow, EndEvent, GuaranteedDelimitationEvents, GuaranteedValueEvent,
@@ -8,7 +8,7 @@ import {
 } from "./dicom-flow";
 import {Elements, ValueElement} from "./elements";
 import {DicomPart, ElementsPart, HeaderPart, ValueChunk} from "./parts";
-import Tag from "./tag";
+import {Tag} from "./tag";
 import {TagPath} from "./tag-path";
 import {Value} from "./value";
 
@@ -66,7 +66,7 @@ export function collectFlow(
                         const updatedElement = new ValueElement(
                             element.tag,
                             element.vr,
-                            Value.fromBuffer(element.vr, base.concat(element.value.bytes, part.bytes)),
+                            Value.fromBuffer(element.vr, concat(element.value.bytes, part.bytes)),
                             element.bigEndian,
                             element.explicitVR);
                         this.currentElement = updatedElement;
@@ -90,7 +90,7 @@ export function collectFlow(
         }
 
         private elementsAndBuffer() {
-            const parts = base.prependToArray(new ElementsPart(label, this.elements), this.buffer);
+            const parts = prependToArray(new ElementsPart(label, this.elements), this.buffer);
 
             this.reachedEnd = true;
             this.buffer = [];

@@ -1,16 +1,18 @@
 import pipe from "multipipe";
 import { Transform } from "readable-stream";
-import * as base from "./base";
-import * as flows from "./flows";
-import {DeflatedChunk, DicomPart, FragmentsPart, HeaderPart, ItemDelimitationPart, ItemPart, MetaPart,
-    PreamblePart, SequenceDelimitationPart, SequencePart, UnknownPart, ValueChunk} from "./parts";
-import Tag from "./tag";
-import {emptyTagPath, TagPath, TagPathItem} from "./tag-path";
+import { emptyBuffer, isGroupLength } from "./base";
+import { appendFlow, flatMapFlow, identityFlow, prependFlow } from "./flows";
+import {
+    DeflatedChunk, DicomPart, FragmentsPart, HeaderPart, ItemDelimitationPart, ItemPart, MetaPart,
+    PreamblePart, SequenceDelimitationPart, SequencePart, UnknownPart, ValueChunk,
+} from "./parts";
+import { Tag } from "./tag";
+import { emptyTagPath, TagPath, TagPathItem } from "./tag-path";
 
 // tslint:disable: max-classes-per-file
 
 export function create(flow: any) {
-    return pipe(flow.baseFlow(), flows.flatMapFlow(flow.handlePart.bind(flow)));
+    return pipe(flow.baseFlow(), flatMapFlow(flow.handlePart.bind(flow)));
 }
 
 export abstract class DicomFlow {
@@ -25,7 +27,7 @@ export abstract class DicomFlow {
     public abstract onDeflatedChunk(part: DeflatedChunk): any[];
     public abstract onUnknown(part: UnknownPart): any[];
     public abstract onPart(part: DicomPart): any[];
-    public baseFlow(): Transform { return flows.identityFlow(true); }
+    public baseFlow(): Transform { return identityFlow(true); }
     public handlePart(part: DicomPart): any[] {
         if (part instanceof PreamblePart) { return this.onPreamble(part); }
         if (part instanceof HeaderPart) { return this.onHeader(part); }
@@ -83,7 +85,7 @@ export const dicomStartMarker = new DicomStartMarker();
 
 export const StartEvent = (Super: any) => class extends Super {
     public onStart() { throw Error("Not implemented"); }
-    public baseFlow() { return pipe(flows.prependFlow(dicomStartMarker, true), super.baseFlow()); }
+    public baseFlow() { return pipe(prependFlow(dicomStartMarker, true), super.baseFlow()); }
     public handlePart(part: DicomPart) {
         return part === dicomStartMarker ? this.onStart() : super.handlePart(part);
     }
@@ -98,7 +100,7 @@ export const dicomEndMarker = new DicomEndMarker();
 
 export const EndEvent = (Super: any) => class extends Super {
     public onEnd() { throw Error("Not implemented"); }
-    public baseFlow() { return pipe(flows.appendFlow(dicomEndMarker, true), super.baseFlow()); }
+    public baseFlow() { return pipe(appendFlow(dicomEndMarker, true), super.baseFlow()); }
     public handlePart(part: DicomPart) {
         return part === dicomEndMarker ? this.onEnd() : super.handlePart(part);
     }
@@ -119,7 +121,7 @@ export const InFragments = (Super: any) => class extends Super {
 
 class ValueChunkMarker extends ValueChunk {
     constructor() {
-        super(false, base.emptyBuffer, true);
+        super(false, emptyBuffer, true);
     }
 
     public toString(): string {
@@ -144,7 +146,7 @@ export const GuaranteedValueEvent = (Super: any) => class extends Super {
 
 class SequenceDelimitationPartMarker extends SequenceDelimitationPart {
     constructor() {
-        super(false, base.emptyBuffer);
+        super(false, emptyBuffer);
     }
 
     public toString(): string {
@@ -155,7 +157,7 @@ export const sequenceDelimitationPartMarker = new SequenceDelimitationPartMarker
 
 export class ItemDelimitationPartMarker extends ItemDelimitationPart {
     constructor(index: number) {
-        super(index, false, base.emptyBuffer);
+        super(index, false, emptyBuffer);
     }
 
     public toString(): string {
@@ -294,7 +296,7 @@ export const GroupLengthWarnings = (Super: any) => class extends Super {
 
     public setSilent(silent: boolean) { this.silent = silent; }
     public onHeader(part: HeaderPart) {
-        if (!this.silent && base.isGroupLength(part.tag) && part.tag !== Tag.FileMetaInformationGroupLength) {
+        if (!this.silent && isGroupLength(part.tag) && part.tag !== Tag.FileMetaInformationGroupLength) {
             console.warn("Group length attribute detected, consider removing group lengths to maintain valid " +
                 "DICOM information");
         }

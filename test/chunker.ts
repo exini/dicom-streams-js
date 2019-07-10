@@ -1,16 +1,16 @@
 import {Transform} from "readable-stream";
-import * as base from "../src/base";
+import { concat, emptyBuffer } from "../src/base";
 
 export class Chunker extends Transform {
 
-    private buffer: Buffer = base.emptyBuffer;
+    private buffer: Buffer = emptyBuffer;
 
     constructor(public readonly size: number) {
         super();
     }
 
     public _transform(chunk: any, encoding: string, callback: (error?: Error, data?: any) => void) {
-        this.buffer = base.concat(this.buffer, chunk);
+        this.buffer = concat(this.buffer, chunk);
 
         while (this.buffer.length >= this.size) {
             const newChunk = this.buffer.slice(0, this.size);

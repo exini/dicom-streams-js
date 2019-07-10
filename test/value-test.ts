@@ -1,9 +1,9 @@
 import assert from "assert";
 import {LocalDate, LocalTime, ZonedDateTime, ZoneOffset} from "js-joda";
-import * as base from "../src/base";
+import { concat, doubleToBytes, floatToBytes, intToBytes, intToBytesLE, shortToBytes } from "../src/base";
 import {CharacterSets} from "../src/character-sets";
 import {Value} from "../src/value";
-import * as VR from "../src/vr";
+import {VR} from "../src/vr";
 
 // tslint:disable: no-bitwise
 
@@ -142,18 +142,18 @@ describe("Parsing number values", () => {
     });
 
     it("should parse multiple int values", () => {
-        assert.deepStrictEqual(Value.fromBuffer(VR.SL, base.concat(base.intToBytesLE(1234),
-            base.intToBytesLE(1234567890)))
+        assert.deepStrictEqual(Value.fromBuffer(VR.SL, concat(intToBytesLE(1234),
+            intToBytesLE(1234567890)))
             .toNumbers(VR.SL), [1234, 1234567890]);
     });
 
     it("should return int values for all numerical VRs", () => {
-        assert(Math.abs(Value.fromBuffer(VR.FL, base.floatToBytes(Math.PI)).toNumber(VR.FL) - Math.PI) < 0.000001);
-        assert(Math.abs(Value.fromBuffer(VR.FD, base.doubleToBytes(Math.PI)).toNumber(VR.FD) - Math.PI) < 0.000001);
-        assert.deepStrictEqual(Value.fromBuffer(VR.SS, base.shortToBytes(-3)).toNumbers(VR.SS), [-3]);
-        assert.deepStrictEqual(Value.fromBuffer(VR.US, base.shortToBytes(-3)).toNumbers(VR.US), [(1 << 16) - 3]);
-        assert.deepStrictEqual(Value.fromBuffer(VR.SL, base.intToBytes(-3)).toNumbers(VR.SL), [-3]);
-        assert.deepStrictEqual(Value.fromBuffer(VR.UL, base.intToBytes(3)).toNumbers(VR.UL), [3]);
+        assert(Math.abs(Value.fromBuffer(VR.FL, floatToBytes(Math.PI)).toNumber(VR.FL) - Math.PI) < 0.000001);
+        assert(Math.abs(Value.fromBuffer(VR.FD, doubleToBytes(Math.PI)).toNumber(VR.FD) - Math.PI) < 0.000001);
+        assert.deepStrictEqual(Value.fromBuffer(VR.SS, shortToBytes(-3)).toNumbers(VR.SS), [-3]);
+        assert.deepStrictEqual(Value.fromBuffer(VR.US, shortToBytes(-3)).toNumbers(VR.US), [(1 << 16) - 3]);
+        assert.deepStrictEqual(Value.fromBuffer(VR.SL, intToBytes(-3)).toNumbers(VR.SL), [-3]);
+        assert.deepStrictEqual(Value.fromBuffer(VR.UL, intToBytes(3)).toNumbers(VR.UL), [3]);
         assert.deepStrictEqual(Value.fromBuffer(VR.DS, Buffer.from("3.1415")).toNumbers(VR.DS), [3.1415]);
         assert.deepStrictEqual(Value.fromBuffer(VR.IS, Buffer.from("-3")).toNumbers(VR.IS), [-3]);
         assert.deepStrictEqual(Value.fromBuffer(VR.AT, Buffer.from("-3")).toNumbers(VR.AT), []);
@@ -162,8 +162,8 @@ describe("Parsing number values", () => {
 
 describe("Parsing a single int value", () => {
     it("should return the first entry among multiple values", () => {
-        assert.strictEqual(Value.fromBuffer(VR.SL, base.concat(base.intToBytesLE(1234),
-            base.intToBytesLE(1234567890))).toNumber(VR.SL), 1234);
+        assert.strictEqual(Value.fromBuffer(VR.SL, concat(intToBytesLE(1234),
+            intToBytesLE(1234567890))).toNumber(VR.SL), 1234);
     });
 
     it("should return undefined if no entry exists", () => {

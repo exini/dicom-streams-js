@@ -1,23 +1,25 @@
 import pipe from "multipipe";
-import * as base from "../src/base";
+import {
+    concat, concatv, emptyBuffer, item, itemDelimitation, sequenceDelimitation, shortToBytesLE, tagToBytesLE,
+} from "../src/base";
 import {prependFlow} from "../src/flows";
 import {modifyFlow, TagInsertion, TagModification, TagModificationsPart} from "../src/modify-flow";
 import {parseFlow} from "../src/parse-flow";
-import Tag from "../src/tag";
+import {Tag} from "../src/tag";
 import {TagPath} from "../src/tag-path";
 import {TagTree} from "../src/tag-tree";
-import * as VR from "../src/vr";
+import {VR} from "../src/vr";
 import * as data from "./test-data";
 import * as util from "./test-util";
 
 describe("The modify flow", () => {
     it("should modify the value of the specified elements", () => {
-        const bytes = base.concat(data.studyDate(), data.patientNameJohnDoe());
+        const bytes = concat(data.studyDate(), data.patientNameJohnDoe());
 
         const mikeBytes = Buffer.from("Mike");
 
         return util.testParts(bytes, pipe(parseFlow(), modifyFlow([
-            TagModification.equals(TagPath.fromTag(Tag.StudyDate), () => base.emptyBuffer),
+            TagModification.equals(TagPath.fromTag(Tag.StudyDate), () => emptyBuffer),
             TagModification.equals(TagPath.fromTag(Tag.PatientName), () => mikeBytes),
         ])), (parts) => {
             util.partProbe(parts)
@@ -29,8 +31,8 @@ describe("The modify flow", () => {
     });
 
     it("should not modify elements in datasets other than the dataset the tag path points to", () => {
-        const bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence), base.item(), data.patientNameJohnDoe(),
-            data.studyDate(), base.itemDelimitation(), base.sequenceDelimitation());
+        const bytes = concatv(data.sequence(Tag.DerivationCodeSequence), item(), data.patientNameJohnDoe(),
+            data.studyDate(), itemDelimitation(), sequenceDelimitation());
 
         const mikeBytes = Buffer.from("Mike");
 
@@ -51,7 +53,7 @@ describe("The modify flow", () => {
     });
 
     it("should insert elements if not present", () => {
-        const bytes = base.concatv(data.patientNameJohnDoe());
+        const bytes = concatv(data.patientNameJohnDoe());
 
         return util.testParts(bytes, pipe(parseFlow(), modifyFlow([], [
             new TagInsertion(TagPath.fromTag(Tag.StudyDate), () => data.studyDate().slice(8)),
@@ -66,7 +68,7 @@ describe("The modify flow", () => {
     });
 
     it("should insert elements if not present also at end of dataset", () => {
-        const bytes = base.concatv(data.studyDate());
+        const bytes = concatv(data.studyDate());
 
         return util.testParts(bytes, pipe(parseFlow(), modifyFlow([], [
             new TagInsertion(TagPath.fromTag(Tag.PatientName), () => data.patientNameJohnDoe().slice(8)),
@@ -81,7 +83,7 @@ describe("The modify flow", () => {
     });
 
     it("should insert elements if not present also at end of dataset when last element is empty", () => {
-        const bytes = base.concatv(base.tagToBytesLE(0x00080050), Buffer.from("SH"), base.shortToBytesLE(0x0000));
+        const bytes = concatv(tagToBytesLE(0x00080050), Buffer.from("SH"), shortToBytesLE(0x0000));
 
         return util.testParts(bytes, pipe(parseFlow(), modifyFlow([], [
             new TagInsertion(TagPath.fromTag(Tag.SOPInstanceUID), () => Buffer.from("1.2.3.4 ")),
@@ -95,8 +97,8 @@ describe("The modify flow", () => {
     });
 
     it("should insert elements between a normal attribute and a sequence", () => {
-        const bytes = base.concatv(data.studyDate(), data.sequence(Tag.AbstractPriorCodeSequence),
-            base.sequenceDelimitation());
+        const bytes = concatv(data.studyDate(), data.sequence(Tag.AbstractPriorCodeSequence),
+            sequenceDelimitation());
 
         return util.testParts(bytes, pipe(parseFlow(), modifyFlow([], [
             new TagInsertion(TagPath.fromTag(Tag.PatientName), () => data.patientNameJohnDoe().slice(8)),
@@ -113,7 +115,7 @@ describe("The modify flow", () => {
     });
 
     it("should insert elements between a sequence and a normal attribute", () => {
-        const bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence), base.sequenceDelimitation(),
+        const bytes = concatv(data.sequence(Tag.DerivationCodeSequence), sequenceDelimitation(),
             data.patientID());
 
         return util.testParts(bytes, pipe(parseFlow(), modifyFlow([], [
@@ -131,8 +133,8 @@ describe("The modify flow", () => {
     });
 
     it("should insert elements between two sequences", () => {
-        const bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence), base.sequenceDelimitation(),
-            data.sequence(Tag.AbstractPriorCodeSequence), base.sequenceDelimitation());
+        const bytes = concatv(data.sequence(Tag.DerivationCodeSequence), sequenceDelimitation(),
+            data.sequence(Tag.AbstractPriorCodeSequence), sequenceDelimitation());
 
         return util.testParts(bytes, pipe(parseFlow(), modifyFlow([], [
             new TagInsertion(TagPath.fromTag(Tag.PatientName), () => data.patientNameJohnDoe().slice(8)),
@@ -149,12 +151,12 @@ describe("The modify flow", () => {
     });
 
     it("should modify, not insert, when 'insert' elements are already present", () => {
-        const bytes = base.concatv(data.studyDate(), data.patientNameJohnDoe());
+        const bytes = concatv(data.studyDate(), data.patientNameJohnDoe());
 
         const mikeBytes = Buffer.from("Mike");
 
         return util.testParts(bytes, pipe(parseFlow(), modifyFlow([], [
-            new TagInsertion(TagPath.fromTag(Tag.StudyDate), () => base.emptyBuffer),
+            new TagInsertion(TagPath.fromTag(Tag.StudyDate), () => emptyBuffer),
             new TagInsertion(TagPath.fromTag(Tag.PatientName), () => mikeBytes),
         ])), (parts) => {
             util.partProbe(parts)
@@ -169,7 +171,7 @@ describe("The modify flow", () => {
         const bytes = data.patientNameJohnDoe();
 
         return util.testParts(bytes, pipe(parseFlow(), modifyFlow([], [
-            new TagInsertion(TagPath.fromTag(Tag.PatientName), (b) => base.concat(b, Buffer.from(" Senior "))),
+            new TagInsertion(TagPath.fromTag(Tag.PatientName), (b) => concat(b, Buffer.from(" Senior "))),
         ])), (parts) => {
             util.partProbe(parts)
                 .expectHeader(Tag.PatientName, VR.PN, 16)
@@ -197,7 +199,7 @@ describe("The modify flow", () => {
     });
 
     it("should not insert elements if dataset contains no elements", () => {
-        return util.testParts(base.emptyBuffer, pipe(parseFlow(), modifyFlow([], [
+        return util.testParts(emptyBuffer, pipe(parseFlow(), modifyFlow([], [
             new TagInsertion(TagPath.fromTag(Tag.SeriesDate), () => data.studyDate().slice(8)),
         ])), (parts) => {
             util.partProbe(parts)
@@ -206,8 +208,8 @@ describe("The modify flow", () => {
     });
 
     it("should insert elements in sequences if sequence is present but element is not present", () => {
-        const bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence), base.item(),
-            data.patientNameJohnDoe(), base.itemDelimitation(), base.sequenceDelimitation());
+        const bytes = concatv(data.sequence(Tag.DerivationCodeSequence), item(),
+            data.patientNameJohnDoe(), itemDelimitation(), sequenceDelimitation());
 
         return util.testParts(bytes, pipe(parseFlow(), modifyFlow([], [
             new TagInsertion(TagPath.fromItem(Tag.DerivationCodeSequence, 1)
@@ -227,13 +229,13 @@ describe("The modify flow", () => {
     });
 
     it("should skip inserting elements in missing sequences", () => {
-        const bytes = base.concatv(data.patientNameJohnDoe());
+        const bytes = concatv(data.patientNameJohnDoe());
 
         return util.testParts(bytes, pipe(parseFlow(), modifyFlow([], [
             new TagInsertion(TagPath.fromItem(Tag.DerivationCodeSequence, 1).thenTag(Tag.StudyDate),
                 () => data.studyDate().slice(8)),
             new TagInsertion(TagPath.fromItem(Tag.DerivationCodeSequence, 1).thenTag(Tag.PatientName),
-                () => base.emptyBuffer),
+                () => emptyBuffer),
         ])), (parts) => {
             util.partProbe(parts)
                 .expectHeader(Tag.PatientName)
@@ -243,7 +245,7 @@ describe("The modify flow", () => {
     });
 
     it("should not insert unknown elements", () => {
-        const bytes = base.concatv(data.patientNameJohnDoe());
+        const bytes = concatv(data.patientNameJohnDoe());
 
         return util.expectDicomError(() => util.testParts(bytes, pipe(parseFlow(), modifyFlow([], [
             new TagInsertion(TagPath.fromTag(0x00200021), () => Buffer.from([1, 2, 3, 4])),
@@ -255,19 +257,19 @@ describe("The modify flow", () => {
     });
 
     it("should not insert sequences", () => {
-        const bytes = base.concatv(data.patientNameJohnDoe());
+        const bytes = concatv(data.patientNameJohnDoe());
 
         return util.expectDicomError(() => util.testParts(bytes, pipe(parseFlow(), modifyFlow([], [
-            new TagInsertion(TagPath.fromTag(Tag.DerivationCodeSequence), () => base.emptyBuffer),
+            new TagInsertion(TagPath.fromTag(Tag.DerivationCodeSequence), () => emptyBuffer),
         ])), () => {
             // do nothing
         }));
     });
 
     it("should insert into the correct sequence item", () => {
-        const bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence), base.item(), data.patientNameJohnDoe(),
-            base.itemDelimitation(), base.item(), data.patientNameJohnDoe(), base.itemDelimitation(),
-            base.sequenceDelimitation());
+        const bytes = concatv(data.sequence(Tag.DerivationCodeSequence), item(), data.patientNameJohnDoe(),
+            itemDelimitation(), item(), data.patientNameJohnDoe(), itemDelimitation(),
+            sequenceDelimitation());
 
         return util.testParts(bytes, pipe(parseFlow(), modifyFlow([], [
             new TagInsertion(TagPath.fromItem(Tag.DerivationCodeSequence, 2).thenTag(Tag.StudyDate),
@@ -291,9 +293,9 @@ describe("The modify flow", () => {
     });
 
     it("should modify the correct sequence item", () => {
-        const bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence), base.item(), data.patientNameJohnDoe(),
-            base.itemDelimitation(), base.item(), data.patientNameJohnDoe(), base.itemDelimitation(),
-            base.sequenceDelimitation());
+        const bytes = concatv(data.sequence(Tag.DerivationCodeSequence), item(), data.patientNameJohnDoe(),
+            itemDelimitation(), item(), data.patientNameJohnDoe(), itemDelimitation(),
+            sequenceDelimitation());
 
         const mikeBytes = Buffer.from("Mike");
 
@@ -317,9 +319,9 @@ describe("The modify flow", () => {
     });
 
     it("should modify all sequence items", () => {
-        const bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence), base.item(), data.patientNameJohnDoe(),
-            base.itemDelimitation(), base.item(), data.patientNameJohnDoe(), base.itemDelimitation(),
-            base.sequenceDelimitation());
+        const bytes = concatv(data.sequence(Tag.DerivationCodeSequence), item(), data.patientNameJohnDoe(),
+            itemDelimitation(), item(), data.patientNameJohnDoe(), itemDelimitation(),
+            sequenceDelimitation());
 
         const mikeBytes = Buffer.from("Mike");
         const tagTree = TagTree.fromAnyItem(Tag.DerivationCodeSequence).thenTag(Tag.PatientName);
@@ -343,7 +345,7 @@ describe("The modify flow", () => {
     });
 
     it("should correctly sort elements with high tag numbers", () => {
-        const bytes = base.concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()),
+        const bytes = concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()),
             data.transferSyntaxUID(),
             Buffer.from([0xFF, 0xFF, 0xFF, 0xFF, 68, 65, 10, 0, 49, 56, 51, 49, 51, 56, 46, 55, 54, 53]));
 
@@ -367,8 +369,8 @@ describe("The modify flow", () => {
     });
 
     it("should work also with the endsWith modification matcher", () => {
-        const bytes = base.concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence), base.item(),
-            data.studyDate(), data.patientNameJohnDoe(), base.itemDelimitation(), base.sequenceDelimitation());
+        const bytes = concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence), item(),
+            data.studyDate(), data.patientNameJohnDoe(), itemDelimitation(), sequenceDelimitation());
 
         const studyBytes = Buffer.from("2012-01-01");
 
@@ -391,7 +393,7 @@ describe("The modify flow", () => {
     });
 
     it("should pick up tag modifications from the stream", () => {
-        const bytes = base.concatv(data.studyDate(), data.patientNameJohnDoe());
+        const bytes = concatv(data.studyDate(), data.patientNameJohnDoe());
 
         const mikeBytes = Buffer.from("Mike");
 
@@ -400,7 +402,7 @@ describe("The modify flow", () => {
             prependFlow(new TagModificationsPart([TagModification.equals(TagPath.fromTag(Tag.PatientName),
                 () => mikeBytes)]), true),
             modifyFlow([
-                TagModification.endsWith(TagPath.fromTag(Tag.StudyDate), () => base.emptyBuffer),
+                TagModification.endsWith(TagPath.fromTag(Tag.StudyDate), () => emptyBuffer),
             ]),
         ), (parts) => {
             util.partProbe(parts)
@@ -412,7 +414,7 @@ describe("The modify flow", () => {
     });
 
     it("should pick up tag modifications and replace old modifications", () => {
-        const bytes = base.concatv(data.studyDate(), data.patientNameJohnDoe());
+        const bytes = concatv(data.studyDate(), data.patientNameJohnDoe());
 
         const mikeBytes = Buffer.from("Mike");
 
@@ -421,7 +423,7 @@ describe("The modify flow", () => {
             prependFlow(new TagModificationsPart([TagModification.equals(TagPath.fromTag(Tag.PatientName),
                 () => mikeBytes)], [], true), true),
             modifyFlow([
-                TagModification.endsWith(TagPath.fromTag(Tag.StudyDate), () => base.emptyBuffer),
+                TagModification.endsWith(TagPath.fromTag(Tag.StudyDate), () => emptyBuffer),
             ]),
         ), (parts) => {
             util.partProbe(parts)
@@ -434,8 +436,8 @@ describe("The modify flow", () => {
     });
 
     it("should not emit sequence and item delimiters for data with explicit length sequences and items", () => {
-        const bytes = base.concatv(data.patientNameJohnDoe(), data.sequence(Tag.DerivationCodeSequence, 24),
-            base.item(16), data.studyDate());
+        const bytes = concatv(data.patientNameJohnDoe(), data.sequence(Tag.DerivationCodeSequence, 24),
+            item(16), data.studyDate());
 
         return util.testParts(bytes, pipe(parseFlow(), modifyFlow([], [], false)), (parts) => {
             util.partProbe(parts)

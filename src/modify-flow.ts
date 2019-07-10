@@ -1,12 +1,12 @@
-import * as base from "./base";
+import { appendToArray, concat, concatArrays, emptyBuffer, flatten, padToEvenLength, prependToArray } from "./base";
 import {
     create, DeferToPartFlow, EndEvent, GroupLengthWarnings, GuaranteedDelimitationEvents,
     GuaranteedValueEvent, InFragments, TagPathTracking,
 } from "./dicom-flow";
-import * as Lookup from "./lookup";
+import {Lookup} from "./lookup";
 import {DicomPart, HeaderPart, MetaPart, SequencePart, ValueChunk} from "./parts";
 import {emptyTagPath, TagPath} from "./tag-path";
-import * as VR from "./vr";
+import {VR} from "./vr";
 
 // tslint:disable: max-classes-per-file
 
@@ -65,7 +65,7 @@ export function modifyFlow(
         private currentModification: TagModification;
         private currentHeader: HeaderPart;
         private latestTagPath: TagPath = emptyTagPath;
-        private value: Buffer = base.emptyBuffer;
+        private value: Buffer = emptyBuffer;
         private bigEndian: boolean = false;
         private explicitVR: boolean = true;
 
@@ -80,9 +80,9 @@ export function modifyFlow(
                     this.currentModifications = part.modifications;
                     this.currentInsertions = organizeInsertions(part.insertions.slice());
                 } else {
-                    this.currentModifications = base.concatArrays(this.currentModifications, part.modifications);
+                    this.currentModifications = concatArrays(this.currentModifications, part.modifications);
                     this.currentInsertions = organizeInsertions(
-                        base.concatArrays(this.currentInsertions, part.insertions));
+                        concatArrays(this.currentInsertions, part.insertions));
                 }
                 return [];
             }
@@ -92,25 +92,25 @@ export function modifyFlow(
                 const insertParts = this.findInsertParts();
                 const modifyPart = this.findModifyPart(part);
                 this.latestTagPath = this.tagPath;
-                return base.concatArrays(insertParts, modifyPart);
+                return concatArrays(insertParts, modifyPart);
             }
 
             if (part instanceof SequencePart) {
                 const insertParts = this.findInsertParts();
                 this.latestTagPath = this.tagPath;
-                return base.appendToArray(part, insertParts);
+                return appendToArray(part, insertParts);
             }
 
             if (part instanceof ValueChunk) {
                 if (this.currentModification !== undefined && this.currentHeader !== undefined) {
-                    this.value = base.concat(this.value, part.bytes);
+                    this.value = concat(this.value, part.bytes);
                     if (part.last) {
-                        const newValue = base.padToEvenLength(
+                        const newValue = padToEvenLength(
                             this.currentModification.modification(this.value), this.currentHeader.vr);
                         const newHeader = this.currentHeader.withUpdatedLength(newValue.length);
                         this.currentModification = undefined;
                         this.currentHeader = undefined;
-                        return base.prependToArray(newHeader, this.valueOrNot(newValue));
+                        return prependToArray(newHeader, this.valueOrNot(newValue));
                     } else {
                         return [];
                     }
@@ -127,11 +127,11 @@ export function modifyFlow(
             if (this.latestTagPath.isEmpty()) {
                 return [];
             } else {
-                return base.flatten(this.currentInsertions
+                return flatten(this.currentInsertions
                     .filter((i) => i.tagPath.isRoot())
                     .filter((m) => this.latestTagPath.isBelow(m.tagPath))
                     .map((m) => this.headerAndValueParts(
-                        m.tagPath, base.padToEvenLength(m.insertion(undefined), m.tagPath.tag()))));
+                        m.tagPath, padToEvenLength(m.insertion(undefined), m.tagPath.tag()))));
             }
         }
 
@@ -153,7 +153,7 @@ export function modifyFlow(
                 throw Error("Cannot insert sequences");
             }
             const header = HeaderPart.create(tagPath.tag(), vr, valueBytes.length, this.bigEndian, this.explicitVR);
-            return base.prependToArray(header, this.valueOrNot(valueBytes));
+            return prependToArray(header, this.valueOrNot(valueBytes));
         }
 
         private isBetween(lowerTag: TagPath, tagToTest: TagPath, upperTag: TagPath): boolean {
@@ -165,11 +165,11 @@ export function modifyFlow(
         }
 
         private findInsertParts(): DicomPart[] {
-            return base.flatten(this.currentInsertions
+            return flatten(this.currentInsertions
                 .filter((i) => this.isBetween(this.latestTagPath, i.tagPath, this.tagPath))
                 .filter((i) => this.isInDataset(i.tagPath, this.tagPath))
                 .map((i) => this.headerAndValueParts(
-                    i.tagPath, base.padToEvenLength(i.insertion(undefined), i.tagPath.tag()))));
+                    i.tagPath, padToEvenLength(i.insertion(undefined), i.tagPath.tag()))));
         }
 
         private findModifyPart(header: HeaderPart) {
@@ -177,7 +177,7 @@ export function modifyFlow(
             if (mod !== undefined) {
                 this.currentHeader = header;
                 this.currentModification = mod;
-                this.value = base.emptyBuffer;
+                this.value = emptyBuffer;
                 return [];
             } else {
                 const ins = this.currentInsertions.find((i) => i.tagPath.isEqualTo(this.tagPath));
@@ -185,7 +185,7 @@ export function modifyFlow(
                     this.currentHeader = header;
                     this.currentModification =
                         new TagModification((tp) => tp.isEqualTo(ins.tagPath), (v) => ins.insertion(v));
-                    this.value = base.emptyBuffer;
+                    this.value = emptyBuffer;
                     return [];
                 } else {
                     return [header];

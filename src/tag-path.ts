@@ -1,5 +1,5 @@
-import * as base from "./base";
-import * as Lookup from "./lookup";
+import { tagToString } from "./base";
+import {Lookup} from "./lookup";
 import {TagPathLike} from "./tag-path-like";
 
 // tslint:disable: max-classes-per-file
@@ -161,7 +161,7 @@ export class TagPath extends TagPathLike<TagPath> {
                 const keyword = Lookup.keywordOf(tag);
                 if (keyword.length > 0) { return keyword; }
             }
-            return base.tagToString(tag);
+            return tagToString(tag);
         };
         const toTagPathString = (path: TagPath, tail: string): string => {
             const itemIndexSuffix = "item" in path ? "[" + (path as IItemIndex).item + "]" : "";

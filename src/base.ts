@@ -2,10 +2,10 @@ import {ZoneId} from "js-joda";
 import uuidv4 from "uuid/v4";
 import uuidv5 from "uuid/v5";
 import * as CS from "./character-sets";
-import * as Lookup from "./lookup";
-import Tag from "./tag";
-import UID from "./uid";
-import { VR } from "./vr";
+import {Lookup} from "./lookup";
+import {Tag} from "./tag";
+import {UID} from "./uid";
+import {VR} from "./vr";
 
 // tslint:disable: no-bitwise
 

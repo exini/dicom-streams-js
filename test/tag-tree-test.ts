@@ -1,5 +1,5 @@
 import assert from "assert";
-import Tag from "../src/tag";
+import {Tag} from "../src/tag";
 import {emptyTagPath, TagPath} from "../src/tag-path";
 import {emptyTagTree, TagTree} from "../src/tag-tree";
 

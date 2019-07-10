@@ -1,15 +1,18 @@
 import assert from "assert";
 import {LocalDate, LocalTime, ZoneOffset} from "js-joda";
-import * as base from "../src/base";
+import {
+    appendToArray, concat, concatv, defaultCharacterSet, emptyBuffer, indeterminateLength, item,
+    itemDelimitation, sequenceDelimitation, systemZone,
+} from "../src/base";
 import {Elements, ElementSet, Fragment, FragmentElement, Fragments, FragmentsElement, Item,
     ItemDelimitationElement, ItemElement, preambleElement, Sequence, SequenceDelimitationElement,
     SequenceElement, ValueElement,
 } from "../src/elements";
 import {HeaderPart} from "../src/parts";
-import Tag from "../src/tag";
+import {Tag} from "../src/tag";
 import {TagPath} from "../src/tag-path";
 import {Value} from "../src/value";
-import * as VR from "../src/vr";
+import {VR} from "../src/vr";
 import * as data from "./test-data";
 
 function create(...elems: ElementSet[]) {
@@ -21,9 +24,9 @@ const patientName = new ValueElement(Tag.PatientName, VR.PN, Value.fromString(VR
 const patientID1 = new ValueElement(Tag.PatientID, VR.LO, Value.fromString(VR.LO, "12345678"));
 const patientID2 = new ValueElement(Tag.PatientID, VR.LO, Value.fromString(VR.LO, "87654321"));
 const patientID3 = new ValueElement(Tag.PatientID, VR.LO, Value.fromString(VR.LO, "18273645"));
-const seq = new Sequence(Tag.DerivationCodeSequence, base.indeterminateLength, [
-    new Item(create(patientID1), base.indeterminateLength, false),
-    new Item(create(patientID2), base.indeterminateLength, false),
+const seq = new Sequence(Tag.DerivationCodeSequence, indeterminateLength, [
+    new Item(create(patientID1), indeterminateLength, false),
+    new Item(create(patientID2), indeterminateLength, false),
 ]);
 
 const elements = create(studyDate, seq, patientName);
@@ -51,7 +54,7 @@ describe("Elements", () => {
     });
 
     it("should support sorting elements", () => {
-        const unsorted = new Elements(base.defaultCharacterSet, base.systemZone, [patientName, studyDate]);
+        const unsorted = new Elements(defaultCharacterSet, systemZone, [patientName, studyDate]);
         assert.strictEqual(unsorted.head(), patientName);
         const sorted = unsorted.sorted();
         assert.strictEqual(sorted.head(), studyDate);
@@ -115,12 +118,12 @@ describe("Elements", () => {
     });
 
     it("should return items", () => {
-        const item = elements.itemByTag(Tag.DerivationCodeSequence, 1);
-        assert(item !== undefined);
+        const itm = elements.itemByTag(Tag.DerivationCodeSequence, 1);
+        assert(itm !== undefined);
         assert(elements.itemByTag(Tag.DerivationCodeSequence, 0) === undefined);
         assert(elements.itemByTag(Tag.DerivationCodeSequence, 2) !== undefined);
         assert(elements.itemByTag(Tag.DerivationCodeSequence, 3) === undefined);
-        assert.strictEqual(item, elements.sequenceByTag(Tag.DerivationCodeSequence).item(1));
+        assert.strictEqual(itm, elements.sequenceByTag(Tag.DerivationCodeSequence).item(1));
     });
 
     it("should return nested elements", () => {
@@ -133,7 +136,7 @@ describe("Elements", () => {
     });
 
     it("should return deeply nested elements", () => {
-        const elems = create(seq.addItem(new Item(create(seq), base.indeterminateLength, false)));
+        const elems = create(seq.addItem(new Item(create(seq), indeterminateLength, false)));
         assert.deepStrictEqual(elems.nestedByPath(TagPath
             .fromItem(Tag.DerivationCodeSequence, 3)
             .thenItem(Tag.DerivationCodeSequence, 1)), create(patientID1));
@@ -148,24 +151,24 @@ describe("Elements", () => {
     });
 
     it("should return elements based on tag condition", () => {
-        const elements2 = create(...base.appendToArray(patientID3, elements.data));
+        const elements2 = create(...appendToArray(patientID3, elements.data));
         assert.deepStrictEqual(elements2.filter((e) => e.tag === Tag.PatientID), create(patientID3));
     });
 
     it("should aggregate the bytes of all its elements", () => {
-        const bytes = base.concatv(data.preamble,
+        const bytes = concatv(data.preamble,
         data.element(Tag.StudyDate, "20041230"),
         data.sequence(Tag.DerivationCodeSequence),
-        base.item(), data.element(Tag.PatientID, "12345678"), base.itemDelimitation(),
-        base.item(), data.element(Tag.PatientID, "87654321"), base.itemDelimitation(),
-        base.sequenceDelimitation(),
+        item(), data.element(Tag.PatientID, "12345678"), itemDelimitation(),
+        item(), data.element(Tag.PatientID, "87654321"), itemDelimitation(),
+        sequenceDelimitation(),
         data.element(Tag.PatientName, "John^Doe"));
 
         assert.deepStrictEqual(elements.toBytes(), bytes);
     });
 
     it("should return an empty byte string when aggregating bytes with no data", () => {
-        assert.deepStrictEqual(create().toBytes(false), base.emptyBuffer);
+        assert.deepStrictEqual(create().toBytes(false), emptyBuffer);
     });
 
     it("should render an informative string representation", () => {
@@ -237,21 +240,21 @@ describe("Elements data classes", () => {
         assert.strictEqual(preambleElement.toBytes().length, 128 + 4);
         assert.strictEqual(preambleElement.toBytes().slice(128).toString(), "DICM");
         assert.deepStrictEqual(new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, "20010101")).toBytes(),
-            base.concat(HeaderPart.create(Tag.StudyDate, VR.DA, 8).bytes, Buffer.from("20010101")));
+            concat(HeaderPart.create(Tag.StudyDate, VR.DA, 8).bytes, Buffer.from("20010101")));
         assert.deepStrictEqual(new SequenceElement(Tag.DerivationCodeSequence, 10).toBytes(),
             data.sequence(Tag.DerivationCodeSequence, 10));
         assert.deepStrictEqual(new FragmentsElement(Tag.PixelData, VR.OW).toBytes(), data.pixeDataFragments());
         assert.deepStrictEqual(new FragmentElement(1, 4, Value.fromBytes(VR.OW, [1, 2, 3, 4])).toBytes(),
-            base.concat(base.item(4), Buffer.from([1, 2, 3, 4])));
-        assert.deepStrictEqual(new ItemElement(1, 10).toBytes(), base.item(10));
-        assert.deepStrictEqual(new ItemDelimitationElement(1).toBytes(), base.itemDelimitation());
-        assert.deepStrictEqual(new SequenceDelimitationElement().toBytes(), base.sequenceDelimitation());
-        assert.deepStrictEqual(new Sequence(Tag.DerivationCodeSequence, base.indeterminateLength, [new Item(create(),
-            base.indeterminateLength)]).toBytes(), base.concatv(data.sequence(Tag.DerivationCodeSequence), base.item(),
-            base.itemDelimitation(), base.sequenceDelimitation()));
+            concat(item(4), Buffer.from([1, 2, 3, 4])));
+        assert.deepStrictEqual(new ItemElement(1, 10).toBytes(), item(10));
+        assert.deepStrictEqual(new ItemDelimitationElement(1).toBytes(), itemDelimitation());
+        assert.deepStrictEqual(new SequenceDelimitationElement().toBytes(), sequenceDelimitation());
+        assert.deepStrictEqual(new Sequence(Tag.DerivationCodeSequence, indeterminateLength, [new Item(create(),
+            indeterminateLength)]).toBytes(), concatv(data.sequence(Tag.DerivationCodeSequence), item(),
+            itemDelimitation(), sequenceDelimitation()));
         assert.deepStrictEqual(new Fragments(Tag.PixelData, VR.OW, [],
-            [new Fragment(4, Value.fromBytes(VR.OW, [1, 2, 3, 4]))]).toBytes(), base.concatv(data.pixeDataFragments(),
-                base.item(0), base.item(4), Buffer.from([1, 2, 3, 4]), base.sequenceDelimitation()));
+            [new Fragment(4, Value.fromBytes(VR.OW, [1, 2, 3, 4]))]).toBytes(), concatv(data.pixeDataFragments(),
+                item(0), item(4), Buffer.from([1, 2, 3, 4]), sequenceDelimitation()));
     });
 
     it("should have expected string representations in terms of number of lines", () => {
@@ -267,8 +270,8 @@ describe("Elements data classes", () => {
         checkString(new ItemElement(1, 10).toString(), 1);
         checkString(new ItemDelimitationElement(1).toString(), 1);
         checkString(new SequenceDelimitationElement().toString(), 1);
-        checkString(new Sequence(Tag.DerivationCodeSequence, base.indeterminateLength, [new Item(create(),
-            base.indeterminateLength)]).toString(), 1);
+        checkString(new Sequence(Tag.DerivationCodeSequence, indeterminateLength, [new Item(create(),
+            indeterminateLength)]).toString(), 1);
         checkString(new Fragments(Tag.PixelData, VR.OW, [],
             [new Fragment(4, Value.fromBytes(VR.OW, [1, 2, 3, 4]))]).toString(), 1);
     });

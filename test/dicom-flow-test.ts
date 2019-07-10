@@ -1,6 +1,6 @@
 import assert from "assert";
 import pipe from "multipipe";
-import * as base from "../src/base";
+import { concatv, indeterminateLength, item, itemDelimitation, sequenceDelimitation } from "../src/base";
 import {create, DeferToPartFlow, dicomEndMarker, dicomStartMarker, EndEvent, GroupLengthWarnings,
     GuaranteedDelimitationEvents, GuaranteedValueEvent, IdentityFlow, InFragments, InSequence, StartEvent,
     TagPathTracking,
@@ -10,7 +10,7 @@ import {parseFlow} from "../src/parse-flow";
 import {DicomPart, ItemDelimitationPart, SequenceDelimitationPart, SequencePart, ValueChunk} from "../src/parts";
 import {arraySink} from "../src/sinks";
 import {singleSource} from "../src/sources";
-import Tag from "../src/tag";
+import {Tag} from "../src/tag";
 import {emptyTagPath, TagPath} from "../src/tag-path";
 import * as data from "./test-data";
 import * as util from "./test-util";
@@ -19,10 +19,10 @@ import * as util from "./test-util";
 
 describe("The dicom flow", () => {
     it("should call the correct events for streamed dicom parts", () => {
-        const bytes = base.concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()),
+        const bytes = concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()),
             data.transferSyntaxUID(), data.patientNameJohnDoe(), data.sequence(Tag.DerivationCodeSequence),
-            base.item(), data.studyDate(), base.itemDelimitation(), base.sequenceDelimitation(),
-            data.pixeDataFragments(), base.item(4), Buffer.from([1, 2, 3, 4]), base.sequenceDelimitation());
+            item(), data.studyDate(), itemDelimitation(), sequenceDelimitation(),
+            data.pixeDataFragments(), item(4), Buffer.from([1, 2, 3, 4]), sequenceDelimitation());
 
         const testFlow = create(new class extends IdentityFlow {
             public onFragments() { return [new util.TestPart("Fragments Start")]; }
@@ -71,8 +71,8 @@ describe("The dicom flow", () => {
             }
         }());
 
-        const bytes = base.concatv(data.patientNameJohnDoe(), data.sequence(Tag.DerivationCodeSequence), base.item(),
-            data.studyDate(), base.itemDelimitation(), base.sequenceDelimitation());
+        const bytes = concatv(data.patientNameJohnDoe(), data.sequence(Tag.DerivationCodeSequence), item(),
+            data.studyDate(), itemDelimitation(), sequenceDelimitation());
 
         return util.expectDicomError(() => util.testParts(bytes, pipe(parseFlow(), testFlow), () => {
             // do nothing
@@ -82,9 +82,9 @@ describe("The dicom flow", () => {
 
 describe("The in fragments flow", () => {
     it("should call onValueChunk callback also after length zero headers", () => {
-        const bytes = base.concatv(data.patientNameJohnDoe(), data.sequence(Tag.DerivationCodeSequence), base.item(),
-            data.studyDate(), base.itemDelimitation(), base.sequenceDelimitation(), data.pixeDataFragments(),
-            base.item(4), Buffer.from([1, 2, 3, 4]), base.sequenceDelimitation());
+        const bytes = concatv(data.patientNameJohnDoe(), data.sequence(Tag.DerivationCodeSequence), item(),
+            data.studyDate(), itemDelimitation(), sequenceDelimitation(), data.pixeDataFragments(),
+            item(4), Buffer.from([1, 2, 3, 4]), sequenceDelimitation());
 
         const expectedInFragments = [false, false, true];
 
@@ -103,7 +103,7 @@ describe("The in fragments flow", () => {
 
 describe("The guaranteed value flow", () => {
     it("should call onValueChunk callback also after length zero headers", () => {
-        const bytes = base.concatv(data.patientNameJohnDoe(), data.emptyPatientName());
+        const bytes = concatv(data.patientNameJohnDoe(), data.emptyPatientName());
 
         const expectedChunkLengths = [8, 0];
 
@@ -226,10 +226,10 @@ describe("The end event flow", () => {
 
 describe("The guaranteed delimitation flow", () => {
     it("should insert delimitation parts at the end of sequences and items with determinate length", () => {
-        const bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence, 56), base.item(16), data.studyDate(),
-            base.item(), data.studyDate(), base.itemDelimitation(), data.sequence(Tag.AbstractPriorCodeSequence),
-            base.item(), data.studyDate(), base.itemDelimitation(), base.item(16), data.studyDate(),
-            base.sequenceDelimitation());
+        const bytes = concatv(data.sequence(Tag.DerivationCodeSequence, 56), item(16), data.studyDate(),
+            item(), data.studyDate(), itemDelimitation(), data.sequence(Tag.AbstractPriorCodeSequence),
+            item(), data.studyDate(), itemDelimitation(), item(16), data.studyDate(),
+            sequenceDelimitation());
 
         const expectedDelimitationLengths = [0, 8, 0, 8, 0, 8];
 
@@ -256,8 +256,8 @@ describe("The guaranteed delimitation flow", () => {
                 .expectValueChunk()
                 .expectItemDelimitation()
                 // .expectSequenceDelimitation()
-                .expectSequence(Tag.AbstractPriorCodeSequence, base.indeterminateLength)
-                .expectItem(1, base.indeterminateLength)
+                .expectSequence(Tag.AbstractPriorCodeSequence, indeterminateLength)
+                .expectItem(1, indeterminateLength)
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
                 .expectItemDelimitation()
@@ -271,8 +271,8 @@ describe("The guaranteed delimitation flow", () => {
     });
 
     it("should handle sequences that end with an item delimitation", () => {
-        const bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence, 32), base.item(), data.studyDate(),
-            base.itemDelimitation());
+        const bytes = concatv(data.sequence(Tag.DerivationCodeSequence, 32), item(), data.studyDate(),
+            itemDelimitation());
 
         const testFlow = toIndeterminateLengthSequences();
 
@@ -289,8 +289,8 @@ describe("The guaranteed delimitation flow", () => {
     });
 
     it("should work in datasets with nested sequences", () => {
-        const bytes = base.concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence, 60), base.item(52),
-            data.studyDate(), data.sequence(Tag.DerivationCodeSequence, 24), base.item(16), data.studyDate(),
+        const bytes = concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence, 60), item(52),
+            data.studyDate(), data.sequence(Tag.DerivationCodeSequence, 24), item(16), data.studyDate(),
             data.patientNameJohnDoe());
 
         const testFlow = toIndeterminateLengthSequences();
@@ -318,8 +318,8 @@ describe("The guaranteed delimitation flow", () => {
     });
 
     it("should handle empty sequences and items", () => {
-        const bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence, 52), base.item(16),
-            data.studyDate(), base.item(0), base.item(12), data.sequence(Tag.DerivationCodeSequence, 0));
+        const bytes = concatv(data.sequence(Tag.DerivationCodeSequence, 52), item(16),
+            data.studyDate(), item(0), item(12), data.sequence(Tag.DerivationCodeSequence, 0));
 
         const testFlow = toIndeterminateLengthSequences();
 
@@ -342,8 +342,8 @@ describe("The guaranteed delimitation flow", () => {
     });
 
     it("should handle empty elements in sequences", () => {
-        const bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence, 44), base.item(36),
-            data.emptyPatientName(), data.sequence(Tag.DerivationCodeSequence, 16), base.item(8),
+        const bytes = concatv(data.sequence(Tag.DerivationCodeSequence, 44), item(36),
+            data.emptyPatientName(), data.sequence(Tag.DerivationCodeSequence, 16), item(8),
             data.emptyPatientName());
 
         const testFlow = toIndeterminateLengthSequences();
@@ -365,7 +365,7 @@ describe("The guaranteed delimitation flow", () => {
     });
 
     it("should call event only once when used twice in flow", () => {
-        const bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence, 24), base.item(16),
+        const bytes = concatv(data.sequence(Tag.DerivationCodeSequence, 24), item(16),
             data.patientNameJohnDoe());
 
         let nItemDelims = 0;
@@ -399,12 +399,12 @@ describe("The InSequence support", () => {
             if (depth > 0) { assert(inSequence); } else { assert(!inSequence); }
         };
 
-        const bytes = base.concatv(data.studyDate(),
-            data.sequence(Tag.EnergyWindowInformationSequence), base.item(), data.studyDate(), base.itemDelimitation(),
-                base.item(), // sequence
-            data.sequence(Tag.EnergyWindowRangeSequence, 24), base.item(16),
+        const bytes = concatv(data.studyDate(),
+            data.sequence(Tag.EnergyWindowInformationSequence), item(), data.studyDate(), itemDelimitation(),
+                item(), // sequence
+            data.sequence(Tag.EnergyWindowRangeSequence, 24), item(16),
                 data.studyDate(), // nested sequence (determinate length)
-            base.itemDelimitation(), base.sequenceDelimitation(),
+            itemDelimitation(), sequenceDelimitation(),
             data.patientNameJohnDoe()); // attribute
 
         const testFlow = create(new class extends GuaranteedValueEvent(InSequence(GuaranteedDelimitationEvents(
@@ -423,16 +423,16 @@ describe("The InSequence support", () => {
 
 describe("DICOM flows with tag path tracking", () => {
     it("should update the tag path through attributes, sequences and fragments", () => {
-        const bytes = base.concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()),
+        const bytes = concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()),
             data.transferSyntaxUID(), // FMI
             data.studyDate(),
-            data.sequence(Tag.EnergyWindowInformationSequence), base.item(), data.studyDate(), base.itemDelimitation(),
-                base.item(), // sequence
-            data.sequence(Tag.EnergyWindowRangeSequence, 24), base.item(16),
+            data.sequence(Tag.EnergyWindowInformationSequence), item(), data.studyDate(), itemDelimitation(),
+                item(), // sequence
+            data.sequence(Tag.EnergyWindowRangeSequence, 24), item(16),
                 data.studyDate(), // nested sequence (determinate length)
-            base.itemDelimitation(), base.sequenceDelimitation(),
+            itemDelimitation(), sequenceDelimitation(),
             data.patientNameJohnDoe(), // attribute
-            data.pixeDataFragments(), base.item(4), Buffer.from([1, 2, 3, 4]), base.sequenceDelimitation());
+            data.pixeDataFragments(), item(4), Buffer.from([1, 2, 3, 4]), sequenceDelimitation());
 
         const expectedPaths = [
             emptyTagPath, // preamble
@@ -487,7 +487,7 @@ describe("DICOM flows with tag path tracking", () => {
     });
 
     it("should support using tracking more than once within a flow", () => {
-        const bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence, 24), base.item(16),
+        const bytes = concatv(data.sequence(Tag.DerivationCodeSequence, 24), item(16),
             data.patientNameJohnDoe());
 
         const createTestFlow = () => {
@@ -506,9 +506,9 @@ describe("DICOM flows with tag path tracking", () => {
     });
 
     it("should support sequences and items with explicit length", () => {
-        const bytes = base.concatv(data.patientNameJohnDoe(),
+        const bytes = concatv(data.patientNameJohnDoe(),
             data.sequence(Tag.DigitalSignaturesSequence, 680),
-            base.item(672),
+            item(672),
             data.element(Tag.MACIDNumber, Buffer.from([1, 1])),
             data.element(Tag.DigitalSignatureUID, Buffer.from(new Array(54).fill("1"))),
             data.element(Tag.CertificateType, Buffer.from(new Array(14).fill("A"))),
@@ -551,15 +551,15 @@ describe("DICOM flows with tag path tracking", () => {
     });
 
     it("should handle elements, sequences and items of zero length", () => {
-        const bytes = base.concatv(Buffer.from([8, 0, 32, 0, 68, 65, 0, 0]), data.patientNameJohnDoe(),
+        const bytes = concatv(Buffer.from([8, 0, 32, 0, 68, 65, 0, 0]), data.patientNameJohnDoe(),
             data.sequence(Tag.MACParametersSequence, 0),
             data.sequence(Tag.WaveformSequence),
-            base.sequenceDelimitation(),
+            sequenceDelimitation(),
             data.sequence(Tag.DigitalSignaturesSequence, 680),
-            base.item(0),
-            base.item(),
-            base.itemDelimitation(),
-            base.item(10),
+            item(0),
+            item(),
+            itemDelimitation(),
+            item(10),
             data.element(Tag.MACIDNumber, Buffer.from([1, 1])));
 
         const expectedPaths = [
@@ -602,7 +602,7 @@ describe("DICOM flows with tag path tracking", () => {
 
 describe("The group length warnings flow", () => {
     it("should issue a warning when a group length attribute is encountered", () => {
-        const bytes = base.concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()),
+        const bytes = concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()),
             data.transferSyntaxUID(), data.groupLength(8, data.studyDate().length), data.studyDate());
         const warnFlow = create(new class extends GroupLengthWarnings(InFragments(IdentityFlow)) {}());
 
@@ -622,7 +622,7 @@ describe("The group length warnings flow", () => {
     });
 
     it("should issue a warning when determinate length sequences and items are encountered", () => {
-        const bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence, 24), base.item(16), data.studyDate());
+        const bytes = concatv(data.sequence(Tag.DerivationCodeSequence, 24), item(16), data.studyDate());
         const warnFlow = create(new class extends GroupLengthWarnings(InFragments(IdentityFlow)) {}());
 
         return util.testParts(bytes, pipe(parseFlow(), warnFlow), (parts) => {
@@ -636,7 +636,7 @@ describe("The group length warnings flow", () => {
     });
 
     it("should not warn when silent", () => {
-        const bytes = base.concatv(data.sequence(Tag.DerivationCodeSequence, 24), base.item(16), data.studyDate());
+        const bytes = concatv(data.sequence(Tag.DerivationCodeSequence, 24), item(16), data.studyDate());
         const warnFlow = create(new class extends GroupLengthWarnings(InFragments(IdentityFlow)) {
             constructor() {
                 super();

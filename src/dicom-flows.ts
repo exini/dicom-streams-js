@@ -1,8 +1,11 @@
 import pipe from "multipipe";
 import {Transform} from "readable-stream";
 import zlib from "zlib";
-import * as base from "./base";
-import {CharacterSets} from "./character-sets";
+import {
+    appendToArray, concat, concatArrays, emptyBuffer, indeterminateLength, intToBytes, isFileMetaInformation,
+    isGroupLength, itemDelimitation, prependToArray, sequenceDelimitation,
+} from "./base";
+import {CharacterSets, defaultCharacterSet} from "./character-sets";
 import {collectFlow, collectFromTagPathsFlow} from "./collect-flow";
 import {Detour} from "./detour";
 import {
@@ -14,12 +17,12 @@ import {
     DeflatedChunk, DicomPart, ElementsPart, HeaderPart, ItemDelimitationPart, ItemPart, PreamblePart,
     SequenceDelimitationPart, SequencePart, ValueChunk,
 } from "./parts";
-import Tag from "./tag";
+import {Tag} from "./tag";
 import {TagPath} from "./tag-path";
 import {emptyTagPath} from "./tag-path";
 import {TagTree} from "./tag-tree";
-import UID from "./uid";
-import * as VR from "./vr";
+import {UID} from "./uid";
+import {VR} from "./vr";
 
 // tslint:disable: max-classes-per-file
 
@@ -78,11 +81,11 @@ export function blacklistFilter(
 
 export function groupLengthDiscardFilter() {
     return tagFilter((tagPath) =>
-        !base.isGroupLength(tagPath.tag()) || base.isFileMetaInformation(tagPath.tag()));
+        !isGroupLength(tagPath.tag()) || isFileMetaInformation(tagPath.tag()));
 }
 
 export function fmiDiscardFilter() {
-    return tagFilter((tagPath) => !base.isFileMetaInformation(tagPath.tag()), () => false);
+    return tagFilter((tagPath) => !isFileMetaInformation(tagPath.tag()), () => false);
 }
 
 export function tagFilter(
@@ -163,11 +166,11 @@ export function validateContextFlow(contexts: ValidationContext[]) {
 export function fmiGroupLengthFlow() {
     return pipe(
         collectFlow(
-            (tagPath) => tagPath.isRoot() && base.isFileMetaInformation(tagPath.tag()),
-            (tagPath) => !base.isFileMetaInformation(tagPath.tag()),
+            (tagPath) => tagPath.isRoot() && isFileMetaInformation(tagPath.tag()),
+            (tagPath) => !isFileMetaInformation(tagPath.tag()),
             "fmigrouplength",
         ), tagFilter(
-            (tagPath) => !base.isFileMetaInformation(tagPath.tag()),
+            (tagPath) => !isFileMetaInformation(tagPath.tag()),
             () => true,
             false,
         ), create(new class extends EndEvent(DeferToPartFlow) {
@@ -191,16 +194,16 @@ export function fmiGroupLengthFlow() {
                             e.toBytes().length).reduce((l1, l2) => l1 + l2, 0);
                         const lengthHeader =
                             HeaderPart.create(Tag.FileMetaInformationGroupLength, VR.UL, 4, bigEndian, explicitVR);
-                        const lengthChunk = new ValueChunk(bigEndian, base.intToBytes(length, bigEndian), true);
-                        this.fmi = base.concatArrays([lengthHeader, lengthChunk], fmiElementsNoLength.toParts(false));
+                        const lengthChunk = new ValueChunk(bigEndian, intToBytes(length, bigEndian), true);
+                        this.fmi = concatArrays([lengthHeader, lengthChunk], fmiElementsNoLength.toParts(false));
                     }
                     return [];
                 }
                 if (!this.hasEmitted && part.bytes.length > 0) {
                     this.hasEmitted = true;
                     return part instanceof PreamblePart
-                        ? base.prependToArray(part, this.fmi)
-                        : base.appendToArray(part, this.fmi);
+                        ? prependToArray(part, this.fmi)
+                        : appendToArray(part, this.fmi);
                 }
                 return [part];
             }
@@ -217,10 +220,10 @@ export function toIndeterminateLengthSequences() {
                 if (p instanceof SequencePart && !p.indeterminate) {
                     return new SequencePart(
                         part.tag,
-                        base.indeterminateLength,
+                        indeterminateLength,
                         part.bigEndian,
                         part.explicitVR,
-                        base.concat(part.bytes.slice(0, part.bytes.length - 4), this.indeterminateBytes));
+                        concat(part.bytes.slice(0, part.bytes.length - 4), this.indeterminateBytes));
                 }
                 return p;
             });
@@ -229,7 +232,7 @@ export function toIndeterminateLengthSequences() {
         public onSequenceDelimitation(part: SequenceDelimitationPart): DicomPart[] {
             const out = super.onSequenceDelimitation(part);
             if (part.bytes.length <= 0) {
-                out.push(new SequenceDelimitationPart(part.bigEndian, base.sequenceDelimitation(part.bigEndian)));
+                out.push(new SequenceDelimitationPart(part.bigEndian, sequenceDelimitation(part.bigEndian)));
             }
             return out;
         }
@@ -239,9 +242,9 @@ export function toIndeterminateLengthSequences() {
                 if (p instanceof ItemPart && !this.inFragments && !p.indeterminate) {
                     return new ItemPart(
                         part.index,
-                        base.indeterminateLength,
+                        indeterminateLength,
                         part.bigEndian,
-                        base.concat(part.bytes.slice(0, part.bytes.length - 4), this.indeterminateBytes));
+                        concat(part.bytes.slice(0, part.bytes.length - 4), this.indeterminateBytes));
                 }
                 return p;
             });
@@ -250,7 +253,7 @@ export function toIndeterminateLengthSequences() {
         public onItemDelimitation(part: ItemDelimitationPart): DicomPart[] {
             const out = super.onItemDelimitation(part);
             if (part.bytes.length <= 0) {
-                out.push(new ItemDelimitationPart(part.index, part.bigEndian, base.itemDelimitation(part.bigEndian)));
+                out.push(new ItemDelimitationPart(part.index, part.bigEndian, itemDelimitation(part.bigEndian)));
             }
             return out;
         }
@@ -263,14 +266,14 @@ export function toUtf8Flow() {
         modifyFlow([], [new TagInsertion(TagPath.fromTag(Tag.SpecificCharacterSet), () => Buffer.from("ISO_IR 192"))]),
         create(new class extends IdentityFlow {
 
-            private characterSets: CharacterSets = base.defaultCharacterSet;
+            private characterSets: CharacterSets = defaultCharacterSet;
             private currentHeader: HeaderPart;
-            private currentValue: Buffer = base.emptyBuffer;
+            private currentValue: Buffer = emptyBuffer;
 
             public onHeader(part: HeaderPart) {
                 if (part.length > 0 && CharacterSets.isVrAffectedBySpecificCharacterSet(part.vr)) {
                     this.currentHeader = part;
-                    this.currentValue = base.emptyBuffer;
+                    this.currentValue = emptyBuffer;
                     return [];
                 } else {
                     this.currentHeader = undefined;
@@ -280,7 +283,7 @@ export function toUtf8Flow() {
 
             public onValueChunk(part: ValueChunk) {
                 if (this.currentHeader !== undefined) {
-                    this.currentValue = base.concat(this.currentValue, part.bytes);
+                    this.currentValue = concat(this.currentValue, part.bytes);
                     if (part.last) {
                         const newValue =
                             Buffer.from(this.characterSets.decode(this.currentValue, this.currentHeader.vr));
@@ -312,7 +315,7 @@ export function toUtf8Flow() {
 
 class DeflateDatasetFlow extends Detour {
     private collectingTs: boolean = false;
-    private tsBytes: Buffer = base.emptyBuffer;
+    private tsBytes: Buffer = emptyBuffer;
 
     constructor() {
         super({objectMode: true});
@@ -339,7 +342,7 @@ class DeflateDatasetFlow extends Detour {
                 }
             }
         } else if (part instanceof ValueChunk && this.collectingTs) {
-            this.tsBytes = base.concat(this.tsBytes, part.bytes);
+            this.tsBytes = concat(this.tsBytes, part.bytes);
             this.push(part);
         } else {
             this.push(part);

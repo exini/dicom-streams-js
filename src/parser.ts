@@ -1,17 +1,17 @@
 import zlib from "zlib";
-import * as base from "./base";
+import { bytesToInt, bytesToUShortBE, groupNumber, indeterminateLength, isDeflated, tagToString, trim } from "./base";
 import {ByteParser, ByteReader, ParseResult, ParseStep} from "./byte-parser";
 import {
     Element, Elements, FragmentElement, FragmentsElement, ItemDelimitationElement,
     ItemElement, SequenceDelimitationElement, SequenceElement, UnknownElement, ValueElement,
 } from "./elements";
 import {ElementsBuilder} from "./elements-builder";
-import * as Lookup from "./lookup";
+import {Lookup} from "./lookup";
 import {dicomPreambleLength, isPreamble, readHeader, tryReadHeader} from "./parsing";
-import Tag from "./tag";
-import UID from "./uid";
+import {Tag} from "./tag";
+import {UID} from "./uid";
 import {Value} from "./value";
-import * as VR from "./vr";
+import {VR} from "./vr";
 
 // tslint:disable: max-classes-per-file
 
@@ -94,7 +94,7 @@ class InFmiAttribute extends DicomParseStep {
 
     public parse(reader: ByteReader): ParseResult {
         const header = readHeader(reader, this.state);
-        if (base.groupNumber(header.tag) !== 2) {
+        if (groupNumber(header.tag) !== 2) {
             console.warn("Missing or wrong File Meta Information Group Length (0002,0000)");
             return new ParseResult(undefined, this.toDatasetStep(reader));
         }
@@ -103,9 +103,9 @@ class InFmiAttribute extends DicomParseStep {
         const valueBytes = bytes.slice(header.headerLength);
         this.state.pos += header.headerLength + header.valueLength;
         if (header.tag === Tag.FileMetaInformationGroupLength) {
-            this.state.fmiEndPos = this.state.pos + base.bytesToInt(valueBytes, this.state.bigEndian);
+            this.state.fmiEndPos = this.state.pos + bytesToInt(valueBytes, this.state.bigEndian);
         } else if (header.tag === Tag.TransferSyntaxUID) {
-            this.state.tsuid = base.trim(valueBytes.toString());
+            this.state.tsuid = trim(valueBytes.toString());
         }
         return new ParseResult(
             new ValueElement(header.tag, updatedVr, new Value(valueBytes), this.state.bigEndian, this.state.explicitVR),
@@ -124,7 +124,7 @@ class InFmiAttribute extends DicomParseStep {
 
         let inflater: Inflater;
 
-        if (base.isDeflated(tsuid)) {
+        if (isDeflated(tsuid)) {
             reader.ensure(2);
 
             inflater = new class extends Inflater {
@@ -134,7 +134,7 @@ class InFmiAttribute extends DicomParseStep {
             }();
 
             const firstTwoBytes = reader.remainingData().slice(0, 2);
-            const hasZLIBHeader = base.bytesToUShortBE(firstTwoBytes) === 0x789C;
+            const hasZLIBHeader = bytesToUShortBE(firstTwoBytes) === 0x789C;
 
             if (hasZLIBHeader) {
                 console.warn("Deflated DICOM Stream with ZLIB Header");
@@ -160,13 +160,13 @@ class InAttribute extends DicomParseStep {
         const header = readHeader(reader, this.state);
         reader.take(header.headerLength);
         if (header.vr) {
-            if (header.vr === VR.SQ || header.vr === VR.UN && header.valueLength === base.indeterminateLength) {
+            if (header.vr === VR.SQ || header.vr === VR.UN && header.valueLength === indeterminateLength) {
                 return new ParseResult(
                     new SequenceElement(header.tag, header.valueLength, this.state.bigEndian, this.state.explicitVR),
                     new InAttribute(
                         new AttributeState(0, this.state.bigEndian, this.state.explicitVR, this.state.inflater)));
             }
-            if (header.valueLength === base.indeterminateLength) {
+            if (header.valueLength === indeterminateLength) {
                 return new ParseResult(
                     new FragmentsElement(header.tag, header.vr, this.state.bigEndian, this.state.explicitVR),
                     new InFragments(
@@ -224,7 +224,7 @@ class InFragments extends DicomParseStep {
                     new AttributeState(0, this.state.bigEndian, this.state.explicitVR, this.state.inflater)));
         }
         reader.take(header.valueLength);
-        console.warn("Unexpected element (" + base.tagToString(header.tag) + ") in fragments with length " +
+        console.warn("Unexpected element (" + tagToString(header.tag) + ") in fragments with length " +
             header.valueLength);
         return new ParseResult(new UnknownElement(this.state.bigEndian), this);
     }

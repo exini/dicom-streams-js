@@ -1,18 +1,18 @@
 import { ZoneId } from "js-joda";
-import * as base from "./base";
+import { defaultCharacterSet, systemZone } from "./base";
 import {CharacterSets} from "./character-sets";
 import {
     Element, Elements, ElementSet, Fragment, FragmentElement, Fragments, FragmentsElement, Item,
     ItemDelimitationElement, ItemElement, parseZoneOffset, Sequence, SequenceDelimitationElement,
     SequenceElement, ValueElement } from "./elements";
-import Tag from "./tag";
-import * as VR from "./vr";
+import {Tag} from "./tag";
+import {VR} from "./vr";
 
 // tslint:disable: max-classes-per-file
 
 export class ElementsBuilder {
 
-    private builderStack: DatasetBuilder[] = [new DatasetBuilder(base.defaultCharacterSet, base.systemZone)];
+    private builderStack: DatasetBuilder[] = [new DatasetBuilder(defaultCharacterSet, systemZone)];
     private sequenceStack: Sequence[] = [];
     private lengthStack: Array<{element: Element, bytesLeft: number}> = [];
     private fragments: Fragments;

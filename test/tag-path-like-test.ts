@@ -1,5 +1,5 @@
 import assert from "assert";
-import Tag from "../src/tag";
+import {Tag} from "../src/tag";
 import {TagPathLike} from "../src/tag-path-like";
 
 // tslint:disable: max-classes-per-file

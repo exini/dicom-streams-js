@@ -1,17 +1,17 @@
 import assert from "assert";
 import pipe from "multipipe";
 import { ElementsPart } from "../src";
-import * as base from "../src/base";
+import { concat, concatv, emptyBuffer } from "../src/base";
 import {collectFlow, collectFromTagPathsFlow} from "../src/collect-flow";
 import {parseFlow} from "../src/parse-flow";
-import Tag from "../src/tag";
+import {Tag} from "../src/tag";
 import {TagPath} from "../src/tag-path";
 import * as data from "./test-data";
 import * as util from "./test-util";
 
 describe("A collect elements flow", () => {
     it("should first produce an elements part followed by the input dicom parts", () => {
-        const bytes = base.concat(data.studyDate(), data.patientNameJohnDoe());
+        const bytes = concat(data.studyDate(), data.patientNameJohnDoe());
         const tags = [Tag.StudyDate, Tag.PatientName].map(TagPath.fromTag);
         return util.testParts(bytes, pipe(parseFlow(), collectFromTagPathsFlow(tags, "tag")), (parts) => {
             const e = parts.shift() as ElementsPart;
@@ -30,7 +30,7 @@ describe("A collect elements flow", () => {
     });
 
     it("should produce an empty elements part when stream is empty", () => {
-        const bytes = base.emptyBuffer;
+        const bytes = emptyBuffer;
 
         return util.testParts(bytes, pipe(parseFlow(), collectFromTagPathsFlow([], "tag")), (parts) => {
             const e = parts.shift() as ElementsPart;
@@ -42,7 +42,7 @@ describe("A collect elements flow", () => {
     });
 
     it("should produce an empty elements part when no relevant data elements are present", () => {
-        const bytes = base.concat(data.patientNameJohnDoe(), data.studyDate());
+        const bytes = concat(data.patientNameJohnDoe(), data.studyDate());
 
         return util.testParts(bytes, pipe(parseFlow(),
             collectFromTagPathsFlow([Tag.Modality, Tag.SeriesInstanceUID].map(TagPath.fromTag), "tag")), (parts) => {
@@ -59,7 +59,7 @@ describe("A collect elements flow", () => {
     });
 
     it("should apply the stop tag appropriately", () => {
-        const bytes = base.concatv(data.studyDate(), data.patientNameJohnDoe(), data.pixelData(2000));
+        const bytes = concatv(data.studyDate(), data.patientNameJohnDoe(), data.pixelData(2000));
 
         return util.testParts(bytes, pipe(parseFlow(500),
             collectFromTagPathsFlow([Tag.StudyDate, Tag.PatientName].map(TagPath.fromTag), "tag")), (parts) => {
@@ -84,7 +84,7 @@ describe("A collect elements flow", () => {
     });
 
     it("should fail if max buffer size is exceeded", () => {
-        const bytes = base.concatv(data.studyDate(), data.patientNameJohnDoe(), data.pixelData(2000));
+        const bytes = concatv(data.studyDate(), data.patientNameJohnDoe(), data.pixelData(2000));
 
         return util.expectDicomError(() => util.testParts(bytes, pipe(
             parseFlow(500),

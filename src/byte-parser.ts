@@ -1,4 +1,4 @@
-import * as base from "./base";
+import { concat, emptyBuffer } from "./base";
 
 // tslint:disable: max-classes-per-file
 
@@ -15,13 +15,13 @@ export class ByteParser {
     public isCompleted = false;
     public hasData = false;
 
-    private reader = new ByteReader(base.emptyBuffer);
-    private buffer: Buffer = base.emptyBuffer;
+    private reader = new ByteReader(emptyBuffer);
+    private buffer: Buffer = emptyBuffer;
 
     constructor(public readonly out: IByteParserTarget) {}
 
     public parse(chunk: any): void {
-        this.buffer = base.concat(this.buffer, chunk);
+        this.buffer = concat(this.buffer, chunk);
         this.hasData = chunk.length > 0;
 
         while (this.hasData && !this.isCompleted) { this.doParse(1000); }
@@ -49,7 +49,7 @@ export class ByteParser {
 
     protected complete(): void {
         this.isCompleted = true;
-        this.buffer = base.emptyBuffer;
+        this.buffer = emptyBuffer;
         this.reader = null;
         this.out.complete();
     }
@@ -57,7 +57,7 @@ export class ByteParser {
     protected fail(error?: any) {
         error.message = "Parsing failed: " + (error && error.message ? error.message : "");
         this.isCompleted = true;
-        this.buffer = base.emptyBuffer;
+        this.buffer = emptyBuffer;
         this.reader = null;
         this.out.fail(error);
     }
@@ -148,7 +148,7 @@ export class ParseResult {
 
 export class ByteReader {
 
-    private input = base.emptyBuffer;
+    private input = emptyBuffer;
     private off = 0;
 
     constructor(input: Buffer) {
@@ -169,7 +169,7 @@ export class ByteReader {
     }
 
     public remainingData(): Buffer {
-        return this.hasRemaining() ? this.input.slice(this.off) : base.emptyBuffer;
+        return this.hasRemaining() ? this.input.slice(this.off) : emptyBuffer;
     }
 
     public ensure(n: number): void {

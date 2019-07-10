@@ -1,6 +1,6 @@
 // tslint:disable: object-literal-sort-keys
 
-const tags: { [key: string]: number } = {
+export const Tag: { [key: string]: number } = {
 
     // command elements
     CommandGroupLength: 0x00000000,
@@ -4316,5 +4316,3 @@ const tags: { [key: string]: number } = {
     ItemDelimitationItem: 0xFFFEE00D,
     SequenceDelimitationItem: 0xFFFEE0DD,
 };
-
-export default tags;

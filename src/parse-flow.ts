@@ -1,16 +1,16 @@
 import { Transform } from "readable-stream";
 import zlib from "zlib";
-import * as base from "./base";
+import { bytesToInt, bytesToUShortBE, groupNumber, indeterminateLength, isDeflated, tagToString, trim } from "./base";
 import {ByteParser, ByteReader, finishedParser, ParseResult, ParseStep} from "./byte-parser";
 import { Detour } from "./detour";
-import * as Lookup from "./lookup";
+import {Lookup} from "./lookup";
 import {dicomPreambleLength, isPreamble, readHeader, tryReadHeader} from "./parsing";
 import {
     DeflatedChunk, DicomPart, FragmentsPart, HeaderPart, ItemDelimitationPart, ItemPart,
     PreamblePart, SequenceDelimitationPart, SequencePart, UnknownPart, ValueChunk} from "./parts";
-import Tag from "./tag";
-import UID from "./uid";
-import * as VR from "./vr";
+import {Tag} from "./tag";
+import {UID} from "./uid";
+import {VR} from "./vr";
 
 // tslint:disable: max-classes-per-file
 
@@ -98,14 +98,14 @@ class InFmiHeader extends DicomParseStep {
         const bigEndian = tsuid === UID.ExplicitVRBigEndianRetired;
         const explicitVR = tsuid !== UID.ImplicitVRLittleEndian;
 
-        if (base.isDeflated(tsuid)) {
+        if (isDeflated(tsuid)) {
             if (this.flow.inflate) {
                 reader.ensure(valueLength + 2);
 
                 let inflater = zlib.createInflateRaw();
 
                 const firstTwoBytes = reader.remainingData().slice(valueLength, valueLength + 2);
-                const hasZLIBHeader = base.bytesToUShortBE(firstTwoBytes) === 0x789C;
+                const hasZLIBHeader = bytesToUShortBE(firstTwoBytes) === 0x789C;
 
                 if (hasZLIBHeader) {
                     console.warn("Deflated DICOM Stream with ZLIB Header");
@@ -127,7 +127,7 @@ class InFmiHeader extends DicomParseStep {
 
     public parse(reader: ByteReader) {
         const header = readHeader(reader, this.state);
-        if (base.groupNumber(header.tag) !== 2) {
+        if (groupNumber(header.tag) !== 2) {
             console.warn("Missing or wrong File Meta Information Group Length (0002,0000)");
             return new ParseResult(undefined, this.toDatasetStep(reader, header.valueLength));
         }
@@ -137,12 +137,12 @@ class InFmiHeader extends DicomParseStep {
         if (header.tag === Tag.FileMetaInformationGroupLength) {
             reader.ensure(4);
             const valueBytes = reader.remainingData().slice(0, 4);
-            this.state.fmiEndPos = this.state.pos + base.bytesToInt(valueBytes, this.state.bigEndian);
+            this.state.fmiEndPos = this.state.pos + bytesToInt(valueBytes, this.state.bigEndian);
         } else if (header.tag === Tag.TransferSyntaxUID) {
             if (header.valueLength < this.transferSyntaxLengthLimit) {
                 reader.ensure(header.valueLength);
                 const valueBytes = reader.remainingData().slice(0, header.valueLength);
-                this.state.tsuid = base.trim(valueBytes.toString());
+                this.state.tsuid = trim(valueBytes.toString());
             } else {
                 console.warn("Transfer syntax data is very large, skipping");
             }
@@ -168,11 +168,11 @@ class InDatasetHeader extends DicomParseStep {
         const header = readHeader(reader, this.state);
         if (header.vr) {
             const bytes = reader.take(header.headerLength);
-            if (header.vr === VR.SQ || header.vr === VR.UN && header.valueLength === base.indeterminateLength) {
+            if (header.vr === VR.SQ || header.vr === VR.UN && header.valueLength === indeterminateLength) {
                 return new SequencePart(
                     header.tag, header.valueLength, this.state.bigEndian, this.state.explicitVR, bytes);
             }
-            if (header.valueLength === base.indeterminateLength) {
+            if (header.valueLength === indeterminateLength) {
                 return new FragmentsPart(
                     header.tag, header.valueLength, header.vr, this.state.bigEndian, this.state.explicitVR, bytes);
             }
@@ -286,7 +286,7 @@ class InFragments extends DicomParseStep {
                     new InDatasetHeader(
                         new DatasetHeaderState(0, this.state.bigEndian, this.state.explicitVR), this.flow));
         }
-        console.warn("Unexpected element (" + base.tagToString(header.tag) +
+        console.warn("Unexpected element (" + tagToString(header.tag) +
             ") in fragments with length " + header.valueLength);
         return new ParseResult(
             new UnknownPart(this.state.bigEndian, reader.take(header.headerLength + header.valueLength)), this);

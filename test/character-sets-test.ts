@@ -1,6 +1,6 @@
 import assert from "assert";
 import {CharacterSets} from "../src/character-sets";
-import * as VR from "../src/vr";
+import {VR} from "../src/vr";
 
 describe("Parsing a DICOM file", () => {
 
