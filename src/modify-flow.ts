@@ -1,6 +1,6 @@
 import { appendToArray, concat, concatArrays, emptyBuffer, flatten, padToEvenLength, prependToArray } from "./base";
 import {
-    create, DeferToPartFlow, EndEvent, GroupLengthWarnings, GuaranteedDelimitationEvents,
+    createFlow, DeferToPartFlow, EndEvent, GroupLengthWarnings, GuaranteedDelimitationEvents,
     GuaranteedValueEvent, InFragments, TagPathTracking,
 } from "./dicom-flow";
 import {Lookup} from "./lookup";
@@ -55,7 +55,7 @@ export function modifyFlow(
         return distinct.sort((a, b) => a.tagPath.isBelow(b.tagPath) ? -1 : 1); // ordered by tag path
     };
 
-    return create(new class extends TagPathTracking(
+    return createFlow(new class extends TagPathTracking(
         GuaranteedValueEvent(GuaranteedDelimitationEvents(GroupLengthWarnings(InFragments(
             EndEvent(DeferToPartFlow)))))) {
 

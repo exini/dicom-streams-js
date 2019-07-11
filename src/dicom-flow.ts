@@ -11,7 +11,7 @@ import { emptyTagPath, TagPath, TagPathItem } from "./tag-path";
 
 // tslint:disable: max-classes-per-file
 
-export function create(flow: any) {
+export function createFlow(flow: any) {
     return pipe(flow.baseFlow(), flatMapFlow(flow.handlePart.bind(flow)));
 }
 

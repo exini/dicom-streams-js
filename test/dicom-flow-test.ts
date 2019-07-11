@@ -1,7 +1,7 @@
 import assert from "assert";
 import pipe from "multipipe";
 import { concatv, indeterminateLength, item, itemDelimitation, sequenceDelimitation } from "../src/base";
-import {create, DeferToPartFlow, dicomEndMarker, dicomStartMarker, EndEvent, GroupLengthWarnings,
+import {createFlow, DeferToPartFlow, dicomEndMarker, dicomStartMarker, EndEvent, GroupLengthWarnings,
     GuaranteedDelimitationEvents, GuaranteedValueEvent, IdentityFlow, InFragments, InSequence, StartEvent,
     TagPathTracking,
 } from "../src/dicom-flow";
@@ -24,7 +24,7 @@ describe("The dicom flow", () => {
             item(), data.studyDate(), itemDelimitation(), sequenceDelimitation(),
             data.pixeDataFragments(), item(4), Buffer.from([1, 2, 3, 4]), sequenceDelimitation());
 
-        const testFlow = create(new class extends IdentityFlow {
+        const testFlow = createFlow(new class extends IdentityFlow {
             public onFragments() { return [new util.TestPart("Fragments Start")]; }
             public onHeader() { return [new util.TestPart("Header")]; }
             public onPreamble() { return [new util.TestPart("Preamble")]; }
@@ -62,7 +62,7 @@ describe("The dicom flow", () => {
     });
 
     it("should emit errors properly", () => {
-        const testFlow = create(new class extends DeferToPartFlow {
+        const testFlow = createFlow(new class extends DeferToPartFlow {
             public onPart(part: DicomPart): DicomPart[] {
                 if (part instanceof SequencePart) {
                     throw Error("Sequences not allowed in this flow");
@@ -88,7 +88,7 @@ describe("The in fragments flow", () => {
 
         const expectedInFragments = [false, false, true];
 
-        const testFlow = create(new class extends InFragments(IdentityFlow) {
+        const testFlow = createFlow(new class extends InFragments(IdentityFlow) {
             public onValueChunk(part: DicomPart) {
                 assert.strictEqual(this.inFragments, expectedInFragments.shift());
                 return super.onValueChunk(part);
@@ -107,7 +107,7 @@ describe("The guaranteed value flow", () => {
 
         const expectedChunkLengths = [8, 0];
 
-        const testFlow = create(new class extends GuaranteedValueEvent(IdentityFlow) {
+        const testFlow = createFlow(new class extends GuaranteedValueEvent(IdentityFlow) {
             public onValueChunk(part: ValueChunk) {
                 assert.strictEqual(part.bytes.length, expectedChunkLengths.shift());
                 return super.onValueChunk(part);
@@ -124,8 +124,8 @@ describe("The guaranteed value flow", () => {
 
         let nEvents = 0;
 
-        const testFlow1 = create(new class extends GuaranteedValueEvent(IdentityFlow) {}());
-        const testFlow2 = create(new class extends GuaranteedValueEvent(IdentityFlow) {
+        const testFlow1 = createFlow(new class extends GuaranteedValueEvent(IdentityFlow) {}());
+        const testFlow2 = createFlow(new class extends GuaranteedValueEvent(IdentityFlow) {
             public onValueChunk(part: ValueChunk) {
                 nEvents += 1;
                 return super.onValueChunk(part);
@@ -143,7 +143,7 @@ describe("The start event flow", () => {
     it("should notify when dicom stream starts", () => {
         const bytes = data.patientNameJohnDoe();
 
-        const testFlow = create(new class extends StartEvent(IdentityFlow) {
+        const testFlow = createFlow(new class extends StartEvent(IdentityFlow) {
             public onStart() {
                 return [dicomStartMarker];
             }
@@ -158,7 +158,7 @@ describe("The start event flow", () => {
 
     it("should call onStart for all combined flow stages", () => {
         const createTestFlow = () => {
-            return create(new class extends StartEvent(DeferToPartFlow) {
+            return createFlow(new class extends StartEvent(DeferToPartFlow) {
 
                 private state: number = 1;
 
@@ -183,7 +183,7 @@ describe("The start event flow", () => {
     });
 
     it("should call onStart once for flows with more than one capability using the onStart event", () => {
-        const testFlow = create(new class extends StartEvent(GuaranteedDelimitationEvents(
+        const testFlow = createFlow(new class extends StartEvent(GuaranteedDelimitationEvents(
             InFragments(DeferToPartFlow))) {
 
             private nCalls: number = 0;
@@ -211,7 +211,7 @@ describe("The end event flow", () => {
     it("should notify when dicom stream ends", () => {
         const bytes = data.patientNameJohnDoe();
 
-        const testFlow = create(new class extends EndEvent(IdentityFlow) {
+        const testFlow = createFlow(new class extends EndEvent(IdentityFlow) {
             public onEnd() {
                 return [dicomEndMarker];
             }
@@ -233,7 +233,7 @@ describe("The guaranteed delimitation flow", () => {
 
         const expectedDelimitationLengths = [0, 8, 0, 8, 0, 8];
 
-        const testFlow = create(new class extends GuaranteedDelimitationEvents(InFragments(IdentityFlow)) {
+        const testFlow = createFlow(new class extends GuaranteedDelimitationEvents(InFragments(IdentityFlow)) {
             public onItemDelimitation(part: ItemDelimitationPart) {
                 assert.strictEqual(part.bytes.length, expectedDelimitationLengths.shift());
                 return super.onItemDelimitation(part);
@@ -371,8 +371,8 @@ describe("The guaranteed delimitation flow", () => {
         let nItemDelims = 0;
         let nSeqDelims = 0;
 
-        const testFlow1 = create(new class extends GuaranteedDelimitationEvents(InFragments(IdentityFlow)) {}());
-        const testFlow2 = create(new class extends GuaranteedDelimitationEvents(InFragments(IdentityFlow)) {
+        const testFlow1 = createFlow(new class extends GuaranteedDelimitationEvents(InFragments(IdentityFlow)) {}());
+        const testFlow2 = createFlow(new class extends GuaranteedDelimitationEvents(InFragments(IdentityFlow)) {
             public onItemDelimitation(part: ItemDelimitationPart) {
                 nItemDelims += 1;
                 return super.onItemDelimitation(part);
@@ -407,7 +407,7 @@ describe("The InSequence support", () => {
             itemDelimitation(), sequenceDelimitation(),
             data.patientNameJohnDoe()); // attribute
 
-        const testFlow = create(new class extends GuaranteedValueEvent(InSequence(GuaranteedDelimitationEvents(
+        const testFlow = createFlow(new class extends GuaranteedValueEvent(InSequence(GuaranteedDelimitationEvents(
             InFragments(DeferToPartFlow)))) {
             public onPart(part: DicomPart) {
                 check(this.sequenceDepth, this.inSequence);
@@ -473,7 +473,7 @@ describe("DICOM flows with tag path tracking", () => {
             assert(tagPath.isEqualTo(expectedPaths.shift()));
         };
 
-        const testFlow = create(new class extends TagPathTracking(GuaranteedDelimitationEvents(GuaranteedValueEvent(
+        const testFlow = createFlow(new class extends TagPathTracking(GuaranteedDelimitationEvents(GuaranteedValueEvent(
             InFragments(DeferToPartFlow)))) {
             public onPart(part: DicomPart) {
                 check(this.tagPath);
@@ -491,7 +491,7 @@ describe("DICOM flows with tag path tracking", () => {
             data.patientNameJohnDoe());
 
         const createTestFlow = () => {
-            return create(new class extends TagPathTracking(GuaranteedDelimitationEvents(GuaranteedValueEvent(
+            return createFlow(new class extends TagPathTracking(GuaranteedDelimitationEvents(GuaranteedValueEvent(
                 InFragments(IdentityFlow)))) {}());
         };
 
@@ -537,7 +537,7 @@ describe("DICOM flows with tag path tracking", () => {
             assert(tagPath.isEqualTo(expectedPaths.shift()));
         };
 
-        const testFlow = create(new class extends TagPathTracking(GuaranteedDelimitationEvents(GuaranteedValueEvent(
+        const testFlow = createFlow(new class extends TagPathTracking(GuaranteedDelimitationEvents(GuaranteedValueEvent(
             InFragments(IdentityFlow)))) {
             public onPart(part: DicomPart) {
                 check(this.tagPath);
@@ -586,7 +586,7 @@ describe("DICOM flows with tag path tracking", () => {
             assert(tagPath.isEqualTo(expectedPaths.shift()));
         };
 
-        const testFlow = create(new class extends TagPathTracking(GuaranteedDelimitationEvents(GuaranteedValueEvent(
+        const testFlow = createFlow(new class extends TagPathTracking(GuaranteedDelimitationEvents(GuaranteedValueEvent(
             InFragments(IdentityFlow)))) {
             public onPart(part: DicomPart) {
                 check(this.tagPath);
@@ -604,7 +604,7 @@ describe("The group length warnings flow", () => {
     it("should issue a warning when a group length attribute is encountered", () => {
         const bytes = concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()),
             data.transferSyntaxUID(), data.groupLength(8, data.studyDate().length), data.studyDate());
-        const warnFlow = create(new class extends GroupLengthWarnings(InFragments(IdentityFlow)) {}());
+        const warnFlow = createFlow(new class extends GroupLengthWarnings(InFragments(IdentityFlow)) {}());
 
         return util.testParts(bytes, pipe(parseFlow(), warnFlow), (parts) => {
             util.partProbe(parts)
@@ -623,7 +623,7 @@ describe("The group length warnings flow", () => {
 
     it("should issue a warning when determinate length sequences and items are encountered", () => {
         const bytes = concatv(data.sequence(Tag.DerivationCodeSequence, 24), item(16), data.studyDate());
-        const warnFlow = create(new class extends GroupLengthWarnings(InFragments(IdentityFlow)) {}());
+        const warnFlow = createFlow(new class extends GroupLengthWarnings(InFragments(IdentityFlow)) {}());
 
         return util.testParts(bytes, pipe(parseFlow(), warnFlow), (parts) => {
             util.partProbe(parts)
@@ -637,7 +637,7 @@ describe("The group length warnings flow", () => {
 
     it("should not warn when silent", () => {
         const bytes = concatv(data.sequence(Tag.DerivationCodeSequence, 24), item(16), data.studyDate());
-        const warnFlow = create(new class extends GroupLengthWarnings(InFragments(IdentityFlow)) {
+        const warnFlow = createFlow(new class extends GroupLengthWarnings(InFragments(IdentityFlow)) {
             constructor() {
                 super();
                 this.silent = true;

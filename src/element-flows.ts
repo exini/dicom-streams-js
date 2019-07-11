@@ -1,5 +1,5 @@
 import { concat, emptyBuffer } from "./base";
-import {create, DeferToPartFlow, GuaranteedValueEvent, InFragments} from "./dicom-flow";
+import {createFlow, DeferToPartFlow, GuaranteedValueEvent, InFragments} from "./dicom-flow";
 import {Element, FragmentElement, FragmentsElement, ItemDelimitationElement, ItemElement,
     preambleElement, SequenceDelimitationElement, SequenceElement, ValueElement,
 } from "./elements";
@@ -9,7 +9,7 @@ import {DicomPart, FragmentsPart, HeaderPart, ItemDelimitationPart, ItemPart, Pr
 import {Value} from "./value";
 
 export function elementFlow() {
-    return create(new class extends GuaranteedValueEvent(InFragments(DeferToPartFlow)) {
+    return createFlow(new class extends GuaranteedValueEvent(InFragments(DeferToPartFlow)) {
         private bytes: Buffer = emptyBuffer;
         private currentValue: ValueElement;
         private currentFragment: FragmentElement;

@@ -9,7 +9,7 @@ import {CharacterSets, defaultCharacterSet} from "./character-sets";
 import {collectFlow, collectFromTagPathsFlow} from "./collect-flow";
 import {Detour} from "./detour";
 import {
-    create, DeferToPartFlow, dicomEndMarker, EndEvent, GroupLengthWarnings, GuaranteedDelimitationEvents,
+    createFlow, DeferToPartFlow, dicomEndMarker, EndEvent, GroupLengthWarnings, GuaranteedDelimitationEvents,
     GuaranteedValueEvent, IdentityFlow, InFragments, InSequence, TagPathTracking,
 } from "./dicom-flow";
 import {modifyFlow, TagInsertion} from "./modify-flow";
@@ -40,7 +40,7 @@ export function stopTagFlow(tag: number) {
     let endReached = false;
 
     return pipe(
-        create(new class extends InSequence(GuaranteedDelimitationEvents(InFragments(IdentityFlow))) {
+        createFlow(new class extends InSequence(GuaranteedDelimitationEvents(InFragments(IdentityFlow))) {
             public onHeader(part: HeaderPart): DicomPart[] {
                 return this.inSequence || part.tag < tag ? [part] : [dicomEndMarker];
             }
@@ -91,7 +91,7 @@ export function fmiDiscardFilter() {
 export function tagFilter(
     keepCondition: (t: TagPath) => boolean,
     defaultCondition: (p: DicomPart) => boolean = () => true, logGroupLengthWarnings: boolean = false) {
-    return create(new class extends TagPathTracking(GuaranteedDelimitationEvents(GuaranteedValueEvent(
+    return createFlow(new class extends TagPathTracking(GuaranteedDelimitationEvents(GuaranteedValueEvent(
         GroupLengthWarnings(InFragments(DeferToPartFlow))))) {
 
         private keeping = false;
@@ -109,7 +109,7 @@ export function tagFilter(
 }
 
 export function headerFilter(keepCondition: (p: HeaderPart) => boolean, logGroupLengthWarnings: boolean = false) {
-    return create(new class extends GroupLengthWarnings(InFragments(DeferToPartFlow)) {
+    return createFlow(new class extends GroupLengthWarnings(InFragments(DeferToPartFlow)) {
 
         private keeping = false;
 
@@ -143,7 +143,7 @@ export function validateContextFlow(contexts: ValidationContext[]) {
             TagPath.fromTag(Tag.TransferSyntaxUID),
             TagPath.fromTag(Tag.SOPClassUID),
         ], "validatecontext"),
-        create(new class extends DeferToPartFlow {
+        createFlow(new class extends DeferToPartFlow {
             public onPart(part: DicomPart): DicomPart[] {
                 if (part instanceof ElementsPart && part.label === "validatecontext") {
                     let scuid = part.elements.stringByTag(Tag.MediaStorageSOPClassUID);
@@ -173,7 +173,7 @@ export function fmiGroupLengthFlow() {
             (tagPath) => !isFileMetaInformation(tagPath.tag()),
             () => true,
             false,
-        ), create(new class extends EndEvent(DeferToPartFlow) {
+        ), createFlow(new class extends EndEvent(DeferToPartFlow) {
 
             private fmi: DicomPart[] = [];
             private hasEmitted = false;
@@ -211,7 +211,7 @@ export function fmiGroupLengthFlow() {
 }
 
 export function toIndeterminateLengthSequences() {
-    return create(new class extends GuaranteedDelimitationEvents(InFragments(IdentityFlow)) {
+    return createFlow(new class extends GuaranteedDelimitationEvents(InFragments(IdentityFlow)) {
 
         private indeterminateBytes = Buffer.from([0xFF, 0xFF, 0xFF, 0xFF]);
 
@@ -264,7 +264,7 @@ export function toUtf8Flow() {
     return pipe(
         collectFromTagPathsFlow([TagPath.fromTag(Tag.SpecificCharacterSet)], "toutf8"),
         modifyFlow([], [new TagInsertion(TagPath.fromTag(Tag.SpecificCharacterSet), () => Buffer.from("ISO_IR 192"))]),
-        create(new class extends IdentityFlow {
+        createFlow(new class extends IdentityFlow {
 
             private characterSets: CharacterSets = defaultCharacterSet;
             private currentHeader: HeaderPart;

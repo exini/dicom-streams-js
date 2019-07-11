@@ -2,7 +2,7 @@ import {Transform} from "readable-stream";
 import {concat, prependToArray} from "./base";
 import {CharacterSets} from "./character-sets";
 import {
-    create, DeferToPartFlow, EndEvent, GuaranteedDelimitationEvents, GuaranteedValueEvent,
+    createFlow, DeferToPartFlow, EndEvent, GuaranteedDelimitationEvents, GuaranteedValueEvent,
     InFragments, ItemDelimitationPartMarker, sequenceDelimitationPartMarker, TagPathTracking,
     valueChunkMarker,
 } from "./dicom-flow";
@@ -17,7 +17,7 @@ export function collectFlow(
     stopCondition: (t: TagPath) => boolean,
     label: string,
     maxBufferSize: number = 1000000): Transform {
-    return create(new class extends EndEvent(
+    return createFlow(new class extends EndEvent(
         TagPathTracking(GuaranteedDelimitationEvents(GuaranteedValueEvent(InFragments(DeferToPartFlow))))) {
 
         private reachedEnd = false;
