@@ -13,9 +13,8 @@
     "build-lib": "./node_modules/typescript/bin/tsc",
     "build-dev": "webpack --config config/webpack.config-dev.js",
     "build-prod": "webpack --config config/webpack.config-prod.js",
-    "build": "npm run clean && npm run lint && npm run test && npm run build-lib && npm run build-dev && npm run build-prod",
-    "prepublish": "npm run clean && npm run build && shx cp package.json LICENSE README.md dist",
-    "pub": "npm publish dist"
+    "build-copy-files": "shx cp package.json LICENSE README.md dist",
+    "build": "npm run clean && npm run lint && npm run test && npm run build-lib && npm run build-dev && npm run build-prod && npm run build-copy-files"
   },
   "nyc": {
     "extension": [
