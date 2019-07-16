@@ -1,9 +1,8 @@
-import pipe from "multipipe";
-import {Transform} from "readable-stream";
+import {Transform} from "stream";
 import zlib from "zlib";
 import {
     appendToArray, concat, concatArrays, emptyBuffer, indeterminateLength, intToBytes, isFileMetaInformation,
-    isGroupLength, itemDelimitation, prependToArray, sequenceDelimitation,
+    isGroupLength, itemDelimitation, pipe, prependToArray, sequenceDelimitation,
 } from "./base";
 import {CharacterSets, defaultCharacterSet} from "./character-sets";
 import {collectFlow, collectFromTagPathsFlow} from "./collect-flow";

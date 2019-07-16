@@ -1,5 +1,4 @@
-import pipe from "multipipe";
-import { concat, concatv, emptyBuffer, item, sequenceDelimitation } from "../src/base";
+import { concat, concatv, emptyBuffer, item, pipe, sequenceDelimitation } from "../src/base";
 import {elementFlow} from "../src/element-flows";
 import {parseFlow} from "../src/parse-flow";
 import {Tag} from "../src/tag";

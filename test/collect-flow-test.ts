@@ -1,7 +1,6 @@
 import assert from "assert";
-import pipe from "multipipe";
 import { ElementsPart } from "../src";
-import { concat, concatv, emptyBuffer } from "../src/base";
+import { concat, concatv, emptyBuffer, pipe } from "../src/base";
 import {collectFlow, collectFromTagPathsFlow} from "../src/collect-flow";
 import {parseFlow} from "../src/parse-flow";
 import {Tag} from "../src/tag";

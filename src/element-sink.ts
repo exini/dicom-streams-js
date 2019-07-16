@@ -1,4 +1,4 @@
-import {Writable} from "readable-stream";
+import {Writable} from "stream";
 import { Elements } from "./elements";
 import {ElementsBuilder} from "./elements-builder";
 

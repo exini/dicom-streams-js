@@ -1,4 +1,4 @@
-import {Writable} from "readable-stream";
+import {Writable} from "stream";
 import { concat, emptyBuffer } from "./base";
 
 export function byteSink(callback: (b: Buffer) => any) {

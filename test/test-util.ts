@@ -1,5 +1,5 @@
 import assert from "assert";
-import {pipeline, Transform} from "readable-stream";
+import {pipeline, Transform} from "stream";
 import {promisify} from "util";
 import zlib from "zlib";
 import { VR } from "../src";

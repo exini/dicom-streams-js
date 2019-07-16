@@ -1,6 +1,5 @@
-import pipe from "multipipe";
 import {
-    concat, concatv, emptyBuffer, item, itemDelimitation, sequenceDelimitation, shortToBytesLE, tagToBytesLE,
+    concat, concatv, emptyBuffer, item, itemDelimitation, pipe, sequenceDelimitation, shortToBytesLE, tagToBytesLE,
 } from "../src/base";
 import {prependFlow} from "../src/flows";
 import {modifyFlow, TagInsertion, TagModification, TagModificationsPart} from "../src/modify-flow";

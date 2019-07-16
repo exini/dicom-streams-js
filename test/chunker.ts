@@ -1,4 +1,4 @@
-import {Transform} from "readable-stream";
+import {Transform} from "stream";
 import { concat, emptyBuffer } from "../src/base";
 
 export class Chunker extends Transform {

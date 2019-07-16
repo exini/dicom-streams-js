@@ -1,3 +1,8 @@
+.*
+**/tsconfig.json
+**/tslint.json
+**/webpack.config.json
 src
 test
-tsconfig.json
+build
+node_modules

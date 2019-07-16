@@ -1,4 +1,4 @@
-import {Readable} from "readable-stream";
+import {Readable} from "stream";
 
 export function singleSource(element: any, objectMode: boolean = false) {
     return new Readable({

@@ -1,6 +1,5 @@
 import assert from "assert";
-import pipe from "multipipe";
-import { concatv, indeterminateLength, item, itemDelimitation, sequenceDelimitation } from "../src/base";
+import { concatv, indeterminateLength, item, itemDelimitation, pipe, sequenceDelimitation } from "../src/base";
 import {createFlow, DeferToPartFlow, dicomEndMarker, dicomStartMarker, EndEvent, GroupLengthWarnings,
     GuaranteedDelimitationEvents, GuaranteedValueEvent, IdentityFlow, InFragments, InSequence, StartEvent,
     TagPathTracking,

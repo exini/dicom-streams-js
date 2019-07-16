@@ -1,4 +1,4 @@
-import {Transform} from "readable-stream";
+import {Transform} from "stream";
 import {concat, prependToArray} from "./base";
 import {CharacterSets} from "./character-sets";
 import {

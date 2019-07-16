@@ -1,4 +1,4 @@
-import {Transform} from "readable-stream";
+import {Transform} from "stream";
 
 export function identityFlow(objectMode: boolean = false): Transform {
     return new Transform({

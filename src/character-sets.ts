@@ -1,4 +1,4 @@
-import { convertBytes } from "../lib/dicom-character-set.min";
+import { convertBytes } from "dicom-character-set/dist/dicom-character-set-no-polyfill";
 import {VR} from "./vr";
 
 export class CharacterSets {

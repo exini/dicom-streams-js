@@ -1,6 +1,5 @@
-import pipe from "multipipe";
-import { Transform } from "readable-stream";
-import { emptyBuffer, isGroupLength } from "./base";
+import { Transform } from "stream";
+import { emptyBuffer, isGroupLength, pipe } from "./base";
 import { appendFlow, flatMapFlow, identityFlow, prependFlow } from "./flows";
 import {
     DeflatedChunk, DicomPart, FragmentsPart, HeaderPart, ItemDelimitationPart, ItemPart, MetaPart,

@@ -2,9 +2,7 @@
 .idea
 .vscode
 .nyc_output
-dist/
-target/
-package/
+dist
 npm-debug.log
 node_modules
 coverage

@@ -1,7 +1,6 @@
-import pipe from "multipipe";
 import {
-    concat, concatv, intToBytes, item, itemDelimitation, sequenceDelimitation, sequenceDelimitationNonZeroLength,
-    tagToBytes,
+    concat, concatv, intToBytes, item, itemDelimitation, pipe, sequenceDelimitation,
+    sequenceDelimitationNonZeroLength, tagToBytes,
 } from "../src/base";
 import {parseFlow} from "../src/parse-flow";
 import {Tag} from "../src/tag";

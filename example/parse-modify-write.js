@@ -1,11 +1,8 @@
 const fs = require("fs");
-const pipe = require("multipipe");
-const {TagPath} = require("../src/tag-path");
-const {TagTree} = require("../src/tag-tree");
-const {parseFlow} = require("../src/parse-flow");
-const {toBytesFlow, whitelistFilter, blacklistFilter, toUtf8Flow, toIndeterminateLengthSequences} = require("../src/dicom-flows");
-const {modifyFlow, TagModification, TagInsertion} = require("../src/modify-flow");
-
+const {
+    TagPath, TagTree, parseFlow, toBytesFlow, whitelistFilter, blacklistFilter, toUtf8Flow, toIndeterminateLengthSequences,
+    modifyFlow, TagModification, TagInsertion, pipe
+} = require("../dist");
 
 const src = fs.createReadStream(process.argv[2]);
 const dest = fs.createWriteStream(process.argv[3]);

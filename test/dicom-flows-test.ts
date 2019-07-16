@@ -1,8 +1,7 @@
 import assert from "assert";
-import pipe from "multipipe";
 import {
     concat, concatv, emptyBuffer, groupNumber, indeterminateLength, intToBytesLE, isFileMetaInformation, item,
-    itemDelimitation, padToEvenLength, sequenceDelimitation, shortToBytesLE, tagToBytesLE,
+    itemDelimitation, padToEvenLength, pipe, sequenceDelimitation, shortToBytesLE, tagToBytesLE,
 } from "../src/base";
 import {
     blacklistFilter, deflateDatasetFlow, fmiDiscardFilter, fmiGroupLengthFlow, groupLengthDiscardFilter, headerFilter,

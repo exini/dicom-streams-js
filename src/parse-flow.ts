@@ -1,4 +1,4 @@
-import { Transform } from "readable-stream";
+import { Transform } from "stream";
 import zlib from "zlib";
 import { bytesToInt, bytesToUShortBE, groupNumber, indeterminateLength, isDeflated, tagToString, trim } from "./base";
 import {ByteParser, ByteReader, finishedParser, ParseResult, ParseStep} from "./byte-parser";
@@ -313,7 +313,7 @@ class ParseFlow extends Detour {
         public readonly chunkSize = 1024 * 1024,
         public readonly inflate = true,
         public readonly bufferBytes = 1024 * 1024) {
-        super({writableHighWaterMark: bufferBytes, readableObjectMode: true});
+        super({highWaterMark: bufferBytes, readableObjectMode: true}); // FIXME should be writableHighWaterMark
 
         this.parser = new ByteParser(this);
         this.parser.startWith(new AtBeginning(this));

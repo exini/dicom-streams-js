@@ -1,4 +1,5 @@
 import {ZoneId} from "js-joda";
+import mpipe from "multipipe";
 import uuidv4 from "uuid/v4";
 import uuidv5 from "uuid/v5";
 import * as CS from "./character-sets";
@@ -193,3 +194,5 @@ export function createUID(): string { return randomUID(uidRoot); }
 export function createUIDFromRoot(root: string): string { return randomUID(root); }
 export function createNameBasedUID(name: string): string { return nameBasedUID(name, uidRoot); }
 export function createNameBasedUIDFromRoot(name: string, root: string): string { return nameBasedUID(name, root); }
+
+export function pipe(...streams: any[]): any { return mpipe(streams); }

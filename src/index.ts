@@ -21,4 +21,3 @@ export * from "./value";
 export * from "./elements";
 export * from "./element-flows";
 export * from "./element-sink";
-export * from "multipipe";

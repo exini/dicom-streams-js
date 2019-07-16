@@ -1,4 +1,4 @@
-import {Transform, TransformOptions} from "readable-stream";
+import {Transform, TransformOptions} from "stream";
 
 export abstract class Detour extends Transform {
 
@@ -15,7 +15,7 @@ export abstract class Detour extends Transform {
         this.detourFlow = detourFlow;
     }
 
-    public setDetour(detour: boolean, initialChunk: any): void {
+    public setDetour(detour: boolean = true, initialChunk?: any): void {
         this.detour = detour;
         if (this.detourFlow !== undefined) {
             if (this.detour) {
