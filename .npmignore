@@ -1,0 +1,8 @@
+.*
+**/tsconfig.json
+**/tslint.json
+**/webpack.config.json
+src
+test
+build
+node_modules

@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es6",
+        "lib": ["es2015", "dom"],
+        "sourceMap": true,
+        "declaration": true,
+        "noImplicitAny": true,
+        "esModuleInterop": true,
+        "rootDir": "src",
+        "outDir": "dist/lib",
+        "typeRoots" : ["./node_modules/@types", "./typings"]
+    },
+    "files": [
+        "./src/index.ts"
+    ]
+}
