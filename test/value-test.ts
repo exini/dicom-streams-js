@@ -261,10 +261,26 @@ describe("Parsing date time strings", () => {
         const dateTimes = Value.fromBuffer(VR.DT,
             Buffer.from("2004\\200403\\20040329\\2004032911\\200403291159\\20040329115935\\20040329115935.123456\\" +
             "20040329115935.123456+0000\\20040329115935.123456-0000")).toDateTimes(VR.DT);
+
         assert.deepStrictEqual(
             dateTimes,
-            [yyyy, yyyyMM, yyyyMMdd, yyyyMMddHH, yyyyMMddHHmm, yyyyMMddHHmmss, yyyyMMddHHmmssS, yyyyMMddHHmmssSZ,
-                yyyyMMddHHmmssSZ],
+            [yyyy, yyyyMM, yyyyMMdd, yyyyMMddHH, yyyyMMddHHmm, yyyyMMddHHmmss, yyyyMMddHHmmssS,
+                yyyyMMddHHmmssSZ, yyyyMMddHHmmssSZ],
+        );
+    });
+
+    it("should parse date time strings with varying precision on fractional seconds part", () => {
+        const zone = ZonedDateTime.now().zone();
+        const yyyyMMddHHmmssS0 = ZonedDateTime.of(2004, 3, 29, 11, 59, 35, 0, zone);
+        const yyyyMMddHHmmssS12 = ZonedDateTime.of(2004, 3, 29, 11, 59, 35, 120000000, zone);
+        const yyyyMMddHHmmssSZ = ZonedDateTime.of(2004, 3, 29, 11, 59, 35, 120000000, ZoneOffset.UTC);
+
+        const dateTimes = Value.fromBuffer(VR.DT,
+            Buffer.from("20040329115935.0\\20040329115935.000000\\20040329115935.12\\20040329115935.1200\\" +
+            "20040329115935.1200-0000")).toDateTimes(VR.DT);
+
+        assert.deepStrictEqual(
+            dateTimes, [yyyyMMddHHmmssS0, yyyyMMddHHmmssS0, yyyyMMddHHmmssS12, yyyyMMddHHmmssS12, yyyyMMddHHmmssSZ],
         );
     });
 

@@ -305,13 +305,28 @@ function parseTime(s: string): LocalTime {
 function parseDateTime(s: string, zone: ZoneId = systemZone): ZonedDateTime {
     s = s.trim();
     let len = s.length;
-    let zoneStart = Math.max(s.indexOf("+"), s.indexOf("-"));
-    if (zoneStart >= 0) {
-        len -= 5;
-    }
-    if (!(len === 4 || len === 6 || len === 8 || len === 10 || len === 12 || len === 14 || len === 21)) {
+    const zoneStart = Math.max(s.indexOf("+"), s.indexOf("-"));
+
+    if (!(len === 4 || len === 6 || len === 8 || (len === 9 && zoneStart >= 0) || len === 10 || len === 12
+                    || len === 14 || (len >= 15 && s.charAt(14) === "." && len <= 26))) {
         return undefined;
     }
+
+    if (len >= 15 && s.charAt(14) === ".") {
+        const endPosition = zoneStart >= 0 ? zoneStart : len;
+        const fractionalSecondLength = endPosition - 15;
+        if (fractionalSecondLength > 6) {
+            return undefined;
+        }
+    }
+
+    if (zoneStart >= 0) {
+        if (len - zoneStart !== 5) {
+            return undefined;
+        }
+        len -= 5;
+    }
+
     try {
         const year = parseInt(s.substring(0, 4), 10);
         let month = 1;
@@ -330,15 +345,18 @@ function parseDateTime(s: string, zone: ZoneId = systemZone): ZonedDateTime {
                         minute = parseInt(s.substring(10, 12), 10);
                         if (len >= 14) {
                             second = parseInt(s.substring(12, 14), 10);
-                            if (s.charAt(14) === "." && len >= 21) {
-                                nanoOfSecond = parseInt(s.substring(15, 21), 10) * 1000;
+                            if (s.charAt(14) === "." && len >= 15) {
+                                const precision = len - 15;
+                                const exponent = 9 - precision;
+                                nanoOfSecond =
+                                parseInt(s.substring(15, len), 10) * Math.pow(10, exponent);
                             }
                         }
                     }
                 }
             }
         }
-        zoneStart = Math.max(s.indexOf("+"), s.indexOf("-"));
+
         if (zoneStart >= 4) {
             zone = ZoneOffset.ofHoursMinutes(
                 parseInt(s.substring(zoneStart + 1, zoneStart + 3), 10),
