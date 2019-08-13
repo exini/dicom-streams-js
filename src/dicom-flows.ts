@@ -41,7 +41,8 @@ export function stopTagFlow(tag: number) {
     return pipe(
         createFlow(new class extends InSequence(GuaranteedDelimitationEvents(InFragments(IdentityFlow))) {
             public onHeader(part: HeaderPart): DicomPart[] {
-                return this.inSequence || part.tag < tag ? [part] : [dicomEndMarker];
+                const out = super.onHeader(part);
+                return this.inSequence || part.tag < tag ? out : [dicomEndMarker];
             }
         }()),
         new Transform({

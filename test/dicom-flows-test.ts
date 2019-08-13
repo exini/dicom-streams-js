@@ -63,6 +63,24 @@ describe("The stop tag flow", () => {
                 .expectDicomComplete();
         });
     });
+
+    it("should work also with sequences and item with explicit length", () => {
+        const bytes = concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence, 30), item(22),
+            data.pixelData(10), data.patientNameJohnDoe(), data.pixelData(100));
+
+        return util.testParts(bytes, pipe(parseFlow(), stopTagFlow(Tag.PatientName + 1)), (parts) => {
+            util.partProbe(parts)
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectSequence()
+                .expectItem()
+                .expectHeader(Tag.PixelData)
+                .expectValueChunk()
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
 });
 
 describe("The DICOM group length discard filter", () => {
