@@ -1,13 +1,14 @@
 import {
     ChronoField, DateTimeFormatter, DateTimeFormatterBuilder, LocalDate,
-    LocalTime, ResolverStyle, ZonedDateTime, ZoneId, ZoneOffset } from "js-joda";
+    LocalTime, ResolverStyle, ZonedDateTime, ZoneId, ZoneOffset,
+} from "js-joda";
 import {
     bytesToDouble, bytesToFloat, bytesToInt, bytesToShort, bytesToTag, bytesToUInt, bytesToUShort, concat, concatv,
     doubleToBytes, emptyBuffer, floatToBytes, intToBytes, multiValueDelimiter, padToEvenLength, shortToBytes,
     systemZone, tagToBytes, tagToString, trim,
 } from "./base";
 import { CharacterSets, defaultCharacterSet } from "./character-sets";
-import {VR} from "./vr";
+import { VR } from "./vr";
 
 export class Value {
     public static fromString(vr: VR, value: string, bigEndian: boolean = false): Value {
@@ -74,7 +75,7 @@ export class Value {
             return [trimPadding(characterSets.decode(this.bytes, vr), vr.paddingByte)];
         }
         if (vr === VR.DA || vr === VR.TM || vr === VR.DT) { return splitString(this.bytes.toString()).map(trim); }
-        if (vr === VR.UC)  { return splitString(trimPadding(characterSets.decode(this.bytes, vr), vr.paddingByte)); }
+        if (vr === VR.UC) { return splitString(trimPadding(characterSets.decode(this.bytes, vr), vr.paddingByte)); }
         return splitString(characterSets.decode(this.bytes, vr)).map(trim);
     }
 
@@ -138,7 +139,7 @@ export class Value {
     public toNumber(
         vr: VR,
         bigEndian: boolean = false): number {
-            return Value.headOption(this.toNumbers(vr, bigEndian));
+        return Value.headOption(this.toNumbers(vr, bigEndian));
     }
     public toDate(vr?: VR): LocalDate { return Value.headOption(this.toDates(vr)); }
     public toTime(vr?: VR): LocalTime { return Value.headOption(this.toTimes(vr)); }
@@ -303,16 +304,33 @@ function parseTime(s: string): LocalTime {
 }
 
 function parseDateTime(s: string, zone: ZoneId = systemZone): ZonedDateTime {
-    s = s.trim();
-    let len = s.length;
-    let zoneStart = Math.max(s.indexOf("+"), s.indexOf("-"));
-    if (zoneStart >= 0) {
-        len -= 5;
-    }
-    if (!(len === 4 || len === 6 || len === 8 || len === 10 || len === 12 || len === 14 || len === 21)) {
-        return undefined;
-    }
     try {
+        s = s.trim();
+        let len = s.length;
+
+        if (len < 4) {
+            throw Error("Malformed date-time, must at least include year.");
+        }
+
+        // parse zone if present and trim this part from string
+        const zoneStart = Math.max(s.indexOf("+"), s.indexOf("-"));
+        if (zoneStart >= 4 && s.length === zoneStart + 5) {
+            const signString = s.substring(zoneStart, zoneStart + 1);
+            const zoneString = s.substring(zoneStart + 1, zoneStart + 5);
+            zone = ZoneOffset.ofHoursMinutes(
+                parseInt(signString + zoneString.substring(0, 2), 10),
+                parseInt(signString + zoneString.substring(2, 4), 10));
+            s = s.substring(0, zoneStart);
+            len = s.length;
+        } else if (zoneStart >= 0) {
+            throw Error("Malformed date-time. Zone is present but misplaced or not of length 5");
+        }
+
+        const validLengths = [4, 6, 8, 10, 12, 14, 16, 17, 18, 19, 20, 21];
+        if (validLengths.indexOf(len) < 0) {
+            throw Error("Malformed date-time, invalid length " + len);
+        }
+
         const year = parseInt(s.substring(0, 4), 10);
         let month = 1;
         let dayOfMonth = 1;
@@ -330,20 +348,18 @@ function parseDateTime(s: string, zone: ZoneId = systemZone): ZonedDateTime {
                         minute = parseInt(s.substring(10, 12), 10);
                         if (len >= 14) {
                             second = parseInt(s.substring(12, 14), 10);
-                            if (s.charAt(14) === "." && len >= 21) {
-                                nanoOfSecond = parseInt(s.substring(15, 21), 10) * 1000;
+                            if (s.charAt(14) === "." && len >= 15) {
+                                const end = Math.min(len, 21);
+                                const precision = end - 15;
+                                const exponent = 9 - precision;
+                                nanoOfSecond = parseInt(s.substring(15, end), 10) * Math.pow(10, exponent);
                             }
                         }
                     }
                 }
             }
         }
-        zoneStart = Math.max(s.indexOf("+"), s.indexOf("-"));
-        if (zoneStart >= 4) {
-            zone = ZoneOffset.ofHoursMinutes(
-                parseInt(s.substring(zoneStart + 1, zoneStart + 3), 10),
-                parseInt(s.substring(zoneStart + 3, zoneStart + 5), 10));
-        }
+
         return ZonedDateTime.of(year, month, dayOfMonth, hour, minute, second, nanoOfSecond, zone);
     } catch (error) {
         return undefined;
