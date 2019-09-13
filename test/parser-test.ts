@@ -2,8 +2,9 @@ import assert from "assert";
 import {
     concatv, intToBytes, item, itemDelimitation, sequenceDelimitation, sequenceDelimitationNonZeroLength, tagToBytes,
 } from "../src/base";
-import { Element, Elements } from "../src/elements";
+import { Elements } from "../src/elements";
 import {Parser} from "../src/parser";
+import { AttributeInfo } from "../src/parsing";
 import {Tag} from "../src/tag";
 import {UID} from "../src/uid";
 import {VR} from "../src/vr";
@@ -364,10 +365,13 @@ describe("DICOM parse flow", () => {
         const bytes = concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence), item(),
             data.patientNameJohnDoe(), itemDelimitation(), sequenceDelimitation(), data.patientNameJohnDoe());
 
-        const stop = (element: Element, depth: number) =>
-            depth === 0 && "tag" in element && (element as any).tag >= Tag.PatientName;
+        const stop = (attributeInfo: AttributeInfo, depth: number) =>
+            depth === 0 && "tag" in attributeInfo && (attributeInfo as any).tag >= Tag.PatientName;
         const parser = new Parser(stop);
+
+        assert(!parser.isComplete());
         parser.parse(bytes);
+        assert(parser.isComplete());
 
         util.partProbe(parser.result().toParts(false))
             .expectHeader(Tag.StudyDate)

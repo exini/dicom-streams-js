@@ -4,7 +4,6 @@ import { concat, emptyBuffer } from "./base";
 
 export interface IByteParserTarget {
     next(result: any): void;
-    shouldStop(result: any): boolean;
     fail(error?: any): void;
     complete(): void;
 
@@ -67,10 +66,6 @@ export class ByteParser {
             this.reader.setInput(this.buffer);
             try {
                 const parseResult = this.current.parse(this.reader);
-                if (this.out.shouldStop(parseResult.result)) {
-                    parseResult.result = null;
-                    parseResult.nextStep = finishedParser;
-                }
                 if (parseResult.result) {
                     this.out.next(parseResult.result);
                 }

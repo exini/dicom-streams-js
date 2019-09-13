@@ -341,14 +341,6 @@ class ParseFlow extends Detour {
     }
 
     /**
-     * Called by byte parser to support early stopping. Not used for this flow as there are separate
-     * flows for early stopping (no bookkeeping of tag paths etc here)
-     */
-    public shouldStop(part: any): boolean {
-        return false;
-    }
-
-    /**
      * Called by byte parser when completing parser. Here we signal completion to the stream.
      */
     public complete(): void {
