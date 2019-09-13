@@ -1,17 +1,17 @@
 import zlib from "zlib";
 import { bytesToInt, bytesToUShortBE, groupNumber, indeterminateLength, isDeflated, tagToString, trim } from "./base";
-import {ByteParser, ByteReader, ParseResult, ParseStep, finishedParser} from "./byte-parser";
+import { ByteParser, ByteReader, finishedParser, ParseResult, ParseStep } from "./byte-parser";
 import {
     Element, Elements, FragmentElement, FragmentsElement, ItemDelimitationElement,
     ItemElement, SequenceDelimitationElement, SequenceElement, UnknownElement, ValueElement,
 } from "./elements";
-import {ElementsBuilder} from "./elements-builder";
-import {Lookup} from "./lookup";
-import {AttributeInfo, dicomPreambleLength, isPreamble, readHeader, tryReadHeader } from "./parsing";
-import {Tag} from "./tag";
-import {UID} from "./uid";
-import {Value} from "./value";
-import {VR} from "./vr";
+import { ElementsBuilder } from "./elements-builder";
+import { Lookup } from "./lookup";
+import { AttributeInfo, dicomPreambleLength, isPreamble, readHeader, tryReadHeader } from "./parsing";
+import { Tag } from "./tag";
+import { UID } from "./uid";
+import { Value } from "./value";
+import { VR } from "./vr";
 
 // tslint:disable: max-classes-per-file
 
