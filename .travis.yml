@@ -3,5 +3,5 @@ sudo: false
 node_js:
   - 13
 script:
-  - npm run-script test-coverage
-after_script: "cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js"
+  - npm run test
+after_success: npm run coverage
