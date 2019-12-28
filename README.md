@@ -1,6 +1,6 @@
 # dicom-streams-js
 
-[![Build Status](https://travis-ci.org/exini/dicom-streams-js.svg?branch=develop)](https://travis-ci.org/exini/dicom-streams-js)
+[![Build Status](https://travis-ci.org/exini/dicom-streams-js.svg?branch=master)](https://travis-ci.org/exini/dicom-streams-js)
 [![Coverage Status](https://coveralls.io/repos/exini/dicom-streams-js/badge.svg)](https://coveralls.io/r/exini/dicom-streams-js)
 
 The purpose of this project is to create a streaming API for reading and processing DICOM data using [node-streams](https://nodejs.org/api/stream.html). It can be used both on the backend using Node, as well as on the frontend. Advantages of streaming DICOM data include better control over resource allocation such as memory via strict bounds on DICOM data chunk size and network utilization using back-pressure.
