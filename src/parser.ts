@@ -1,17 +1,17 @@
 import zlib from "zlib";
 import { bytesToInt, bytesToUShortBE, groupNumber, indeterminateLength, isDeflated, tagToString, trim } from "./base";
-import {ByteParser, ByteReader, ParseResult, ParseStep} from "./byte-parser";
+import { ByteParser, ByteReader, finishedParser, ParseResult, ParseStep } from "./byte-parser";
 import {
     Element, Elements, FragmentElement, FragmentsElement, ItemDelimitationElement,
     ItemElement, SequenceDelimitationElement, SequenceElement, UnknownElement, ValueElement,
 } from "./elements";
-import {ElementsBuilder} from "./elements-builder";
-import {Lookup} from "./lookup";
-import {dicomPreambleLength, isPreamble, readHeader, tryReadHeader} from "./parsing";
-import {Tag} from "./tag";
-import {UID} from "./uid";
-import {Value} from "./value";
-import {VR} from "./vr";
+import { ElementsBuilder } from "./elements-builder";
+import { Lookup } from "./lookup";
+import { AttributeInfo, dicomPreambleLength, isPreamble, readHeader, tryReadHeader } from "./parsing";
+import { Tag } from "./tag";
+import { UID } from "./uid";
+import { Value } from "./value";
+import { VR } from "./vr";
 
 // tslint:disable: max-classes-per-file
 
@@ -48,14 +48,14 @@ class FragmentsState {
 }
 
 abstract class DicomParseStep extends ParseStep {
-    constructor(public readonly state: any) {
+    constructor(public readonly state: any, public readonly stop: (attributeInfo: AttributeInfo) => boolean) {
         super();
     }
 }
 
 class AtBeginning extends DicomParseStep {
-    constructor() {
-        super(null);
+    constructor(stop: (attributeInfo: AttributeInfo) => boolean) {
+        super(null, stop);
     }
 
     public parse(reader: ByteReader): ParseResult {
@@ -71,8 +71,9 @@ class AtBeginning extends DicomParseStep {
         if (info) {
             const nextState = info.hasFmi ?
                 new InFmiAttribute(
-                    new FmiAttributeState(undefined, info.bigEndian, info.explicitVR, info.hasFmi, 0, undefined)) :
-                new InAttribute(new AttributeState(0, info.bigEndian, info.explicitVR, undefined));
+                    new FmiAttributeState(
+                        undefined, info.bigEndian, info.explicitVR, info.hasFmi, 0, undefined), this.stop) :
+                new InAttribute(new AttributeState(0, info.bigEndian, info.explicitVR, undefined), this.stop);
             return new ParseResult(undefined, nextState);
         } else {
             throw new Error("Not a DICOM file");
@@ -85,15 +86,17 @@ class AtBeginning extends DicomParseStep {
         }
     }
 }
-const atBeginning = new AtBeginning();
 
 class InFmiAttribute extends DicomParseStep {
-    constructor(state: FmiAttributeState) {
-        super(state);
+    constructor(state: FmiAttributeState, stop: (attributeInfo: AttributeInfo) => boolean) {
+        super(state, stop);
     }
 
     public parse(reader: ByteReader): ParseResult {
         const header = readHeader(reader, this.state);
+        if (this.stop(header)) {
+            return new ParseResult(undefined, finishedParser);
+        }
         if (groupNumber(header.tag) !== 2) {
             console.warn("Missing or wrong File Meta Information Group Length (0002,0000)");
             return new ParseResult(undefined, this.toDatasetStep(reader));
@@ -147,30 +150,35 @@ class InFmiAttribute extends DicomParseStep {
 
             reader.setInput(inflater.inflate(reader.remainingData()));
         }
-        return new InAttribute(new AttributeState(0, bigEndian, explicitVR, inflater));
+        return new InAttribute(new AttributeState(0, bigEndian, explicitVR, inflater), this.stop);
     }
 }
 
 class InAttribute extends DicomParseStep {
-    constructor(state: AttributeState) {
-        super(state);
+    constructor(state: AttributeState, stop: (attributeInfo: AttributeInfo) => boolean) {
+        super(state, stop);
     }
 
     public parse(reader: ByteReader): ParseResult {
         const header = readHeader(reader, this.state);
         reader.take(header.headerLength);
         if (header.vr) {
+            if (this.stop(header)) {
+                return new ParseResult(undefined, finishedParser);
+            }
             if (header.vr === VR.SQ || header.vr === VR.UN && header.valueLength === indeterminateLength) {
                 return new ParseResult(
                     new SequenceElement(header.tag, header.valueLength, this.state.bigEndian, this.state.explicitVR),
                     new InAttribute(
-                        new AttributeState(0, this.state.bigEndian, this.state.explicitVR, this.state.inflater)));
+                        new AttributeState(0, this.state.bigEndian, this.state.explicitVR, this.state.inflater),
+                        this.stop));
             }
             if (header.valueLength === indeterminateLength) {
                 return new ParseResult(
                     new FragmentsElement(header.tag, header.vr, this.state.bigEndian, this.state.explicitVR),
                     new InFragments(
-                        new FragmentsState(0, this.state.bigEndian, this.state.explicitVR, this.state.inflater)));
+                        new FragmentsState(0, this.state.bigEndian, this.state.explicitVR, this.state.inflater),
+                        this.stop));
             }
             return new ParseResult(
                 new ValueElement(header.tag, header.vr, new Value(reader.take(header.valueLength)),
@@ -182,25 +190,28 @@ class InAttribute extends DicomParseStep {
                 return new ParseResult(
                     new ItemElement(this.state.itemIndex + 1, header.valueLength, this.state.bigEndian),
                     new InAttribute(new AttributeState(this.state.itemIndex + 1, this.state.bigEndian,
-                        this.state.explicitVR, this.state.inflater)));
+                        this.state.explicitVR, this.state.inflater),
+                        this.stop));
             case 0xFFFEE00D:
                     return new ParseResult(
                         new ItemDelimitationElement(this.state.itemIndex, this.state.bigEndian),
                         new InAttribute(new AttributeState(this.state.itemIndex, this.state.bigEndian,
-                            this.state.explicitVR, this.state.inflater)));
+                            this.state.explicitVR, this.state.inflater),
+                            this.stop));
             case 0xFFFEE0DD:
                     return new ParseResult(
                         new SequenceDelimitationElement(this.state.bigEndian),
                         new InAttribute(new AttributeState(this.state.itemIndex, this.state.bigEndian,
-                            this.state.explicitVR, this.state.inflater)));
+                            this.state.explicitVR, this.state.inflater),
+                            this.stop));
         }
         return new ParseResult(new UnknownElement(this.state.bigEndian), this);
     }
 }
 
 class InFragments extends DicomParseStep {
-    constructor(state: FragmentsState) {
-        super(state);
+    constructor(state: FragmentsState, stop: (attributeInfo: AttributeInfo) => boolean) {
+        super(state, stop);
     }
 
     public parse(reader: ByteReader): ParseResult {
@@ -211,8 +222,10 @@ class InFragments extends DicomParseStep {
             return new ParseResult(
                 new FragmentElement(this.state.fragmentIndex + 1, header.valueLength,
                     new Value(valueBytes), this.state.bigEndian),
-                new InFragments(new FragmentsState(this.state.fragmentIndex + 1, this.state.bigEndian,
-                    this.state.explicitVR, this.state.inflater)));
+                new InFragments(
+                    new FragmentsState(this.state.fragmentIndex + 1, this.state.bigEndian,
+                        this.state.explicitVR, this.state.inflater),
+                    this.stop));
         }
         if (header.tag === 0xFFFEE0DD) { // end fragments
             if (header.valueLength !== 0) {
@@ -221,7 +234,8 @@ class InFragments extends DicomParseStep {
             return new ParseResult(
                 new SequenceDelimitationElement(this.state.bigEndian),
                 new InAttribute(
-                    new AttributeState(0, this.state.bigEndian, this.state.explicitVR, this.state.inflater)));
+                    new AttributeState(0, this.state.bigEndian, this.state.explicitVR, this.state.inflater),
+                    this.stop));
         }
         reader.take(header.valueLength);
         console.warn("Unexpected element (" + tagToString(header.tag) + ") in fragments with length " +
@@ -235,8 +249,11 @@ export class Parser {
     private builder = new ElementsBuilder();
     private byteParser: ByteParser = new ByteParser(this);
 
-    constructor(public readonly stop?: (e: Element, depth: number) => boolean) {
-        this.byteParser.startWith(atBeginning);
+    constructor(public readonly stop?: (attributeInfo: AttributeInfo, depth: number) => boolean) {
+        const shouldStop = stop ?
+            (attributeInfo: AttributeInfo) => stop(attributeInfo, this.builder.currentDepth()) :
+            () => false;
+        this.byteParser.startWith(new AtBeginning(shouldStop));
     }
 
     /**
@@ -250,14 +267,6 @@ export class Parser {
             chunk = step.state.inflater.inflate(chunk);
         }
         this.byteParser.parse(chunk);
-    }
-
-    /**
-     * Called by byte parser to support early stopping. If stop function is supplied and it returns true for
-     * the given element, parsing will stop. Element will not be added to builder.
-     */
-    public shouldStop(element: Element): boolean {
-        return this.stop && element && this.stop(element, this.builder.currentDepth());
     }
 
     /**
