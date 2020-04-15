@@ -1,12 +1,13 @@
 import { ZoneId } from "js-joda";
 import { defaultCharacterSet, systemZone } from "./base";
-import {CharacterSets} from "./character-sets";
+import { CharacterSets } from "./character-sets";
 import {
     Element, Elements, ElementSet, Fragment, FragmentElement, Fragments, FragmentsElement, Item,
     ItemDelimitationElement, ItemElement, parseZoneOffset, Sequence, SequenceDelimitationElement,
-    SequenceElement, ValueElement } from "./elements";
-import {Tag} from "./tag";
-import {VR} from "./vr";
+    SequenceElement, ValueElement,
+} from "./elements";
+import { Tag } from "./tag";
+import { VR } from "./vr";
 
 // tslint:disable: max-classes-per-file
 
@@ -14,7 +15,7 @@ export class ElementsBuilder {
 
     private builderStack: DatasetBuilder[] = [new DatasetBuilder(defaultCharacterSet, systemZone)];
     private sequenceStack: Sequence[] = [];
-    private lengthStack: Array<{element: Element, bytesLeft: number}> = [];
+    private lengthStack: Array<{ element: Element, bytesLeft: number }> = [];
     private fragments: Fragments;
 
     public addElement(element: Element) {
@@ -47,13 +48,21 @@ export class ElementsBuilder {
             if (!element.indeterminate) {
                 this.pushLength(element, element.length);
             }
-            this.pushSequence(new Sequence(element.tag, element.length, [], element.bigEndian, element.explicitVR));
+            this.pushSequence(new Sequence(
+                element.tag,
+                element.indeterminate ? element.length : 0,
+                [], element.bigEndian,
+                element.explicitVR,
+            ));
             this.maybeDelimit();
         } else if (element instanceof ItemElement && this.hasSequence()) {
             this.subtractLength(8);
             const builder = this.builderStack[0];
-            const sequence = this.sequenceStack[0].addItem(
-                new Item(Elements.empty(), element.length, element.bigEndian));
+            const sequence = this.sequenceStack[0].addItem(new Item(
+                Elements.empty(),
+                element.indeterminate ? element.length : 0,
+                element.bigEndian,
+            ));
             if (!element.indeterminate) {
                 this.pushLength(element, element.length);
             }
@@ -111,8 +120,11 @@ export class ElementsBuilder {
     }
     private endSequence(): void {
         const sequence = this.sequenceStack[0];
+        const sequenceLength = sequence.indeterminate ? sequence.length : sequence.toBytes().length - 12;
+        const updatedSequence =
+            new Sequence(sequence.tag, sequenceLength, sequence.items, sequence.bigEndian, sequence.explicitVR);
         const builder = this.builderStack[0];
-        builder.addElementSet(sequence);
+        builder.addElementSet(updatedSequence);
         this.popSequence();
     }
     private maybeDelimit(): void {
@@ -135,7 +147,7 @@ class DatasetBuilder {
     private data = new Array<ElementSet>(64);
     private pos = 0;
 
-    constructor(public characterSets: CharacterSets, public zoneOffset: ZoneId) {}
+    constructor(public characterSets: CharacterSets, public zoneOffset: ZoneId) { }
 
     public addElementSet(elementSet: ElementSet): DatasetBuilder {
         if (elementSet instanceof ValueElement && elementSet.tag === Tag.SpecificCharacterSet) {

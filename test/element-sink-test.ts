@@ -67,6 +67,26 @@ describe("An element sink", () => {
             }));
     });
 
+    it("should handle sequences and items of determinate length", () => {
+        const bytes = concatv(data.studyDate(), data.sequence(Tag.DerivationCodeSequence, 8 + 16 + 16),
+            item(16 + 16), data.studyDate(), data.patientNameJohnDoe(), data.patientNameJohnDoe());
+
+        const elementList = [
+            new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, "20040329")),
+            new SequenceElement(Tag.DerivationCodeSequence, 8 + 16 + 16),
+            new ItemElement(1, 16 + 16),
+            new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, "20040329")),
+            new ValueElement(Tag.PatientName, VR.DA, Value.fromString(VR.DA, "Doe^John")),
+            new ValueElement(Tag.PatientName, VR.DA, Value.fromString(VR.DA, "Doe^John")),
+        ];
+
+        return util.streamPromise(
+            arraySource(elementList, true),
+            elementSink((elements) => {
+                assert.deepStrictEqual(elements.toElements(false), elementList);
+            }));
+    });
+
     it("should convert an empty offsets table item to an empty list of offsets", () => {
         const elementList = [
             new FragmentsElement(Tag.PixelData, VR.OB),

@@ -23,7 +23,7 @@ function probe(bytes: Buffer): util.PartProbe {
     return util.partProbe(elements.toParts(withPreamble));
 }
 
-describe("DICOM parse flow", () => {
+describe("DICOM parser", () => {
 
     it("should produce a preamble, FMI tags and dataset tags for a complete DICOM file", () => {
         const bytes = concatv(data.preamble, data.fmiGroupLength(data.transferSyntaxUID()),
@@ -310,8 +310,8 @@ describe("DICOM parse flow", () => {
         probe(bytes)
             .expectHeader(Tag.StudyDate)
             .expectValueChunk()
-            .expectSequence(Tag.DerivationCodeSequence)
-            .expectItem(1)
+            .expectSequence(Tag.DerivationCodeSequence, 8 + 16 + 16)
+            .expectItem(1, 16 + 16)
             .expectHeader(Tag.StudyDate)
             .expectValueChunk()
             .expectHeader(Tag.PatientName)
