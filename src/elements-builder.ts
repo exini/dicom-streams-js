@@ -15,7 +15,7 @@ export class ElementsBuilder {
 
     private builderStack: DatasetBuilder[] = [new DatasetBuilder(defaultCharacterSet, systemZone)];
     private sequenceStack: Sequence[] = [];
-    private lengthStack: Array<{ element: Element, bytesLeft: number }> = [];
+    private lengthStack: { element: Element, bytesLeft: number }[] = [];
     private fragments: Fragments;
 
     public addElement(element: Element) {

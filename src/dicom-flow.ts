@@ -168,12 +168,12 @@ export class ItemDelimitationPartMarker extends ItemDelimitationPart {
  * Depends on InFragments
  */
 export const GuaranteedDelimitationEvents = (Super: any) => class extends Super {
-    public partStack: Array<{part: DicomPart, bytesLeft: number}> = [];
+    public partStack: { part: DicomPart, bytesLeft: number }[] = [];
 
     public onSequence(part: SequencePart) {
         if (!part.indeterminate) {
             this.subtractLength(part);
-            this.partStack.unshift({part, bytesLeft: part.length});
+            this.partStack.unshift({ part, bytesLeft: part.length });
             return super.onSequence(part).concat(this.maybeDelimit());
         }
         return this.subtractAndEmit(part, super.onSequence.bind(this));
@@ -181,7 +181,7 @@ export const GuaranteedDelimitationEvents = (Super: any) => class extends Super 
     public onItem(part: ItemPart) {
         if (!this.inFragments && !part.indeterminate) {
             this.subtractLength(part);
-            this.partStack.unshift({part, bytesLeft: part.length});
+            this.partStack.unshift({ part, bytesLeft: part.length });
             return super.onItem(part).concat(this.maybeDelimit());
         }
         return this.subtractAndEmit(part, super.onItem.bind(this));
