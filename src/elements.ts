@@ -3,14 +3,17 @@ import {
     appendToArray, bytesToUInt, concat, defaultCharacterSet, emptyBuffer, flatten, indeterminateLength,
     intToBytes, multiValueDelimiter, prependToArray, systemZone, tagToBytes, tagToString, toInt32,
 } from "./base";
-import {CharacterSets} from "./character-sets";
-import {Lookup} from "./lookup";
-import {DicomPart, FragmentsPart, HeaderPart, ItemDelimitationPart, ItemPart, PreamblePart,
-    SequenceDelimitationPart, SequencePart, ValueChunk} from "./parts";
-import {Tag} from "./tag";
-import {TagPath, TagPathItem, TagPathTag, TagPathTrunk} from "./tag-path";
-import {Value} from "./value";
-import {VR} from "./vr";
+import { CharacterSets } from "./character-sets";
+import { Lookup } from "./lookup";
+import {
+    DicomPart, FragmentsPart, HeaderPart, ItemDelimitationPart, ItemPart, PreamblePart,
+    SequenceDelimitationPart, SequencePart, ValueChunk
+} from "./parts";
+import { Tag } from "./tag";
+import { TagPath, TagPathItem, TagPathTag, TagPathTrunk, TagPathSequence, emptyTagPath } from "./tag-path";
+import { Value } from "./value";
+import { VR } from "./vr";
+import { PersonName } from "./person-name";
 
 // tslint:disable: max-classes-per-file
 
@@ -132,6 +135,26 @@ export class Elements {
         return this._valueByPath(tagPath, (v) => v.value.toDateTime(v.vr, this.zoneOffset));
     }
 
+    public personNamesByTag(tag: number): PersonName[] {
+        return this._valuesByTag(tag, (v) => v.value.toPersonNames(v.vr, this.characterSets));
+    }
+    public personNamesByPath(tagPath: TagPathTag): PersonName[] {
+        return this._valuesByPath(tagPath, (v) => v.value.toPersonNames(v.vr, this.characterSets));
+    }
+    public personNameByTag(tag: number): PersonName {
+        return this._valueByTag(tag, (v) => v.value.toPersonName(v.vr, this.characterSets));
+    }
+    public personNameByPath(tagPath: TagPathTag): PersonName {
+        return this._valueByPath(tagPath, (v) => v.value.toPersonName(v.vr, this.characterSets));
+    }
+
+    public urlByTag(tag: number): URL {
+        return this._valueByTag(tag, (v) => v.value.toURL(v.vr));
+    }
+    public urlByPath(tagPath: TagPathTag): LocalTime {
+        return this._valueByPath(tagPath, (v) => v.value.toURL(v.vr));
+    }
+
     public sequenceByTag(tag: number): Sequence {
         const e = this.elementByTag(tag);
         return e instanceof Sequence ? e : undefined;
@@ -159,20 +182,86 @@ export class Elements {
         return e && e instanceof Fragments ? e : undefined;
     }
 
-    public setElementSet(element: ElementSet) {
-        if (element instanceof ValueElement && element.tag === Tag.SpecificCharacterSet) {
+    public setElementSet(elementSet: ElementSet) {
+        if (elementSet instanceof ValueElement && elementSet.tag === Tag.SpecificCharacterSet) {
             return new Elements(
-                CharacterSets.fromBytes(element.value.bytes),
+                CharacterSets.fromBytes(elementSet.value.bytes),
                 this.zoneOffset,
-                this._insertOrdered(element));
+                this._insertOrdered(elementSet));
         }
-        if (element instanceof ValueElement && element.tag === Tag.TimezoneOffsetFromUTC) {
-            const newOffset = parseZoneOffset(
-                element.value.toSingleString(VR.SH, element.bigEndian, this.characterSets));
+        if (elementSet instanceof ValueElement && elementSet.tag === Tag.TimezoneOffsetFromUTC) {
+            console.log(elementSet.value.toString(VR.SH));
+            const newOffset = parseZoneOffset(elementSet.value.toString(VR.SH));
             const zone = newOffset || systemZone;
-            return new Elements(this.characterSets, zone, this._insertOrdered(element));
+            return new Elements(this.characterSets, zone, this._insertOrdered(elementSet));
         }
-        return new Elements(this.characterSets, this.zoneOffset, this._insertOrdered(element));
+        return new Elements(this.characterSets, this.zoneOffset, this._insertOrdered(elementSet));
+    }
+
+    public setElementSets(elementSets: ElementSet[]) {
+        return elementSets.reduce((elements, elementSet) => elements.setElementSet(elementSet), this);
+    }
+
+    public setSequence(sequence: Sequence) {
+        return this.setElementSet(sequence);
+    }
+
+    private updateSequence(tag: number, index: number, update: (e: Elements) => Elements): Elements | undefined {
+        const s1 = this.sequenceByTag(tag);
+        if (s1) {
+            const i1 = s1.item(index);
+            if (i1) {
+                const e1 = i1.elements;
+                const e2 = update(e1);
+                const i2 = i1.setElements(e2);
+                const s2 = s1.setItem(index, i2);
+                return this.setElementSet(s2);
+            }
+        }
+        return undefined;
+    }
+
+    private updatePath(elems: Elements, tagPath: TagPath[], f: (e: Elements) => Elements): Elements {
+        if (tagPath.length === 0) {
+            return f(elems);
+        }
+        const tp = tagPath[0];
+        if (tp instanceof TagPathItem) {
+            const updated = elems.updateSequence(tp.tag(), tp.item, e => this.updatePath(e, tagPath.slice(1), f));
+            return updated ? updated : elems;
+        }
+        throw Error('Unsupported tag path type');
+    }
+
+    public setNested(tagPath: TagPathItem, elements: Elements): Elements {
+        return this.updatePath(this, tagPath.toList(), _ => elements);
+    }
+
+    public setNestedElementSet(tagPath: TagPathItem, elementSet: ElementSet): Elements {
+        return this.updatePath(this, tagPath.toList(), elements => elements.setElementSet(elementSet));
+    }
+
+    public setNestedSequence(tagPath: TagPathItem, sequence: Sequence): Elements {
+        return this.setNestedElementSet(tagPath, sequence);
+    }
+
+    public addItem(tagPath: TagPathSequence, elements: Elements): Elements {
+        const sequence = this.sequenceByPath(tagPath);
+        if (sequence) {
+            const bigEndian = sequence.bigEndian
+            const indeterminate = sequence.indeterminate
+            const item = indeterminate ?
+                new Item(elements, indeterminateLength, bigEndian) :
+                new Item(elements, elements.toBytes(false).length, bigEndian);
+            const updatedSequence = sequence.addItem(item);
+            if (tagPath.previous() === emptyTagPath) {
+                return this.setSequence(updatedSequence);
+            } else if (tagPath.previous() instanceof TagPathItem) {
+                return this.setNestedSequence(tagPath.previous() as TagPathItem, updatedSequence);
+            }
+            throw Error('Unsupported tag path type');
+        }
+        return this;
     }
 
     public setCharacterSets(characterSets: CharacterSets) {
@@ -181,6 +270,102 @@ export class Elements {
 
     public setZoneOffset(zoneOffset: ZoneId) {
         return new Elements(this.characterSets, zoneOffset, this.data);
+    }
+
+    public setValue(tag: number, vr: VR, value: Value, bigEndian: boolean = false, explicitVR: boolean = true): Elements {
+        return this.setElementSet(new ValueElement(tag, vr, value, bigEndian, explicitVR));
+    }
+
+    public setBytes(tag: number, vr: VR, value: Buffer, bigEndian: boolean = false, explicitVR: boolean = true): Elements {
+        return this.setValue(tag, vr, Value.fromBuffer(vr, value), bigEndian, explicitVR);
+    }
+
+    public setStrings(tag: number, values: string[], vr: VR = Lookup.vrOf(tag), bigEndian: boolean = false, explicitVR: boolean = true): Elements {
+        return this.setValue(tag, vr, Value.fromStrings(vr, values, bigEndian), bigEndian, explicitVR);
+    }
+
+    public setString(tag: number, value: string, vr: VR = Lookup.vrOf(tag), bigEndian: boolean = false, explicitVR: boolean = true): Elements {
+        return this.setValue(tag, vr, Value.fromString(vr, value, bigEndian), bigEndian, explicitVR);
+    }
+
+    public setNumbers(tag: number, values: number[], vr: VR = Lookup.vrOf(tag), bigEndian: boolean = false, explicitVR: boolean = true): Elements {
+        return this.setValue(tag, vr, Value.fromNumbers(vr, values, bigEndian), bigEndian, explicitVR);
+    }
+
+    public setNumber(tag: number, value: number, vr: VR = Lookup.vrOf(tag), bigEndian: boolean = false, explicitVR: boolean = true): Elements {
+        return this.setValue(tag, vr, Value.fromNumber(vr, value, bigEndian), bigEndian, explicitVR);
+    }
+
+    public setDates(tag: number, values: LocalDate[], vr: VR = Lookup.vrOf(tag), bigEndian: boolean = false, explicitVR: boolean = true): Elements {
+        return this.setValue(tag, vr, Value.fromDates(vr, values), bigEndian, explicitVR);
+    }
+
+    public setDate(tag: number, value: LocalDate, vr: VR = Lookup.vrOf(tag), bigEndian: boolean = false, explicitVR: boolean = true): Elements {
+        return this.setValue(tag, vr, Value.fromDate(vr, value), bigEndian, explicitVR);
+    }
+
+    public setTimes(tag: number, values: LocalTime[], vr: VR = Lookup.vrOf(tag), bigEndian: boolean = false, explicitVR: boolean = true): Elements {
+        return this.setValue(tag, vr, Value.fromTimes(vr, values), bigEndian, explicitVR);
+    }
+
+    public setTime(tag: number, value: LocalTime, vr: VR = Lookup.vrOf(tag), bigEndian: boolean = false, explicitVR: boolean = true): Elements {
+        return this.setValue(tag, vr, Value.fromTime(vr, value), bigEndian, explicitVR);
+    }
+
+    public setDateTimes(tag: number, values: ZonedDateTime[], vr: VR = Lookup.vrOf(tag), bigEndian: boolean = false, explicitVR: boolean = true): Elements {
+        return this.setValue(tag, vr, Value.fromDateTimes(vr, values), bigEndian, explicitVR);
+    }
+
+    public setDateTime(tag: number, value: ZonedDateTime, vr: VR = Lookup.vrOf(tag), bigEndian: boolean = false, explicitVR: boolean = true): Elements {
+        return this.setValue(tag, vr, Value.fromDateTime(vr, value), bigEndian, explicitVR);
+    }
+
+    public setPersonNames(tag: number, values: PersonName[], vr: VR = Lookup.vrOf(tag), bigEndian: boolean = false, explicitVR: boolean = true): Elements {
+        return this.setValue(tag, vr, Value.fromPersonNames(vr, values), bigEndian, explicitVR);
+    }
+
+    public setPersonName(tag: number, value: PersonName, vr: VR = Lookup.vrOf(tag), bigEndian: boolean = false, explicitVR: boolean = true): Elements {
+        return this.setValue(tag, vr, Value.fromPersonName(vr, value), bigEndian, explicitVR);
+    }
+
+    public setURL(tag: number, value: URL, vr: VR = Lookup.vrOf(tag), bigEndian: boolean = false, explicitVR: boolean = true): Elements {
+        return this.setValue(tag, vr, Value.fromURL(vr, value), bigEndian, explicitVR);
+    }
+
+    public removeByTag(tag: number): Elements {
+        return this.filter(elementSet => elementSet.tag !== tag);
+    }
+
+    public removeByPath(tagPath: TagPath): Elements {
+        if (tagPath === emptyTagPath) {
+            return this;
+        }
+        if (tagPath instanceof TagPathItem) {
+            if (tagPath.previous() === emptyTagPath) {
+                const s = this.sequenceByTag(tagPath.tag());
+                return s ? this.setSequence(s.removeItem(tagPath.item)) : this;
+            }
+            if (tagPath.previous() instanceof TagPathItem) {
+                const e = this.nestedByPath(tagPath.previous() as TagPathItem);
+                return e ?
+                    this.setNested(tagPath.previous() as TagPathItem, e.removeByPath(TagPath.fromItem(tagPath.tag(), tagPath.item))) :
+                    this;
+            }
+            throw Error('Unsupported tag path type');
+        }
+        if (tagPath instanceof TagPathTag) {
+            if (tagPath.previous() === emptyTagPath) {
+                return this.removeByTag(tagPath.tag());
+            }
+            if (tagPath.previous() instanceof TagPathItem) {
+                const e = this.nestedByPath(tagPath.previous() as TagPathItem);
+                return e ?
+                    this.setNested(tagPath.previous() as TagPathItem, e.removeByTag(tagPath.tag())) :
+                    this;
+            }
+            throw Error('Unsupported tag path type');
+        }
+        throw Error('Unsupported tag path type');
     }
 
     public filter(f: (e: ElementSet) => boolean) {
@@ -196,7 +381,7 @@ export class Elements {
     public contains(tag: number | TagPath) {
         return typeof tag === "number" ? this.data.map((e) => e.tag).includes(tag) :
             tag instanceof TagPathTag ? this.elementByPath(tag) !== undefined :
-            tag instanceof TagPathItem ? this.nestedByPath(tag) !== undefined : false;
+                tag instanceof TagPathItem ? this.nestedByPath(tag) !== undefined : false;
     }
 
     public sorted() {
@@ -354,7 +539,7 @@ export class Elements {
 }
 
 export class Element {
-    constructor(public readonly bigEndian: boolean = false) {}
+    constructor(public readonly bigEndian: boolean = false) { }
 
     public toBytes(): Buffer { return emptyBuffer; }
     public toParts(): DicomPart[] { return []; }
@@ -365,7 +550,7 @@ export class ElementSet {
         public readonly tag: number,
         public readonly vr: VR,
         public readonly bigEndian: boolean = false,
-        public readonly explicitVR: boolean = true) {}
+        public readonly explicitVR: boolean = true) { }
 
     public toBytes(): Buffer { return emptyBuffer; }
     public toElements(): Element[] { return []; }
@@ -645,7 +830,7 @@ export class Fragments extends ElementSet {
     }
     public frameCount(): number {
         return this.offsets === undefined && this.fragments.length === 0 ? 0 :
-            this.offsets === undefined ?  1 : this.offsets.length;
+            this.offsets === undefined ? 1 : this.offsets.length;
     }
     public addFragment(fragment: Fragment): Fragments {
         if (this.size === 0 && this.offsets === undefined) {
@@ -700,6 +885,9 @@ export class Fragments extends ElementSet {
 
 export function parseZoneOffset(s: string): ZoneOffset {
     if (s.length < 5) { return undefined; }
-    return ZoneOffset.ofTotalMinutes(
-        parseInt(s.slice(0, 1) + (parseInt(s.slice(1, 3), 10) * 60 + parseInt(s.slice(3, 5), 10)), 10));
+    try {
+        return ZoneOffset.ofTotalMinutes(parseInt(s.slice(0, 1) + (parseInt(s.slice(1, 3), 10) * 60 + parseInt(s.slice(4, 6), 10)), 10));
+    } catch (error) {
+        return undefined;
+    }
 }

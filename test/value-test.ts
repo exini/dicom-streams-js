@@ -1,9 +1,10 @@
 import assert from "assert";
-import {LocalDate, LocalTime, ZonedDateTime, ZoneOffset} from "js-joda";
+import { LocalDate, LocalTime, ZonedDateTime, ZoneOffset } from "js-joda";
 import { concat, doubleToBytes, floatToBytes, intToBytes, intToBytesLE, shortToBytes } from "../src/base";
-import {CharacterSets} from "../src/character-sets";
-import {Value} from "../src/value";
-import {VR} from "../src/vr";
+import { CharacterSets } from "../src/character-sets";
+import { Value } from "../src/value";
+import { VR } from "../src/vr";
+import { PersonName, ComponentGroup } from "../src/person-name";
 
 // tslint:disable: no-bitwise
 
@@ -114,6 +115,23 @@ describe("Creating an element", () => {
         assert.deepStrictEqual(Value.fromDateTime(VR.LT, dt1).toString(VR.LT), "20040329115935.123456+0000");
     });
 
+    it("should produce the expected bytes from person-name(s)", () => {
+        const pn1 = new PersonName(new ComponentGroup("Doe"), new ComponentGroup("John"));
+        const pn2 = new PersonName(new ComponentGroup("Doe", "iDoe", "pDoe"), new ComponentGroup("Jane", "iJane", "pJane"), new ComponentGroup("Middle", "iMiddle", "pMiddle"), new ComponentGroup("Prefix", "iPrefix", "pPrefix"), new ComponentGroup("Suffix", "iSuffix", "pSuffix"));
+        assert.deepStrictEqual(Value.fromPersonName(VR.PN, pn1).toPersonName(), pn1);
+        assert.deepStrictEqual(Value.fromPersonNames(VR.PN, [pn1, pn2]).toPersonNames(), [pn1, pn2]);
+
+        assert.deepStrictEqual(Value.fromPersonName(VR.PN, pn1).toString(VR.PN), "Doe^John^^^");
+        assert.deepStrictEqual(Value.fromPersonName(VR.PN, pn2).toString(VR.PN), "Doe=iDoe=pDoe^Jane=iJane=pJane^Middle=iMiddle=pMiddle^Prefix=iPrefix=pPrefix^Suffix=iSuffix=pSuffix");
+    });
+
+    it("should produce the expected bytes from an URL", () => {
+        const url = new URL("https://example.com:8080/path?q1=45&q2=46#anchor");
+        assert.deepStrictEqual(Value.fromURL(VR.UR, url).toURL(), url);
+        assert.equal(url.protocol, "https:");
+        assert.equal(url.host, "example.com:8080");
+        assert.equal(url.port, 8080);
+    });
 });
 
 describe("A Value", () => {
@@ -160,7 +178,7 @@ describe("Parsing number values", () => {
     });
 });
 
-describe("Parsing a single int value", () => {
+describe("Parsing a single number value", () => {
     it("should return the first entry among multiple values", () => {
         assert.strictEqual(Value.fromBuffer(VR.SL, concat(intToBytesLE(1234),
             intToBytesLE(1234567890))).toNumber(VR.SL), 1234);
@@ -260,7 +278,7 @@ describe("Parsing date time strings", () => {
         const yyyyMMddHHmmssSZ = ZonedDateTime.of(2004, 3, 29, 11, 59, 35, 123456000, ZoneOffset.UTC);
         const dateTimes = Value.fromBuffer(VR.DT,
             Buffer.from("2004\\200403\\20040329\\2004032911\\200403291159\\20040329115935\\20040329115935.123456\\" +
-            "20040329115935.123456+0000\\20040329115935.123456-0000")).toDateTimes(VR.DT);
+                "20040329115935.123456+0000\\20040329115935.123456-0000")).toDateTimes(VR.DT);
 
         assert.deepStrictEqual(
             dateTimes,
@@ -277,7 +295,7 @@ describe("Parsing date time strings", () => {
 
         const dateTimes = Value.fromBuffer(VR.DT,
             Buffer.from("20040329115935.0\\20040329115935.000000\\20040329115935.12\\20040329115935.1200\\" +
-            "20040329115935.1200-0000")).toDateTimes(VR.DT);
+                "20040329115935.1200-0000")).toDateTimes(VR.DT);
 
         assert.deepStrictEqual(
             dateTimes, [yyyyMMddHHmmssS0, yyyyMMddHHmmssS0, yyyyMMddHHmmssS12, yyyyMMddHHmmssS12, yyyyMMddHHmmssSZ],
@@ -286,8 +304,8 @@ describe("Parsing date time strings", () => {
 
     it("should ignore improperly formatted entries", () => {
         assert.deepStrictEqual(Value.fromBuffer(VR.DT, Buffer.from("200\\2004ab\\20040\\2004032\\200403291\\" +
-        "20040329115\\2004032911593\\200403291159356\\20040329115935.1234567\\20040329115935.12345+000\\" +
-        "20040329115935.123456+00000")).toDateTimes(VR.DT), []);
+            "20040329115\\2004032911593\\200403291159356\\20040329115935.1234567\\20040329115935.12345+000\\" +
+            "20040329115935.123456+00000")).toDateTimes(VR.DT), []);
     });
 
     it("should allow time zone also with null components", () => {
@@ -314,5 +332,46 @@ describe("Parsing a single date time string", () => {
         const dateTime = ZonedDateTime.of(2004, 3, 29, 5, 35, 59, 12345000, ZoneOffset.UTC);
         assert.deepStrictEqual(Value.fromBuffer(VR.DT,
             Buffer.from("one\\20040329053559.012345+0000\\20050329053559.012345+0000")).toDateTime(VR.DT), dateTime);
+    });
+});
+
+describe("Parsing person names", () => {
+    const emptyPersonName = new PersonName(new ComponentGroup(""), new ComponentGroup(""));
+
+    it("should return empty person name for empty byte string", () => {
+        assert.deepStrictEqual(Value.empty().toPersonNames(VR.PN), [emptyPersonName]);
+    });
+
+    it("should parse properly formatted person names", () => {
+        const pn1 = new PersonName(new ComponentGroup("Doe"), new ComponentGroup("John"));
+        const pn2 = new PersonName(new ComponentGroup("Smith"), new ComponentGroup(""));
+        const pn3 = new PersonName(new ComponentGroup("Doe"), new ComponentGroup("Jane"));
+        assert.deepStrictEqual(Value.fromStrings(VR.PN, ["Doe^John", "Smith", "Doe^Jane"]).toPersonNames(VR.PN), [pn1, pn2, pn3]);
+    });
+
+    it("should trim whitespace", () => {
+        const pn1 = new PersonName(new ComponentGroup("Doe"), new ComponentGroup("John"));
+        assert.deepStrictEqual(Value.fromStrings(VR.PN, [" Doe^John "]).toPersonNames(VR.PN), [pn1]);
+    });
+});
+
+describe("Parsing a single person name", () => {
+    it("should return the first entry among multiple values", () => {
+        const pn1 = new PersonName(new ComponentGroup("Doe"), new ComponentGroup("John"));
+        assert.deepStrictEqual(Value.fromStrings(VR.PN, ["Doe^John", "Doe^Jane"]).toPersonName(VR.PN), pn1);
+    });
+});
+
+describe("Parsing a URL", () => {
+    it("should work for valid URL strings", () => {
+        const url = new Value(new Buffer("https://example.com:8080/path?q1=45&q2=46")).toURL();
+        assert.equal(url.protocol, "https:");
+        assert.equal(url.host, "example.com:8080");
+        assert.equal(url.port, 8080);
+    });
+
+    it("should not parse invalid URIs", () => {
+        const url = new Value(new Buffer("not < a > uri")).toURL();
+        assert(url === undefined);
     });
 });

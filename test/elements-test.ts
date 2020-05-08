@@ -1,19 +1,22 @@
 import assert from "assert";
-import {LocalDate, LocalTime, ZoneOffset} from "js-joda";
+import { LocalDate, LocalTime, ZoneOffset } from "js-joda";
 import {
     appendToArray, concat, concatv, defaultCharacterSet, emptyBuffer, indeterminateLength, item,
-    itemDelimitation, sequenceDelimitation, systemZone,
+    itemDelimitation, sequenceDelimitation, systemZone, flatten
 } from "../src/base";
-import {Elements, ElementSet, Fragment, FragmentElement, Fragments, FragmentsElement, Item,
+import {
+    Elements, ElementSet, Fragment, FragmentElement, Fragments, FragmentsElement, Item,
     ItemDelimitationElement, ItemElement, preambleElement, Sequence, SequenceDelimitationElement,
     SequenceElement, ValueElement,
 } from "../src/elements";
-import {HeaderPart} from "../src/parts";
-import {Tag} from "../src/tag";
-import {TagPath} from "../src/tag-path";
-import {Value} from "../src/value";
-import {VR} from "../src/vr";
+import { HeaderPart } from "../src/parts";
+import { Tag } from "../src/tag";
+import { TagPath, emptyTagPath } from "../src/tag-path";
+import { Value } from "../src/value";
+import { VR } from "../src/vr";
 import * as data from "./test-data";
+import { CharacterSets } from "../src/character-sets";
+import { PersonName } from "../src/person-name";
 
 function create(...elems: ElementSet[]) {
     return elems.reduce((e, s) => e.setElementSet(s), Elements.empty());
@@ -87,7 +90,7 @@ describe("Elements", () => {
 
     it("should return all strings in value with VM > 1", () => {
         const elems = create(new ValueElement(Tag.ImageType, VR.CS,
-                Value.fromString(VR.CS, "ORIGINAL\\RECON TOMO")), seq);
+            Value.fromString(VR.CS, "ORIGINAL\\RECON TOMO")), seq);
         const strings = elems.stringsByTag(Tag.ImageType);
         assert.strictEqual(strings.length, 2);
         assert.strictEqual(strings[1], "RECON TOMO");
@@ -155,14 +158,196 @@ describe("Elements", () => {
         assert.deepStrictEqual(elements2.filter((e) => e.tag === Tag.PatientID), create(patientID3));
     });
 
+    it("should remove element if present", () => {
+        const updatedSeq1 = new Sequence(seq.tag, seq.length, [seq.items[0], new Item(create())]);
+        const updatedSeq2 = new Sequence(seq.tag, seq.length, [seq.items[0]]);
+        const deepSeq = new Sequence(Tag.DerivationCodeSequence, indeterminateLength, [new Item(create(patientID1)), new Item(create(seq))]);
+        const deepElements = create(studyDate, deepSeq, patientName);
+        const updatedDeepSeq = new Sequence(deepSeq.tag, deepSeq.length, [deepSeq.items[0], new Item(create(updatedSeq2))]);
+        const updatedDeepElements = create(studyDate, updatedDeepSeq, patientName);
+
+        assert.deepStrictEqual(elements.removeByTag(Tag.DerivationCodeSequence), create(studyDate, patientName));
+        assert.deepStrictEqual(elements.removeByTag(Tag.PatientName), create(studyDate, seq));
+        assert.deepStrictEqual(elements.removeByTag(Tag.StudyDate), create(seq, patientName));
+        assert.deepStrictEqual(elements.removeByTag(Tag.Modality), elements);
+        assert.deepStrictEqual(elements.removeByPath(emptyTagPath), elements);
+        assert.deepStrictEqual(elements.removeByPath(TagPath.fromTag(Tag.StudyDate)), create(seq, patientName));
+        assert.deepStrictEqual(elements.removeByPath(TagPath.fromItem(Tag.DerivationCodeSequence, 1)), create(studyDate, new Sequence(seq.tag, seq.length, seq.items.slice(1)), patientName));
+        assert.deepStrictEqual(elements.removeByPath(TagPath.fromItem(Tag.DerivationCodeSequence, 2).thenTag(Tag.PatientID)), create(studyDate, updatedSeq1, patientName));
+        assert.deepStrictEqual(elements.removeByPath(TagPath.fromItem(Tag.DerivationCodeSequence, 3)), elements);
+        assert.deepStrictEqual(elements.removeByPath(TagPath.fromItem(Tag.DetectorInformationSequence, 1)), elements);
+        assert.deepStrictEqual(deepElements.removeByPath(TagPath.fromItem(Tag.DerivationCodeSequence, 2).thenItem(Tag.DerivationCodeSequence, 2)), updatedDeepElements);
+    });
+
+    it("should set elements in the correct position", () => {
+        const characterSets = new ValueElement(Tag.SpecificCharacterSet, VR.CS, Value.fromString(VR.CS, "CS1 "));
+        const modality = new ValueElement(Tag.Modality, VR.CS, Value.fromString(VR.CS, "NM"));
+        assert.deepStrictEqual(elements.setElementSet(patientID3).data, [studyDate, seq, patientName, patientID3]);
+        assert.deepStrictEqual(elements.setElementSet(characterSets).data, [characterSets, studyDate, seq, patientName]);
+        assert.deepStrictEqual(elements.setElementSet(modality).data, [studyDate, modality, seq, patientName]);
+    });
+
+    it("should not create duplicate elements if inserted twice", () => {
+        const e = Elements.empty()
+            .setString(Tag.PatientName, "John")
+            .setString(Tag.PatientName, "John");
+        assert.equal(e.size, 1);
+    });
+
+    it("should set elements in sequences", () => {
+        const updated = elements.setNestedElementSet(TagPath.fromItem(Tag.DerivationCodeSequence, 2), studyDate);
+        assert.deepStrictEqual(updated.elementByPath(TagPath.fromItem(Tag.DerivationCodeSequence, 2).thenTag(Tag.StudyDate)), studyDate);
+    });
+
+    it("should not add elements to sequences that does not exist", () => {
+        const updated = elements.setNestedElementSet(TagPath.fromItem(Tag.DetectorInformationSequence, 1), studyDate);
+        assert.deepStrictEqual(updated, elements);
+    });
+
+    it("should replace items in sequences", () => {
+        const newElements = Elements.empty().setElementSet(studyDate);
+        const updated = elements.setNested(TagPath.fromItem(Tag.DerivationCodeSequence, 2), newElements);
+        assert.deepStrictEqual(updated.nestedByTag(Tag.DerivationCodeSequence, 2), newElements);
+    });
+
+    it("should not add items when trying to replace item at specified index", () => {
+        const newElements = Elements.empty().setElementSet(studyDate);
+        const updated = elements.setNested(TagPath.fromItem(Tag.DerivationCodeSequence, 3), newElements);
+        assert.deepStrictEqual(updated, elements);
+        assert.deepStrictEqual(updated.nestedByTag(Tag.DerivationCodeSequence, 3), undefined);
+    });
+
+    it("should not add new sequences", () => {
+        const newElements = Elements.empty().setElementSet(studyDate);
+        const updated = elements.setNested(TagPath.fromItem(Tag.DetectorInformationSequence, 1), newElements);
+        assert.deepStrictEqual(updated, elements);
+        assert.deepStrictEqual(updated.nestedByTag(Tag.DetectorInformationSequence, 1), undefined);
+    });
+
+    it("should add an item to a sequence", () => {
+        const newItem = Elements.empty().setElementSet(studyDate);
+        const updated = elements.addItem(TagPath.fromSequence(Tag.DerivationCodeSequence), newItem);
+        assert.deepStrictEqual(updated.nestedByTag(Tag.DerivationCodeSequence, 3), newItem);
+    });
+
+    it("should not add new sequence when adding item to a sequence that does not exist", () => {
+        const newItem = Elements.empty().setElementSet(studyDate);
+        const updated = elements.addItem(TagPath.fromSequence(Tag.DetectorInformationSequence), newItem);
+        assert.deepStrictEqual(updated, elements);
+    });
+
+    it("should add a new sequence", () => {
+        const updated = elements.setNestedSequence(
+            TagPath.fromItem(Tag.DerivationCodeSequence, 1),
+            new Sequence(
+                Tag.DetectorInformationSequence,
+                indeterminateLength,
+                [new Item(Elements.empty().setElementSet(studyDate))]
+            )
+        );
+        assert.deepStrictEqual(updated.elementByPath(TagPath.fromItem(Tag.DerivationCodeSequence, 1).thenItem(Tag.DetectorInformationSequence, 1).thenTag(Tag.StudyDate)), studyDate);
+    });
+
+    it("should overwrite element if already present", () => {
+        const newPatientName = patientName.setValue(Value.fromString(VR.PN, "Jane^Doe"));
+        const updated = elements.setElementSet(newPatientName);
+
+        assert.deepStrictEqual(updated.size, elements.size);
+        assert.deepStrictEqual(updated.valueByTag(Tag.PatientName).bytes.toString(), "Jane^Doe");
+    });
+
+    it("should set value", () => {
+        const updated = elements.setValue(Tag.SeriesDate, VR.DA, Value.fromString(VR.DA, "20100101"));
+        assert.deepStrictEqual(updated.dateByTag(Tag.SeriesDate), LocalDate.parse("2010-01-01"));
+    });
+
+    it("should set bytes", () => {
+        const updated = elements.setBytes(Tag.SeriesDate, VR.DA, new Buffer("20100101"));
+        assert.deepStrictEqual(updated.dateByTag(Tag.SeriesDate), LocalDate.parse("2010-01-01"));
+    });
+
+    it("should set strings", () => {
+        const names = ["Smith^Dr", "Jones^Dr"];
+        assert.deepStrictEqual(elements.setStrings(Tag.ReferringPhysicianName, names).stringsByTag(Tag.ReferringPhysicianName), names);
+        assert.deepStrictEqual(elements.setString(Tag.ReferringPhysicianName, names[0]).stringsByTag(Tag.ReferringPhysicianName), [names[0]]);
+    });
+
+    it("should set numbers", () => {
+        assert.deepStrictEqual(elements.setNumbers(Tag.ReferencedFrameNumber, [1, 2, 3]).numbersByTag(Tag.ReferencedFrameNumber), [1, 2, 3]);
+        assert.deepStrictEqual(elements.setNumber(Tag.ReferencedFrameNumber, 42).numbersByTag(Tag.ReferencedFrameNumber), [42]);
+    });
+
+    it("should set dates", () => {
+        const dates = [LocalDate.parse("2005-01-01"), LocalDate.parse("2010-01-01")];
+        assert.deepStrictEqual(elements.setDates(Tag.StudyDate, dates).datesByTag(Tag.StudyDate), dates);
+        assert.deepStrictEqual(elements.setDate(Tag.StudyDate, dates[0]).datesByTag(Tag.StudyDate), [dates[0]]);
+    });
+
+    it("should set times", () => {
+        const times = [LocalTime.parse("23:30:10"), LocalTime.parse("12:00:00")];
+        assert.deepStrictEqual(elements.setTimes(Tag.AcquisitionTime, times).timesByTag(Tag.AcquisitionTime), times);
+        assert.deepStrictEqual(elements.setTime(Tag.AcquisitionTime, times[0]).timesByTag(Tag.AcquisitionTime), [times[0]]);
+    });
+
+    it("should set date times", () => {
+        const dateTimes = [LocalDate.parse("2005-01-01"), LocalDate.parse("2010-01-01")].map(d => d.atStartOfDay(ZoneOffset.of("+04:00")));
+        assert.deepStrictEqual(elements.setDateTimes(Tag.InstanceCoercionDateTime, dateTimes).dateTimesByTag(Tag.InstanceCoercionDateTime), dateTimes);
+        assert.deepStrictEqual(elements.setDateTime(Tag.InstanceCoercionDateTime, dateTimes[0]).dateTimesByTag(Tag.InstanceCoercionDateTime), [dateTimes[0]]);
+    });
+
+    it("should set patient names", () => {
+        const names = ["Doe^John", "Doe^Jane"];
+        const personNames = flatten(names.map(PersonName.parse));
+        assert.deepStrictEqual(elements.setPersonNames(Tag.PatientName, personNames).personNamesByTag(Tag.PatientName), personNames);
+        assert.deepStrictEqual(elements.setPersonName(Tag.PatientName, personNames[0]).personNamesByTag(Tag.PatientName), [personNames[0]]);
+    });
+
+    it("should set URL", () => {
+        const url = new URL("https://example.com:8080/path?q1=45");
+        assert.deepStrictEqual(elements.setURL(Tag.StorageURL, url).urlByTag(Tag.StorageURL), url);
+    });
+
+    it("should update character sets", () => {
+        const updatedCs1 = elements.setCharacterSets(CharacterSets.fromBytes(new Buffer("\\ISO 2022 IR 127"))).characterSets;
+        assert.equal(updatedCs1.charsets.trim(), "\\ISO 2022 IR 127");
+        const updatedCs2 = elements.setElementSet(new ValueElement(Tag.SpecificCharacterSet, VR.CS, Value.fromString(VR.CS, "\\ISO 2022 IR 13"))).characterSets;
+        assert.equal(updatedCs2.charsets.trim(), "\\ISO 2022 IR 13");
+    });
+
+    it("should update zone offset", () => {
+        const updatedZo1 = elements.setZoneOffset(ZoneOffset.of("-06:00")).zoneOffset;
+        assert.equal(updatedZo1.toString(), "-06:00");
+        const updatedZo2 = elements.setElementSet(new ValueElement(Tag.TimezoneOffsetFromUTC, VR.SH, Value.fromString(VR.SH, "+04:00"))).zoneOffset;
+        assert.equal(updatedZo2.toString(), "+04:00");
+        const updatedZo3 = elements.setElementSet(new ValueElement(Tag.TimezoneOffsetFromUTC, VR.SH, Value.fromString(VR.SH, "bad zone offset string"))).zoneOffset;
+        assert.deepStrictEqual(updatedZo3, elements.zoneOffset);
+    });
+
+    it("should set sequence", () => {
+        const e1 = Elements.empty().setString(Tag.PatientName, "Last1^First1");
+        const e2 = Elements.empty().setString(Tag.PatientName, "Last2^First2");
+        const i1 = new Item(e1);
+        const i2 = new Item(e2);
+        const s = new Sequence(Tag.DerivationCodeSequence, indeterminateLength, [i1, i2]);
+
+        assert.deepStrictEqual(s, new Sequence(Tag.DerivationCodeSequence, indeterminateLength, [i1, i2]));
+        assert.deepStrictEqual(s.items.length, 2);
+        assert.deepStrictEqual(s.items[1], i2);
+
+        const updated = elements.setSequence(s);
+        assert.deepStrictEqual(updated, elements.setElementSet(s));
+        assert.deepStrictEqual(updated.contains(Tag.DerivationCodeSequence), true);
+        assert.deepStrictEqual(updated.sequenceByTag(Tag.DerivationCodeSequence), s);
+    });
+
     it("should aggregate the bytes of all its elements", () => {
         const bytes = concatv(data.preamble,
-        data.element(Tag.StudyDate, "20041230"),
-        data.sequence(Tag.DerivationCodeSequence),
-        item(), data.element(Tag.PatientID, "12345678"), itemDelimitation(),
-        item(), data.element(Tag.PatientID, "87654321"), itemDelimitation(),
-        sequenceDelimitation(),
-        data.element(Tag.PatientName, "John^Doe"));
+            data.element(Tag.StudyDate, "20041230"),
+            data.sequence(Tag.DerivationCodeSequence),
+            item(), data.element(Tag.PatientID, "12345678"), itemDelimitation(),
+            item(), data.element(Tag.PatientID, "87654321"), itemDelimitation(),
+            sequenceDelimitation(),
+            data.element(Tag.PatientName, "John^Doe"));
 
         assert.deepStrictEqual(elements.toBytes(), bytes);
     });
@@ -224,7 +409,7 @@ describe("Elements", () => {
         const dateTimes = [LocalDate.parse("2005-01-01"), LocalDate.parse("2010-01-01")]
             .map((dt) => dt.atStartOfDay(ZoneOffset.ofHoursMinutes(4, 0)));
         const elems = create(
-            new ValueElement(Tag.TimezoneOffsetFromUTC, VR.SH, Value.fromString(VR.SH, "+0400")),
+            new ValueElement(Tag.TimezoneOffsetFromUTC, VR.SH, Value.fromString(VR.SH, "+04:00")),
             new ValueElement(Tag.InstanceCoercionDateTime, VR.DT, Value.fromDateTimes(VR.DT, dateTimes)));
         assert.deepStrictEqual(elems.dateTimesByTag(Tag.InstanceCoercionDateTime), dateTimes);
         assert.deepStrictEqual(elems.dateTimeByTag(Tag.InstanceCoercionDateTime), dateTimes[0]);
@@ -232,6 +417,15 @@ describe("Elements", () => {
         assert.deepStrictEqual(elems.dateTimeByPath(TagPath.fromTag(Tag.InstanceCoercionDateTime)), dateTimes[0]);
     });
 
+    it("should return person names", () => {
+        const names = ["Doe^John", "Doe^Jane"];
+        const personNames = flatten(names.map(PersonName.parse));
+        const e = create(new ValueElement(Tag.PatientName, VR.PN, Value.fromString(VR.PN, names.join("\\"))));
+        assert.deepStrictEqual(e.personNamesByTag(Tag.PatientName), personNames);
+        assert.deepStrictEqual(e.personNameByTag(Tag.PatientName), personNames[0]);
+        assert.deepStrictEqual(e.personNamesByPath(TagPath.fromTag(Tag.PatientName)), personNames);
+        assert.deepStrictEqual(e.personNameByPath(TagPath.fromTag(Tag.PatientName)), personNames[0]);
+    });
 });
 
 describe("Elements data classes", () => {
@@ -251,7 +445,7 @@ describe("Elements data classes", () => {
         assert.deepStrictEqual(new SequenceDelimitationElement().toBytes(), sequenceDelimitation());
         assert.deepStrictEqual(new Sequence(Tag.DerivationCodeSequence, indeterminateLength, [new Item(create(),
             indeterminateLength)]).toBytes(), concatv(data.sequence(Tag.DerivationCodeSequence), item(),
-            itemDelimitation(), sequenceDelimitation()));
+                itemDelimitation(), sequenceDelimitation()));
         assert.deepStrictEqual(new Fragments(Tag.PixelData, VR.OW, [],
             [new Fragment(4, Value.fromBytes(VR.OW, [1, 2, 3, 4]))]).toBytes(), concatv(data.pixeDataFragments(),
                 item(0), item(4), Buffer.from([1, 2, 3, 4]), sequenceDelimitation()));

@@ -6,6 +6,7 @@ export * from "./tag";
 export * from "./lookup";
 export * from "./tag-path";
 export * from "./tag-tree";
+export * from "./person-name";
 export * from "./parts";
 export {CharacterSets} from "./character-sets";
 export * from "./sources";

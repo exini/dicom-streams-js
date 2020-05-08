@@ -9,6 +9,7 @@ import {
 } from "./base";
 import { CharacterSets, defaultCharacterSet } from "./character-sets";
 import { VR } from "./vr";
+import { PersonName, ComponentGroup } from "./person-name";
 
 export class Value {
     public static fromString(vr: VR, value: string, bigEndian: boolean = false): Value {
@@ -44,6 +45,13 @@ export class Value {
     public static fromDateTimes(vr: VR, values: ZonedDateTime[]): Value {
         return create(combine(values.map((v) => dateTimeBytes(vr, v)), vr), vr);
     }
+
+    public static fromPersonName(vr: VR, value: PersonName): Value { return Value.fromBuffer(vr, personNameBytes(vr, value)); }
+    public static fromPersonNames(vr: VR, values: PersonName[]): Value {
+        return Value.fromBuffer(vr, combine(values.map((v) => personNameBytes(vr, v)), vr));
+    }
+
+    public static fromURL(vr: VR, value: URL): Value { return create(urlBytes(vr, value), vr); }
 
     public static empty() { return new Value(emptyBuffer); }
 
@@ -130,6 +138,16 @@ export class Value {
         return [];
     }
 
+    public toPersonNames(vr: VR = VR.PN, characterSets: CharacterSets = defaultCharacterSet): PersonName[] {
+        if (vr === VR.PN) { return parsePN(this.bytes, characterSets); }
+        return [];
+    }
+
+    public toURL(vr: VR = VR.UR): URL {
+        if (vr === VR.UR) { return parseUR(this.bytes); }
+        return undefined;
+    }
+
     public toString(
         vr: VR,
         bigEndian: boolean = false,
@@ -144,6 +162,10 @@ export class Value {
     public toDate(vr?: VR): LocalDate { return Value.headOption(this.toDates(vr)); }
     public toTime(vr?: VR): LocalTime { return Value.headOption(this.toTimes(vr)); }
     public toDateTime(vr?: VR, zone?: ZoneId): ZonedDateTime { return Value.headOption(this.toDateTimes(vr, zone)); }
+
+    public toPersonName(vr: VR = VR.PN, characterSets: CharacterSets = defaultCharacterSet): PersonName {
+        return Value.headOption(this.toPersonNames(vr, characterSets));
+    }
 
     public append(bytes: Buffer): Value {
         return new Value(concat(this.bytes, bytes));
@@ -226,6 +248,16 @@ function dateTimeBytes(vr: VR, value: ZonedDateTime): Buffer {
     return Buffer.from(formatDateTime(value));
 }
 
+function personNameBytes(vr: VR, value: PersonName): Buffer {
+    if (vr === VR.PN) { return new Buffer(value.toString()); }
+    throw Error('Cannot create value of VR ' + vr + ' from person name');
+}
+
+function urlBytes(vr: VR, value: URL): Buffer {
+    if (vr === VR.UR) { return Buffer.from(value.toString()); }
+    throw Error('Cannot create value of VR ' + vr + ' from URL')
+}
+
 function chunk(arr: Buffer, len: number): Buffer[] {
     const chunks = [];
     const n = arr.length;
@@ -276,6 +308,12 @@ function parseTM(value: Buffer): LocalTime[] {
 }
 function parseDT(value: Buffer, zone: ZoneId): ZonedDateTime[] {
     return splitString(value.toString()).map((s) => parseDateTime(s, zone)).filter((d) => d !== undefined);
+}
+function parsePN(value: Buffer, characterSets: CharacterSets): PersonName[] {
+    return splitString(characterSets.decode(value, VR.PN)).map(trim).map((s) => parsePersonName(s));
+}
+function parseUR(value: Buffer): URL {
+    return parseURL(value.toString().trim());
 }
 
 const dateFormat1 = DateTimeFormatter.ofPattern("uuuuMMdd");
@@ -364,4 +402,20 @@ function parseDateTime(s: string, zone: ZoneId = systemZone): ZonedDateTime {
     } catch (error) {
         return undefined;
     }
+}
+
+export function parsePersonName(s: string): PersonName {
+    function ensureLength(ss: string[], n: number) {
+        return ss.concat(new Array(Math.max(0, n - ss.length)).fill(''));
+    }
+
+    const comps = ensureLength(s.split(/\^/), 5)
+        .map(s1 => ensureLength(s1.split(/=/), 3).map(trim))
+        .map(c => new ComponentGroup(c[0], c[1], c[2]))
+
+    return new PersonName(comps[0], comps[1], comps[2], comps[3], comps[4]);
+}
+
+function parseURL(s: string): URL {
+    try { return new URL(s); } catch (error) { return undefined; }
 }
