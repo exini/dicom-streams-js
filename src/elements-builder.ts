@@ -1,24 +1,62 @@
-import { ZoneId } from "js-joda";
-import { defaultCharacterSet, systemZone } from "./base";
-import { CharacterSets } from "./character-sets";
+import { ZoneId } from 'js-joda';
+import { defaultCharacterSet, systemZone } from './base';
+import { CharacterSets } from './character-sets';
 import {
-    Element, Elements, ElementSet, Fragment, FragmentElement, Fragments, FragmentsElement, Item,
-    ItemDelimitationElement, ItemElement, parseZoneOffset, Sequence, SequenceDelimitationElement,
-    SequenceElement, ValueElement,
-} from "./elements";
-import { Tag } from "./tag";
-import { VR } from "./vr";
+    Element,
+    Elements,
+    ElementSet,
+    Fragment,
+    FragmentElement,
+    Fragments,
+    FragmentsElement,
+    Item,
+    ItemDelimitationElement,
+    ItemElement,
+    parseZoneOffset,
+    Sequence,
+    SequenceDelimitationElement,
+    SequenceElement,
+    ValueElement,
+} from './elements';
+import { Tag } from './tag';
+import { VR } from './vr';
 
-// tslint:disable: max-classes-per-file
+class DatasetBuilder {
+    private data = new Array<ElementSet>(64);
+    private pos = 0;
+
+    constructor(public characterSets: CharacterSets, public zoneOffset: ZoneId) {}
+
+    public addElementSet(elementSet: ElementSet): DatasetBuilder {
+        if (elementSet instanceof ValueElement && elementSet.tag === Tag.SpecificCharacterSet) {
+            this.characterSets = CharacterSets.fromBytes(elementSet.value.bytes);
+        } else if (elementSet instanceof ValueElement && elementSet.tag === Tag.TimezoneOffsetFromUTC) {
+            const newOffset = parseZoneOffset(
+                elementSet.value.toSingleString(VR.SH, elementSet.bigEndian, this.characterSets),
+            );
+            this.zoneOffset = newOffset || this.zoneOffset;
+        }
+
+        if (this.data.length <= this.pos) {
+            this.data.length *= 2;
+        }
+        this.data[this.pos++] = elementSet;
+
+        return this;
+    }
+
+    public result(): Elements {
+        return new Elements(this.characterSets, this.zoneOffset, this.data.slice(0, this.pos));
+    }
+}
 
 export class ElementsBuilder {
-
     private builderStack: DatasetBuilder[] = [new DatasetBuilder(defaultCharacterSet, systemZone)];
     private sequenceStack: Sequence[] = [];
-    private lengthStack: { element: Element, bytesLeft: number }[] = [];
+    private lengthStack: { element: Element; bytesLeft: number }[] = [];
     private fragments: Fragments;
 
-    public addElement(element: Element) {
+    public addElement(element: Element): void {
         if (element instanceof ValueElement) {
             this.subtractLength(element.length + element.vr.headerLength);
             const builder = this.builderStack[0];
@@ -27,13 +65,15 @@ export class ElementsBuilder {
         } else if (element instanceof FragmentsElement) {
             this.subtractLength(element.vr.headerLength);
             this.updateFragments(
-                new Fragments(element.tag, element.vr, undefined, [], element.bigEndian, element.explicitVR));
+                new Fragments(element.tag, element.vr, undefined, [], element.bigEndian, element.explicitVR),
+            );
             this.maybeDelimit();
         } else if (element instanceof FragmentElement) {
             this.subtractLength(8 + element.length);
             if (this.fragments !== undefined) {
                 const updatedFragments = this.fragments.addFragment(
-                    new Fragment(element.length, element.value, element.bigEndian));
+                    new Fragment(element.length, element.value, element.bigEndian),
+                );
                 this.updateFragments(updatedFragments);
             }
             this.maybeDelimit();
@@ -48,21 +88,22 @@ export class ElementsBuilder {
             if (!element.indeterminate) {
                 this.pushLength(element, element.length);
             }
-            this.pushSequence(new Sequence(
-                element.tag,
-                element.indeterminate ? element.length : 0,
-                [], element.bigEndian,
-                element.explicitVR,
-            ));
+            this.pushSequence(
+                new Sequence(
+                    element.tag,
+                    element.indeterminate ? element.length : 0,
+                    [],
+                    element.bigEndian,
+                    element.explicitVR,
+                ),
+            );
             this.maybeDelimit();
         } else if (element instanceof ItemElement && this.hasSequence()) {
             this.subtractLength(8);
             const builder = this.builderStack[0];
-            const sequence = this.sequenceStack[0].addItem(new Item(
-                Elements.empty(),
-                element.indeterminate ? element.length : 0,
-                element.bigEndian,
-            ));
+            const sequence = this.sequenceStack[0].addItem(
+                new Item(Elements.empty(), element.indeterminate ? element.length : 0, element.bigEndian),
+            );
             if (!element.indeterminate) {
                 this.pushLength(element, element.length);
             }
@@ -94,17 +135,33 @@ export class ElementsBuilder {
             this.sequenceStack[0] = sequence;
         }
     }
-    private updateFragments(fragments: Fragments): void { this.fragments = fragments; }
-    private subtractLength(length: number): void { this.lengthStack.forEach((l) => l.bytesLeft -= length); }
-    private pushBuilder(builder: DatasetBuilder): void { this.builderStack.unshift(builder); }
-    private pushSequence(sequence: Sequence): void { this.sequenceStack.unshift(sequence); }
-    private pushLength(element: Element, length: number) {
+    private updateFragments(fragments: Fragments): void {
+        this.fragments = fragments;
+    }
+    private subtractLength(length: number): void {
+        this.lengthStack.forEach((l) => (l.bytesLeft -= length));
+    }
+    private pushBuilder(builder: DatasetBuilder): void {
+        this.builderStack.unshift(builder);
+    }
+    private pushSequence(sequence: Sequence): void {
+        this.sequenceStack.unshift(sequence);
+    }
+    private pushLength(element: Element, length: number): void {
         this.lengthStack.unshift({ element, bytesLeft: length });
     }
-    private popBuilder(): void { this.builderStack.shift(); }
-    private popSequence(): void { this.sequenceStack.shift(); }
-    private hasSequence(): boolean { return this.sequenceStack.length > 0; }
-    private hasFragments(): boolean { return this.fragments !== undefined; }
+    private popBuilder(): void {
+        this.builderStack.shift();
+    }
+    private popSequence(): void {
+        this.sequenceStack.shift();
+    }
+    private hasSequence(): boolean {
+        return this.sequenceStack.length > 0;
+    }
+    private hasFragments(): boolean {
+        return this.fragments !== undefined;
+    }
     private endItem(): void {
         const builder = this.builderStack[0];
         const sequence = this.sequenceStack[0];
@@ -112,8 +169,13 @@ export class ElementsBuilder {
         const items = sequence.items;
         if (items.length > 0) {
             items[items.length - 1] = items[items.length - 1].setElements(elements);
-            const updatedSequence =
-                new Sequence(sequence.tag, sequence.length, items, sequence.bigEndian, sequence.explicitVR);
+            const updatedSequence = new Sequence(
+                sequence.tag,
+                sequence.length,
+                items,
+                sequence.bigEndian,
+                sequence.explicitVR,
+            );
             this.popBuilder();
             this.updateSequence(updatedSequence);
         }
@@ -121,8 +183,13 @@ export class ElementsBuilder {
     private endSequence(): void {
         const sequence = this.sequenceStack[0];
         const sequenceLength = sequence.indeterminate ? sequence.length : sequence.toBytes().length - 12;
-        const updatedSequence =
-            new Sequence(sequence.tag, sequenceLength, sequence.items, sequence.bigEndian, sequence.explicitVR);
+        const updatedSequence = new Sequence(
+            sequence.tag,
+            sequenceLength,
+            sequence.items,
+            sequence.bigEndian,
+            sequence.explicitVR,
+        );
         const builder = this.builderStack[0];
         builder.addElementSet(updatedSequence);
         this.popSequence();
@@ -139,34 +206,5 @@ export class ElementsBuilder {
                 }
             });
         }
-    }
-}
-
-class DatasetBuilder {
-
-    private data = new Array<ElementSet>(64);
-    private pos = 0;
-
-    constructor(public characterSets: CharacterSets, public zoneOffset: ZoneId) { }
-
-    public addElementSet(elementSet: ElementSet): DatasetBuilder {
-        if (elementSet instanceof ValueElement && elementSet.tag === Tag.SpecificCharacterSet) {
-            this.characterSets = CharacterSets.fromBytes(elementSet.value.bytes);
-        } else if (elementSet instanceof ValueElement && elementSet.tag === Tag.TimezoneOffsetFromUTC) {
-            const newOffset = parseZoneOffset(
-                elementSet.value.toSingleString(VR.SH, elementSet.bigEndian, this.characterSets));
-            this.zoneOffset = newOffset || this.zoneOffset;
-        }
-
-        if (this.data.length <= this.pos) {
-            this.data.length *= 2;
-        }
-        this.data[this.pos++] = elementSet;
-
-        return this;
-    }
-
-    public result(): Elements {
-        return new Elements(this.characterSets, this.zoneOffset, this.data.slice(0, this.pos));
     }
 }

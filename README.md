@@ -9,7 +9,7 @@ This project is a port of the [dicom-streams](https://github.com/exini/dicom-str
 
 ### Setup
 
-The dicom-streams-js library is deployed to NPM. Install it using `npm install @exini/dicom-streams-js`.
+The dicom-streams-js library is deployed to NPM. Install it using `npm install -s @exini/dicom-streams-js`. Time and date handling using `js-joda` is marked as an external dependency in dicom-streams-js. If you want to read and modify times and dates, install this using `npm install -s js-joda`.
 
 ### Data Model
 
@@ -121,8 +121,8 @@ New non-trivial DICOM flows can be built using a modular system of capabilities 
 Default behavior to these events are implemented in core classes. The most natural behavior is to simply pass parts on
 down the stream, e.g. 
 ```javascript
-  public onPreamble(part: PreamblePart): DicomPart[] { return part :: Nil; }
-  public onHeader(part: HeaderPart): DicomPart[] { return part :: Nil; }
+  public onPreamble(part: PreamblePart): DicomPart[] { return [part]; }
+  public onHeader(part: HeaderPart): DicomPart[] { return [part]; }
   ...
 ```
 This behavior is implemented in the `IdentityFlow` core class. Another option is to defer handling to the `onPart` method which is implemented in the `DeferToPartFlow` core class. This is appropriate for flows which define a common behavior for all part types. 

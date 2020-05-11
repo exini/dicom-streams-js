@@ -1,12 +1,13 @@
 export abstract class TagPathLike<T extends TagPathLike<T>> {
-
     public abstract tag(): number;
 
     public abstract previous(): T;
 
     public abstract isEmpty(): boolean;
 
-    public isRoot(): boolean { return this.previous().isEmpty(); }
+    public isRoot(): boolean {
+        return this.previous().isEmpty();
+    }
 
     public toList(): T[] {
         const toListRec = (path: any, list: T[]): T[] => {
@@ -19,7 +20,13 @@ export abstract class TagPathLike<T extends TagPathLike<T>> {
         return toListRec(this, []);
     }
 
-    public contains(tag: number): boolean { return this.toList().map((tp) => tp.tag()).indexOf(tag) >= 0; }
+    public contains(tag: number): boolean {
+        return (
+            this.toList()
+                .map((tp) => tp.tag())
+                .indexOf(tag) >= 0
+        );
+    }
 
     public depth(): number {
         const depthRec = (path: any, d: number): number => {
@@ -32,9 +39,13 @@ export abstract class TagPathLike<T extends TagPathLike<T>> {
         return this.isEmpty() ? 0 : depthRec(this, 1);
     }
 
-    public head(): T { return this.take(1); }
+    public head(): T {
+        return this.take(1);
+    }
 
-    public tail(): T { return this.drop(1); }
+    public tail(): T {
+        return this.drop(1);
+    }
 
     public take(n: number): T {
         const takeRec = (path: any, i: number): T => {
@@ -44,5 +55,4 @@ export abstract class TagPathLike<T extends TagPathLike<T>> {
     }
 
     public abstract drop(n: number): T;
-
 }

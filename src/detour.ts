@@ -1,7 +1,6 @@
-import {Transform, TransformOptions} from "stream";
+import { Transform, TransformOptions } from 'stream';
 
 export abstract class Detour extends Transform {
-
     private detour = false;
 
     constructor(private readonly options: TransformOptions, private detourFlow?: Transform) {
@@ -15,13 +14,13 @@ export abstract class Detour extends Transform {
         this.detourFlow = detourFlow;
     }
 
-    public setDetour(detour: boolean = true, initialChunk?: any): void {
+    public setDetour(detour = true, initialChunk?: any): void {
         this.detour = detour;
         if (this.detourFlow !== undefined) {
             if (this.detour) {
-                this.detourFlow.on("data", (chunk) => this.process(chunk));
-                this.detourFlow.once("end", () => this.cleanup());
-                this.detourFlow.once("error", (error) => this.emit("error", error));
+                this.detourFlow.on('data', (chunk) => this.process(chunk));
+                this.detourFlow.once('end', () => this.cleanup());
+                this.detourFlow.once('error', (error) => this.emit('error', error));
             } else {
                 this.detourFlow.end();
             }
@@ -37,14 +36,14 @@ export abstract class Detour extends Transform {
 
     public abstract process(chunk: any): void;
 
-    public cleanup() {
+    public cleanup(): void {
         // override to add custom cleanup code
     }
 
     public _transform(chunk: any, encoding: string, callback: (error?: Error, data?: any) => void): void {
         if (this.detour !== undefined && this.detourFlow !== undefined) {
             if (!this.detourFlow.write(chunk)) {
-                this.detourFlow.once("drain", callback);
+                this.detourFlow.once('drain', callback);
             } else {
                 process.nextTick(() => callback());
             }
@@ -56,12 +55,11 @@ export abstract class Detour extends Transform {
 
     public _flush(callback: (error?: Error, data?: any) => void): void {
         if (this.detour && this.detourFlow) {
-            this.detourFlow.once("end", callback);
+            this.detourFlow.once('end', callback);
             this.detourFlow.end();
         } else {
             this.cleanup();
             process.nextTick(() => callback());
         }
     }
-
 }

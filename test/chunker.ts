@@ -1,15 +1,14 @@
-import {Transform} from "stream";
-import { concat, emptyBuffer } from "../src/base";
+import { Transform } from 'stream';
+import { concat, emptyBuffer } from '../src/base';
 
 export class Chunker extends Transform {
-
     private buffer: Buffer = emptyBuffer;
 
     constructor(public readonly size: number) {
         super();
     }
 
-    public _transform(chunk: any, encoding: string, callback: (error?: Error, data?: any) => void) {
+    public _transform(chunk: any, encoding: string, callback: (error?: Error, data?: any) => void): void {
         this.buffer = concat(this.buffer, chunk);
 
         while (this.buffer.length >= this.size) {
@@ -20,7 +19,7 @@ export class Chunker extends Transform {
         process.nextTick(() => callback());
     }
 
-    public _flush(callback: (error?: Error, data?: any) => void) {
+    public _flush(callback: (error?: Error, data?: any) => void): void {
         if (this.buffer.length) {
             this.push(this.buffer);
         }

@@ -1,20 +1,36 @@
-import assert from "assert";
-import {pipeline, Transform} from "stream";
-import {promisify} from "util";
-import zlib from "zlib";
-import { VR } from "../src";
+import assert from 'assert';
+import { pipeline, Transform } from 'stream';
+import { promisify } from 'util';
+import zlib from 'zlib';
+import { VR } from '../src';
 import {
-    Element, FragmentElement, FragmentsElement, ItemDelimitationElement, ItemElement,
-    preambleElement, SequenceDelimitationElement, SequenceElement, ValueElement,
-} from "../src/elements";
+    Element,
+    FragmentElement,
+    FragmentsElement,
+    ItemDelimitationElement,
+    ItemElement,
+    preambleElement,
+    SequenceDelimitationElement,
+    SequenceElement,
+    ValueElement,
+} from '../src/elements';
 import {
-    DeflatedChunk, DicomPart, ElementsPart, FragmentsPart, HeaderPart, ItemDelimitationPart, ItemPart,
-    MetaPart, PreamblePart, SequenceDelimitationPart, SequencePart, UnknownPart, ValueChunk,
-} from "../src/parts";
-import {arraySink} from "../src/sinks";
-import {singleSource} from "../src/sources";
-
-// tslint:disable: max-classes-per-file
+    DeflatedChunk,
+    DicomPart,
+    ElementsPart,
+    FragmentsPart,
+    HeaderPart,
+    ItemDelimitationPart,
+    ItemPart,
+    MetaPart,
+    PreamblePart,
+    SequenceDelimitationPart,
+    SequencePart,
+    UnknownPart,
+    ValueChunk,
+} from '../src/parts';
+import { arraySink } from '../src/sinks';
+import { singleSource } from '../src/sources';
 
 export class TestPart extends MetaPart {
     constructor(public readonly id: string) {
@@ -22,13 +38,12 @@ export class TestPart extends MetaPart {
     }
 
     public toString(): string {
-        return "TestPart: " + this.id;
+        return 'TestPart: ' + this.id;
     }
 }
 
 export class PartProbe {
-
-    private offset: number = 0;
+    private offset = 0;
 
     constructor(public readonly array: DicomPart[]) {}
 
@@ -167,8 +182,7 @@ export class PartProbe {
 }
 
 class ElementProbe {
-
-    private offset: number = 0;
+    private offset = 0;
 
     constructor(public readonly array: Element[]) {}
 
@@ -274,14 +288,18 @@ class ElementProbe {
 }
 
 export const streamPromise = promisify(pipeline);
-export function partProbe(array: DicomPart[]) { return new PartProbe(array); }
-export function elementProbe(array: Element[]) { return new ElementProbe(array); }
-export function testParts(bytes: Buffer, flow: Transform, assertParts: (parts: any[]) => void) {
+export function partProbe(array: DicomPart[]): PartProbe {
+    return new PartProbe(array);
+}
+export function elementProbe(array: Element[]): ElementProbe {
+    return new ElementProbe(array);
+}
+export function testParts(bytes: Buffer, flow: Transform, assertParts: (parts: any[]) => void): Promise<void> {
     return streamPromise(singleSource(bytes), flow, arraySink(assertParts));
 }
-export function expectDicomError(asyncFunction: () => Promise<any>) {
+export function expectDicomError(asyncFunction: () => Promise<any>): Promise<void> {
     return assert.rejects(asyncFunction);
 }
-export function deflate(buffer: Buffer, gzip: boolean = false) {
+export function deflate(buffer: Buffer, gzip = false): Buffer {
     return gzip ? zlib.deflateSync(buffer) : zlib.deflateRawSync(buffer);
 }

@@ -1,7 +1,10 @@
 .*
 **/tsconfig.json
-**/tslint.json
-**/webpack.config.json
+**/.eslintrc.js
+**/.eslintignore
+**/.mocharc.js
+**/.prettierrc.js
+**/webpack.config-*.js
 src
 test
 build

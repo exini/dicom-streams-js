@@ -1,8 +1,20 @@
-const fs = require("fs");
+const fs = require('fs');
 const {
-    TagPath, TagTree, parseFlow, whitelistFilter, blacklistFilter, toUtf8Flow, toIndeterminateLengthSequences,
-    modifyFlow, TagModification, TagInsertion, elementFlow, elementSink, Tag, pipe
-} = require("../dist");
+    TagPath,
+    TagTree,
+    parseFlow,
+    whitelistFilter,
+    blacklistFilter,
+    toUtf8Flow,
+    toIndeterminateLengthSequences,
+    modifyFlow,
+    TagModification,
+    TagInsertion,
+    elementFlow,
+    elementSink,
+    Tag,
+    pipe,
+} = require('../dist');
 
 const src = fs.createReadStream(process.argv[2]);
 
@@ -17,19 +29,15 @@ pipe(
         TagTree.fromTag(Tag.PatientName),
         TagTree.fromTag(Tag.StudyDescription),
         TagTree.fromTag(Tag.SeriesDate),
-        TagTree.fromAnyItem(Tag.MACParametersSequence)
+        TagTree.fromAnyItem(Tag.MACParametersSequence),
     ]),
-    blacklistFilter([
-        TagTree.fromAnyItem(Tag.MACParametersSequence).thenTag(Tag.DataElementsSigned)
-    ]),
-    modifyFlow([
-        TagModification.equals(TagPath.fromTag(Tag.PatientName), () => Buffer.from("Anon 001"))
-    ], [
-        new TagInsertion(TagPath.fromTag(Tag.PatientIdentityRemoved), () => Buffer.from("YES"))
-    ]),
+    blacklistFilter([TagTree.fromAnyItem(Tag.MACParametersSequence).thenTag(Tag.DataElementsSigned)]),
+    modifyFlow(
+        [TagModification.equals(TagPath.fromTag(Tag.PatientName), () => Buffer.from('Anon 001'))],
+        [new TagInsertion(TagPath.fromTag(Tag.PatientIdentityRemoved), () => Buffer.from('YES'))],
+    ),
     elementFlow(),
-    elementSink(elements => {
+    elementSink((elements) => {
         console.log(elements.toString());
-    })
+    }),
 );
-
