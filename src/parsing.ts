@@ -1,9 +1,7 @@
-import { bytesToTag, bytesToUInt, bytesToUShort, bytesToVR, groupNumber, isFileMetaInformation } from "./base";
-import { ByteReader } from "./byte-parser";
-import {Lookup} from "./lookup";
-import {VR} from "./vr";
-
-// tslint:disable: max-classes-per-file
+import { bytesToTag, bytesToUInt, bytesToUShort, bytesToVR, groupNumber, isFileMetaInformation } from './base';
+import { ByteReader } from './byte-parser';
+import { Lookup } from './lookup';
+import { VR } from './vr';
 
 export const dicomPreambleLength = 132;
 
@@ -15,7 +13,8 @@ export class HeaderInfo {
     constructor(
         public readonly bigEndian: boolean,
         public readonly explicitVR: boolean,
-        public readonly hasFmi: boolean) {}
+        public readonly hasFmi: boolean,
+    ) {}
 }
 
 export function tryReadHeader(data: Buffer): HeaderInfo {
@@ -26,17 +25,25 @@ export function tryReadHeader(data: Buffer): HeaderInfo {
 export function headerInfo(data: Buffer, assumeBigEndian: boolean): HeaderInfo {
     const tag = bytesToTag(data, assumeBigEndian);
     const vr = Lookup.vrOf(tag);
-    if (vr === VR.UN || groupNumber(tag) !== 2 && groupNumber(tag) < 8) {
+    if (vr === VR.UN || (groupNumber(tag) !== 2 && groupNumber(tag) < 8)) {
         return undefined;
     }
     if (bytesToVR(data.slice(4, 6)) === vr.code) {
-        return { bigEndian: assumeBigEndian, explicitVR: true, hasFmi: isFileMetaInformation(tag) };
+        return {
+            bigEndian: assumeBigEndian,
+            explicitVR: true,
+            hasFmi: isFileMetaInformation(tag),
+        };
     }
     if (bytesToUInt(data.slice(4, 8), assumeBigEndian) >= 0) {
         if (assumeBigEndian) {
-            throw Error("Implicit VR Big Endian encoded DICOM Stream");
+            throw Error('Implicit VR Big Endian encoded DICOM Stream');
         } else {
-            return { bigEndian: false, explicitVR: false, hasFmi: isFileMetaInformation(tag) };
+            return {
+                bigEndian: false,
+                explicitVR: false,
+                hasFmi: isFileMetaInformation(tag),
+            };
         }
     }
     return undefined;
@@ -47,13 +54,12 @@ export function isPreamble(data: Buffer): boolean {
 }
 
 export class TagVr {
-    // tslint:disable-next-line: no-shadowed-variable
     constructor(public readonly tag: number, public readonly vr: VR) {}
 }
 
 export function readTagVr(data: Buffer, bigEndian: boolean, explicitVr: boolean): TagVr {
     const tag = bytesToTag(data, bigEndian);
-    if (tag === 0xFFFEE000 || tag === 0xFFFEE00D || tag === 0xFFFEE0DD) {
+    if (tag === 0xfffee000 || tag === 0xfffee00d || tag === 0xfffee0dd) {
         return new TagVr(tag, undefined);
     }
     if (explicitVr) {
@@ -67,7 +73,8 @@ export class AttributeInfo {
         public readonly tag: number,
         public readonly vr: VR,
         public readonly headerLength: number,
-        public readonly valueLength: number) {}
+        public readonly valueLength: number,
+    ) {}
 }
 
 export function readHeader(reader: ByteReader, state: any): AttributeInfo {
@@ -79,8 +86,12 @@ export function readHeader(reader: ByteReader, state: any): AttributeInfo {
             return new AttributeInfo(tagVr.tag, tagVr.vr, 8, bytesToUShort(tagVrBytes.slice(6), state.bigEndian));
         }
         reader.ensure(12);
-        return new AttributeInfo(tagVr.tag, tagVr.vr, 12,
-            bytesToUInt(reader.remainingData().slice(8), state.bigEndian));
+        return new AttributeInfo(
+            tagVr.tag,
+            tagVr.vr,
+            12,
+            bytesToUInt(reader.remainingData().slice(8), state.bigEndian),
+        );
     }
     return new AttributeInfo(tagVr.tag, tagVr.vr, 8, bytesToUInt(tagVrBytes.slice(4), state.bigEndian));
 }

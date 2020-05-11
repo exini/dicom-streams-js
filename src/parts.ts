@@ -1,11 +1,16 @@
 import {
-    concat, emptyBuffer, indeterminateLength, intToBytes, isFileMetaInformation, shortToBytes, tagToBytes, tagToString,
+    concat,
+    emptyBuffer,
+    indeterminateLength,
+    intToBytes,
+    isFileMetaInformation,
+    shortToBytes,
+    tagToBytes,
+    tagToString,
     trim,
-} from "./base";
-import { Elements } from "./elements";
-import { VR } from "./vr";
-
-// tslint:disable: max-classes-per-file
+} from './base';
+import { Elements } from './elements';
+import { VR } from './vr';
 
 export class DicomPart {
     constructor(public readonly bigEndian: boolean, public readonly bytes: Buffer) {}
@@ -23,26 +28,25 @@ export class PreamblePart extends DicomPart {
     }
 
     public toString(): string {
-        return "Preamble []";
+        return 'Preamble []';
     }
 }
 
 export class HeaderPart extends DicomPart {
-    public static create(tag: number, vr: VR, length: number,
-                         bigEndian: boolean = false, explicitVR: boolean = true) {
-        const bytes = explicitVR ?
-            vr.headerLength === 8 ?
-                Buffer.concat([
-                    tagToBytes(tag, bigEndian),
-                    Buffer.from(vr.name),
-                    shortToBytes(length, bigEndian)], 8) :
-                Buffer.concat([
-                    tagToBytes(tag, bigEndian),
-                    Buffer.from(vr.name), Buffer.from([0, 0]),
-                    intToBytes(length, bigEndian)], 12) :
-            Buffer.concat([
-                tagToBytes(tag, bigEndian),
-                intToBytes(length, bigEndian)], 8);
+    public static create(tag: number, vr: VR, length: number, bigEndian = false, explicitVR = true): HeaderPart {
+        const bytes = explicitVR
+            ? vr.headerLength === 8
+                ? Buffer.concat([tagToBytes(tag, bigEndian), Buffer.from(vr.name), shortToBytes(length, bigEndian)], 8)
+                : Buffer.concat(
+                      [
+                          tagToBytes(tag, bigEndian),
+                          Buffer.from(vr.name),
+                          Buffer.from([0, 0]),
+                          intToBytes(length, bigEndian),
+                      ],
+                      12,
+                  )
+            : Buffer.concat([tagToBytes(tag, bigEndian), intToBytes(length, bigEndian)], 8);
         return new HeaderPart(tag, vr, length, isFileMetaInformation(tag), bigEndian, explicitVR, bytes);
     }
 
@@ -53,22 +57,26 @@ export class HeaderPart extends DicomPart {
         public readonly isFmi: boolean,
         public readonly bigEndian: boolean,
         public readonly explicitVR: boolean,
-        public readonly bytes: Buffer) {
+        public readonly bytes: Buffer,
+    ) {
         super(bigEndian, bytes);
         if (!this.bytes) {
-            this.bytes = this.explicitVR ?
-                vr.headerLength === 8 ?
-                    Buffer.concat([
-                        tagToBytes(tag, bigEndian),
-                        Buffer.from(vr.name),
-                        shortToBytes(length, bigEndian)], 8) :
-                    Buffer.concat([
-                        tagToBytes(tag, bigEndian),
-                        Buffer.from(vr.name), Buffer.from([0, 0]),
-                        intToBytes(length, bigEndian)], 12) :
-                Buffer.concat([
-                    tagToBytes(tag, bigEndian),
-                    intToBytes(length, bigEndian)], 8);
+            this.bytes = this.explicitVR
+                ? vr.headerLength === 8
+                    ? Buffer.concat(
+                          [tagToBytes(tag, bigEndian), Buffer.from(vr.name), shortToBytes(length, bigEndian)],
+                          8,
+                      )
+                    : Buffer.concat(
+                          [
+                              tagToBytes(tag, bigEndian),
+                              Buffer.from(vr.name),
+                              Buffer.from([0, 0]),
+                              intToBytes(length, bigEndian),
+                          ],
+                          12,
+                      )
+                : Buffer.concat([tagToBytes(tag, bigEndian), intToBytes(length, bigEndian)], 8);
         }
     }
 
@@ -77,11 +85,14 @@ export class HeaderPart extends DicomPart {
             return this;
         } else {
             let updated = null;
-            if ((this.bytes.length >= 8) && this.explicitVR && (this.vr.headerLength === 8)) { // explicit vr
+            if (this.bytes.length >= 8 && this.explicitVR && this.vr.headerLength === 8) {
+                // explicit vr
                 updated = concat(this.bytes.slice(0, 6), shortToBytes(newLength, this.bigEndian));
-            } else if ((this.bytes.length >= 12) && this.explicitVR && (this.vr.headerLength === 12)) { // explicit vr
+            } else if (this.bytes.length >= 12 && this.explicitVR && this.vr.headerLength === 12) {
+                // explicit vr
                 updated = concat(this.bytes.slice(0, 8), intToBytes(newLength, this.bigEndian));
-            } else { // implicit vr
+            } else {
+                // implicit vr
                 updated = concat(this.bytes.slice(0, 4), intToBytes(newLength, this.bigEndian));
             }
 
@@ -90,8 +101,19 @@ export class HeaderPart extends DicomPart {
     }
 
     public toString(): string {
-        return "Header [tag = " + tagToString(this.tag) + ", vr = " + this.vr.name + ", length = " + this.length +
-            ", bigEndian = " + this.bigEndian + ", explicitVR = " + this.explicitVR + "]";
+        return (
+            'Header [tag = ' +
+            tagToString(this.tag) +
+            ', vr = ' +
+            this.vr.name +
+            ', length = ' +
+            this.length +
+            ', bigEndian = ' +
+            this.bigEndian +
+            ', explicitVR = ' +
+            this.explicitVR +
+            ']'
+        );
     }
 }
 
@@ -101,11 +123,16 @@ export class ValueChunk extends DicomPart {
     }
 
     public toString(): string {
-        let ascii = trim(this.bytes.slice(0, 100).toString("ascii").replace(/[^\x20-\x7E]/g, ""));
+        let ascii = trim(
+            this.bytes
+                .slice(0, 100)
+                .toString('ascii')
+                .replace(/[^\x20-\x7E]/g, ''),
+        );
         if (this.bytes.length > 100) {
-            ascii = ascii + "...";
+            ascii = ascii + '...';
         }
-        return "ValueChunk [length = " + this.bytes.length + ", last = " + this.last + ", ascii = " + ascii + "]";
+        return 'ValueChunk [length = ' + this.bytes.length + ', last = ' + this.last + ', ascii = ' + ascii + ']';
     }
 }
 
@@ -115,12 +142,11 @@ export class DeflatedChunk extends DicomPart {
     }
 
     public toString(): string {
-        return "DeflatedChunk [length = " + this.bytes.length + "]";
+        return 'DeflatedChunk [length = ' + this.bytes.length + ']';
     }
 }
 
 export class ItemPart extends DicomPart {
-
     public indeterminate = false;
 
     constructor(public readonly index: number, public readonly length: number, bigEndian: boolean, bytes: Buffer) {
@@ -129,7 +155,7 @@ export class ItemPart extends DicomPart {
     }
 
     public toString(): string {
-        return "Item [length = " + this.length + ", index = " + this.index + "]";
+        return 'Item [length = ' + this.length + ', index = ' + this.index + ']';
     }
 }
 
@@ -139,12 +165,11 @@ export class ItemDelimitationPart extends DicomPart {
     }
 
     public toString(): string {
-        return "ItemDelimitation [index = " + this.index + "]";
+        return 'ItemDelimitation [index = ' + this.index + ']';
     }
 }
 
 export class SequencePart extends DicomPart {
-
     public indeterminate = false;
 
     constructor(
@@ -152,13 +177,14 @@ export class SequencePart extends DicomPart {
         public readonly length: number,
         bigEndian: boolean,
         public readonly explicitVR: boolean,
-        bytes: Buffer) {
+        bytes: Buffer,
+    ) {
         super(bigEndian, bytes);
         this.indeterminate = length === indeterminateLength;
     }
 
     public toString(): string {
-        return "Sequence [tag = " + tagToString(this.tag) + ", length = " + this.length + "]";
+        return 'Sequence [tag = ' + tagToString(this.tag) + ', length = ' + this.length + ']';
     }
 }
 
@@ -168,7 +194,7 @@ export class SequenceDelimitationPart extends DicomPart {
     }
 
     public toString(): string {
-        return "SequenceDelimitation []";
+        return 'SequenceDelimitation []';
     }
 }
 
@@ -179,13 +205,15 @@ export class FragmentsPart extends DicomPart {
         public readonly vr: VR,
         bigEndian: boolean,
         public readonly explicitVR: boolean,
-        bytes: Buffer) {
+        bytes: Buffer,
+    ) {
         super(bigEndian, bytes);
     }
 
     public toString(): string {
-        return "Fragments [tag = " + tagToString(this.tag) + ", vr = " + this.vr.name + ", length = " +
-            this.length + "]";
+        return (
+            'Fragments [tag = ' + tagToString(this.tag) + ', vr = ' + this.vr.name + ', length = ' + this.length + ']'
+        );
     }
 }
 
@@ -195,7 +223,7 @@ export class UnknownPart extends DicomPart {
     }
 
     public toString(): string {
-        return "Unknown []";
+        return 'Unknown []';
     }
 }
 
