@@ -4320,5 +4320,4 @@ export const Tag: { [key: string]: number } = {
      PhilipsSUVScaleFactor: 0x70531000,
      PhilipsActivityConcentrationFactor :0x70531009,
      PhilipsCreatorDataElements: 0x70530010,
-
 };
