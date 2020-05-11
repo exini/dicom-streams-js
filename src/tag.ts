@@ -4315,4 +4315,9 @@ export const Tag: { [key: string]: number } = {
     Item: 0xFFFEE000,
     ItemDelimitationItem: 0xFFFEE00D,
     SequenceDelimitationItem: 0xFFFEE0DD,
+
+    // private tags
+     PhilipsSUVScaleFactor: 0x70531000,
+     PhilipsActivityConcentrationFactor :0x70531009,
+
 };
