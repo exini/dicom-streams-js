@@ -428,6 +428,157 @@ export class Elements {
         return this.setValue(tag, vr, Value.fromURL(vr, value), bigEndian, explicitVR);
     }
 
+    public setNestedValue(tagPath: TagPathTag, vr: VR, value: Value, bigEndian = false, explicitVR = true): Elements {
+        if (tagPath.isRoot()) {
+            return this.setValue(tagPath.tag(), vr, value, bigEndian, explicitVR);
+        } else {
+            return this.setNested(
+                tagPath.previous() as TagPathItem,
+                (this.nestedByPath(tagPath.previous() as TagPathItem) || Elements.empty()).setValue(
+                    tagPath.tag(),
+                    vr,
+                    value,
+                    bigEndian,
+                    explicitVR,
+                ),
+            );
+        }
+    }
+
+    public setNestedBytes(tagPath: TagPathTag, vr: VR, value: Buffer, bigEndian = false, explicitVR = true): Elements {
+        return this.setNestedValue(tagPath, vr, Value.fromBuffer(vr, value), bigEndian, explicitVR);
+    }
+
+    public setNestedStrings(
+        tagPath: TagPathTag,
+        values: string[],
+        vr: VR = Lookup.vrOf(tagPath.tag()),
+        bigEndian = false,
+        explicitVR = true,
+    ): Elements {
+        return this.setNestedValue(tagPath, vr, Value.fromStrings(vr, values, bigEndian), bigEndian, explicitVR);
+    }
+
+    public setNestedString(
+        tagPath: TagPathTag,
+        value: string,
+        vr: VR = Lookup.vrOf(tagPath.tag()),
+        bigEndian = false,
+        explicitVR = true,
+    ): Elements {
+        return this.setNestedValue(tagPath, vr, Value.fromString(vr, value, bigEndian), bigEndian, explicitVR);
+    }
+
+    public setNestedNumbers(
+        tagPath: TagPathTag,
+        values: number[],
+        vr: VR = Lookup.vrOf(tagPath.tag()),
+        bigEndian = false,
+        explicitVR = true,
+    ): Elements {
+        return this.setNestedValue(tagPath, vr, Value.fromNumbers(vr, values, bigEndian), bigEndian, explicitVR);
+    }
+
+    public setNestedNumber(
+        tagPath: TagPathTag,
+        value: number,
+        vr: VR = Lookup.vrOf(tagPath.tag()),
+        bigEndian = false,
+        explicitVR = true,
+    ): Elements {
+        return this.setNestedValue(tagPath, vr, Value.fromNumber(vr, value, bigEndian), bigEndian, explicitVR);
+    }
+
+    public setNestedDates(
+        tagPath: TagPathTag,
+        values: LocalDate[],
+        vr: VR = Lookup.vrOf(tagPath.tag()),
+        bigEndian = false,
+        explicitVR = true,
+    ): Elements {
+        return this.setNestedValue(tagPath, vr, Value.fromDates(vr, values), bigEndian, explicitVR);
+    }
+
+    public setNestedDate(
+        tagPath: TagPathTag,
+        value: LocalDate,
+        vr: VR = Lookup.vrOf(tagPath.tag()),
+        bigEndian = false,
+        explicitVR = true,
+    ): Elements {
+        return this.setNestedValue(tagPath, vr, Value.fromDate(vr, value), bigEndian, explicitVR);
+    }
+
+    public setNestedTimes(
+        tagPath: TagPathTag,
+        values: LocalTime[],
+        vr: VR = Lookup.vrOf(tagPath.tag()),
+        bigEndian = false,
+        explicitVR = true,
+    ): Elements {
+        return this.setNestedValue(tagPath, vr, Value.fromTimes(vr, values), bigEndian, explicitVR);
+    }
+
+    public setNestedTime(
+        tagPath: TagPathTag,
+        value: LocalTime,
+        vr: VR = Lookup.vrOf(tagPath.tag()),
+        bigEndian = false,
+        explicitVR = true,
+    ): Elements {
+        return this.setNestedValue(tagPath, vr, Value.fromTime(vr, value), bigEndian, explicitVR);
+    }
+
+    public setNestedDateTimes(
+        tagPath: TagPathTag,
+        values: ZonedDateTime[],
+        vr: VR = Lookup.vrOf(tagPath.tag()),
+        bigEndian = false,
+        explicitVR = true,
+    ): Elements {
+        return this.setNestedValue(tagPath, vr, Value.fromDateTimes(vr, values), bigEndian, explicitVR);
+    }
+
+    public setNestedDateTime(
+        tagPath: TagPathTag,
+        value: ZonedDateTime,
+        vr: VR = Lookup.vrOf(tagPath.tag()),
+        bigEndian = false,
+        explicitVR = true,
+    ): Elements {
+        return this.setNestedValue(tagPath, vr, Value.fromDateTime(vr, value), bigEndian, explicitVR);
+    }
+
+    public setNestedPersonNames(
+        tagPath: TagPathTag,
+        values: PersonName[],
+        vr: VR = Lookup.vrOf(tagPath.tag()),
+        bigEndian = false,
+        explicitVR = true,
+    ): Elements {
+        return this.setNestedValue(tagPath, vr, Value.fromPersonNames(vr, values), bigEndian, explicitVR);
+    }
+
+    public setNestedPersonName(
+        tagPath: TagPathTag,
+        value: PersonName,
+        vr: VR = Lookup.vrOf(tagPath.tag()),
+        bigEndian = false,
+        explicitVR = true,
+    ): Elements {
+        return this.setNestedValue(tagPath, vr, Value.fromPersonName(vr, value), bigEndian, explicitVR);
+    }
+
+    public setNestedURL(
+        tagPath: TagPathTag,
+        value: URL,
+        vr: VR = Lookup.vrOf(tagPath.tag()),
+        bigEndian = false,
+        explicitVR = true,
+    ): Elements {
+        return this.setNestedValue(tagPath, vr, Value.fromURL(vr, value), bigEndian, explicitVR);
+    }
+
     public removeByTag(tag: number): Elements {
         return this.filter((elementSet) => elementSet.tag !== tag);
     }

@@ -324,9 +324,33 @@ describe('Elements', () => {
         assert.deepStrictEqual(updated.dateByTag(Tag.SeriesDate), LocalDate.parse('2010-01-01'));
     });
 
+    it('should set nested value in the root dataset', () => {
+        const tagPath = TagPath.fromTag(Tag.SeriesDate);
+        const updated = elements.setNestedValue(tagPath, VR.DA, Value.fromString(VR.DA, '20100101'));
+        assert.deepStrictEqual(updated.dateByPath(tagPath), LocalDate.parse('2010-01-01'));
+    });
+
+    it('should set deeply nested value', () => {
+        const tagPath = TagPath.fromItem(Tag.DerivationCodeSequence, 1).thenTag(Tag.SeriesDate);
+        const updated = elements.setNestedValue(tagPath, VR.DA, Value.fromString(VR.DA, '20100101'));
+        assert.deepStrictEqual(updated.dateByPath(tagPath), LocalDate.parse('2010-01-01'));
+    });
+
+    it('should not set deeply nested value when sequence or item is missing', () => {
+        const tagPath = TagPath.fromItem(Tag.RadiopharmaceuticalInformationSequence, 1).thenTag(Tag.SeriesDate);
+        const updated = elements.setNestedValue(tagPath, VR.DA, Value.fromString(VR.DA, '20100101'));
+        assert.deepStrictEqual(updated, elements);
+    });
+
     it('should set bytes', () => {
         const updated = elements.setBytes(Tag.SeriesDate, VR.DA, new Buffer('20100101'));
         assert.deepStrictEqual(updated.dateByTag(Tag.SeriesDate), LocalDate.parse('2010-01-01'));
+    });
+
+    it('should set nested bytes', () => {
+        const tagPath = TagPath.fromItem(Tag.DerivationCodeSequence, 1).thenTag(Tag.SeriesDate);
+        const updated = elements.setNestedBytes(tagPath, VR.DA, new Buffer('20100101'));
+        assert.deepStrictEqual(updated.dateByPath(tagPath), LocalDate.parse('2010-01-01'));
     });
 
     it('should set strings', () => {
@@ -341,6 +365,13 @@ describe('Elements', () => {
         );
     });
 
+    it('should set nested strings', () => {
+        const tagPath = TagPath.fromItem(Tag.DerivationCodeSequence, 1).thenTag(Tag.ReferringPhysicianName);
+        const names = ['Smith^Dr', 'Jones^Dr'];
+        assert.deepStrictEqual(elements.setNestedStrings(tagPath, names).stringsByPath(tagPath), names);
+        assert.deepStrictEqual(elements.setNestedString(tagPath, names[0]).stringsByPath(tagPath), [names[0]]);
+    });
+
     it('should set numbers', () => {
         assert.deepStrictEqual(
             elements.setNumbers(Tag.ReferencedFrameNumber, [1, 2, 3]).numbersByTag(Tag.ReferencedFrameNumber),
@@ -352,10 +383,23 @@ describe('Elements', () => {
         );
     });
 
+    it('should set nested numbers', () => {
+        const tagPath = TagPath.fromItem(Tag.DerivationCodeSequence, 1).thenTag(Tag.ReferencedFrameNumber);
+        assert.deepStrictEqual(elements.setNestedNumbers(tagPath, [1, 2, 3]).numbersByPath(tagPath), [1, 2, 3]);
+        assert.deepStrictEqual(elements.setNestedNumber(tagPath, 42).numbersByPath(tagPath), [42]);
+    });
+
     it('should set dates', () => {
         const dates = [LocalDate.parse('2005-01-01'), LocalDate.parse('2010-01-01')];
         assert.deepStrictEqual(elements.setDates(Tag.StudyDate, dates).datesByTag(Tag.StudyDate), dates);
         assert.deepStrictEqual(elements.setDate(Tag.StudyDate, dates[0]).datesByTag(Tag.StudyDate), [dates[0]]);
+    });
+
+    it('should set nested dates', () => {
+        const tagPath = TagPath.fromItem(Tag.DerivationCodeSequence, 1).thenTag(Tag.StudyDate);
+        const dates = [LocalDate.parse('2005-01-01'), LocalDate.parse('2010-01-01')];
+        assert.deepStrictEqual(elements.setNestedDates(tagPath, dates).datesByPath(tagPath), dates);
+        assert.deepStrictEqual(elements.setNestedDate(tagPath, dates[0]).datesByPath(tagPath), [dates[0]]);
     });
 
     it('should set times', () => {
@@ -364,6 +408,13 @@ describe('Elements', () => {
         assert.deepStrictEqual(elements.setTime(Tag.AcquisitionTime, times[0]).timesByTag(Tag.AcquisitionTime), [
             times[0],
         ]);
+    });
+
+    it('should set nested times', () => {
+        const tagPath = TagPath.fromItem(Tag.DerivationCodeSequence, 1).thenTag(Tag.AcquisitionTime);
+        const times = [LocalTime.parse('23:30:10'), LocalTime.parse('12:00:00')];
+        assert.deepStrictEqual(elements.setNestedTimes(tagPath, times).timesByPath(tagPath), times);
+        assert.deepStrictEqual(elements.setNestedTime(tagPath, times[0]).timesByPath(tagPath), [times[0]]);
     });
 
     it('should set date times', () => {
@@ -382,6 +433,17 @@ describe('Elements', () => {
         );
     });
 
+    it('should set nested date times', () => {
+        const tagPath = TagPath.fromItem(Tag.DerivationCodeSequence, 1).thenTag(Tag.InstanceCoercionDateTime);
+        const dateTimes = [LocalDate.parse('2005-01-01'), LocalDate.parse('2010-01-01')].map((d) =>
+            d.atStartOfDay(ZoneOffset.of('+04:00')),
+        );
+        assert.deepStrictEqual(elements.setNestedDateTimes(tagPath, dateTimes).dateTimesByPath(tagPath), dateTimes);
+        assert.deepStrictEqual(elements.setNestedDateTime(tagPath, dateTimes[0]).dateTimesByPath(tagPath), [
+            dateTimes[0],
+        ]);
+    });
+
     it('should set patient names', () => {
         const names = ['Doe^John', 'Doe^Jane'];
         const personNames = flatten(names.map(PersonName.parse));
@@ -395,9 +457,28 @@ describe('Elements', () => {
         );
     });
 
+    it('should set nested patient names', () => {
+        const tagPath = TagPath.fromItem(Tag.DerivationCodeSequence, 1).thenTag(Tag.PatientName);
+        const names = ['Doe^John', 'Doe^Jane'];
+        const personNames = flatten(names.map(PersonName.parse));
+        assert.deepStrictEqual(
+            elements.setNestedPersonNames(tagPath, personNames).personNamesByPath(tagPath),
+            personNames,
+        );
+        assert.deepStrictEqual(elements.setNestedPersonName(tagPath, personNames[0]).personNamesByPath(tagPath), [
+            personNames[0],
+        ]);
+    });
+
     it('should set URL', () => {
         const url = new URL('https://example.com:8080/path?q1=45');
         assert.deepStrictEqual(elements.setURL(Tag.StorageURL, url).urlByTag(Tag.StorageURL), url);
+    });
+
+    it('should set nested URL', () => {
+        const tagPath = TagPath.fromItem(Tag.DerivationCodeSequence, 1).thenTag(Tag.StorageURL);
+        const url = new URL('https://example.com:8080/path?q1=45');
+        assert.deepStrictEqual(elements.setNestedURL(tagPath, url).urlByPath(tagPath), url);
     });
 
     it('should update character sets', () => {
