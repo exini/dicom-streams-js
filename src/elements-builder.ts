@@ -3,7 +3,6 @@ import { defaultCharacterSet, systemZone } from './base';
 import { CharacterSets } from './character-sets';
 import {
     Element,
-    Elements,
     ElementSet,
     Fragment,
     FragmentElement,
@@ -12,14 +11,14 @@ import {
     Item,
     ItemDelimitationElement,
     ItemElement,
-    parseZoneOffset,
     Sequence,
     SequenceDelimitationElement,
     SequenceElement,
     ValueElement,
-} from './elements';
+} from './dicom-elements';
 import { Tag } from './tag';
 import { VR } from './vr';
+import { Elements, parseZoneOffset } from './elements';
 
 class DatasetBuilder {
     private data = new Array<ElementSet>(64);

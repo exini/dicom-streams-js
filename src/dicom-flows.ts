@@ -42,7 +42,7 @@ import {
     SequenceDelimitationPart,
     SequencePart,
     ValueChunk,
-} from './parts';
+} from './dicom-parts';
 import { Tag } from './tag';
 import { TagPath } from './tag-path';
 import { emptyTagPath } from './tag-path';

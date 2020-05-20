@@ -21,7 +21,7 @@ import {
     ItemElement,
     ItemDelimitationElement,
     SequenceDelimitationElement,
-} from './elements';
+} from './dicom-elements';
 import {
     DicomPart,
     ElementsPart,
@@ -32,7 +32,7 @@ import {
     FragmentsPart,
     ItemDelimitationPart,
     SequenceDelimitationPart,
-} from './parts';
+} from './dicom-parts';
 import { TagPath } from './tag-path';
 import { Value } from './value';
 import { ElementsBuilder } from './elements-builder';

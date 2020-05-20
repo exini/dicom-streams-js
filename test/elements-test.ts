@@ -14,7 +14,6 @@ import {
     flatten,
 } from '../src/base';
 import {
-    Elements,
     ElementSet,
     Fragment,
     FragmentElement,
@@ -28,8 +27,8 @@ import {
     SequenceDelimitationElement,
     SequenceElement,
     ValueElement,
-} from '../src/elements';
-import { HeaderPart } from '../src/parts';
+} from '../src/dicom-elements';
+import { HeaderPart } from '../src/dicom-parts';
 import { Tag } from '../src/tag';
 import { TagPath, emptyTagPath } from '../src/tag-path';
 import { Value } from '../src/value';
@@ -37,6 +36,7 @@ import { VR } from '../src/vr';
 import * as data from './test-data';
 import { CharacterSets } from '../src/character-sets';
 import { PersonName } from '../src/person-name';
+import { Elements } from '../src/elements';
 
 function create(...elems: ElementSet[]): Elements {
     return elems.reduce((e, s) => e.setElementSet(s), Elements.empty());

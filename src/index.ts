@@ -7,7 +7,7 @@ export * from './lookup';
 export * from './tag-path';
 export * from './tag-tree';
 export * from './person-name';
-export * from './parts';
+export * from './dicom-parts';
 export { CharacterSets } from './character-sets';
 export * from './sources';
 export * from './flows';

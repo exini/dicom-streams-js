@@ -14,7 +14,7 @@ import {
     SequencePart,
     UnknownPart,
     ValueChunk,
-} from './parts';
+} from './dicom-parts';
 import { Tag } from './tag';
 import { emptyTagPath, TagPath, TagPathItem } from './tag-path';
 

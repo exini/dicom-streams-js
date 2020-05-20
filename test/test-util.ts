@@ -13,7 +13,7 @@ import {
     SequenceDelimitationElement,
     SequenceElement,
     ValueElement,
-} from '../src/elements';
+} from '../src/dicom-elements';
 import {
     DeflatedChunk,
     DicomPart,
@@ -28,7 +28,7 @@ import {
     SequencePart,
     UnknownPart,
     ValueChunk,
-} from '../src/parts';
+} from '../src/dicom-parts';
 import { arraySink } from '../src/sinks';
 import { singleSource } from '../src/sources';
 

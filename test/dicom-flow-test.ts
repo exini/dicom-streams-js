@@ -17,7 +17,13 @@ import {
 } from '../src/dicom-flow';
 import { toIndeterminateLengthSequences } from '../src/dicom-flows';
 import { parseFlow } from '../src/parse-flow';
-import { DicomPart, ItemDelimitationPart, SequenceDelimitationPart, SequencePart, ValueChunk } from '../src/parts';
+import {
+    DicomPart,
+    ItemDelimitationPart,
+    SequenceDelimitationPart,
+    SequencePart,
+    ValueChunk,
+} from '../src/dicom-parts';
 import { arraySink } from '../src/sinks';
 import { singleSource } from '../src/sources';
 import { Tag } from '../src/tag';

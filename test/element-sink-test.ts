@@ -10,7 +10,7 @@ import {
     SequenceDelimitationElement,
     SequenceElement,
     ValueElement,
-} from '../src/elements';
+} from '../src/dicom-elements';
 import { parseFlow } from '../src/parse-flow';
 import { arraySource, singleSource } from '../src/sources';
 import { Tag } from '../src/tag';

@@ -34,7 +34,7 @@ import {
 import { prependFlow } from '../src/flows';
 import { modifyFlow, TagModification } from '../src/modify-flow';
 import { parseFlow } from '../src/parse-flow';
-import { MetaPart } from '../src/parts';
+import { MetaPart } from '../src/dicom-parts';
 import { Tag } from '../src/tag';
 import { TagPath } from '../src/tag-path';
 import { TagTree } from '../src/tag-tree';

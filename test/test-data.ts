@@ -10,7 +10,7 @@ import {
     tagToBytes,
 } from '../src/base';
 import { Lookup } from '../src/lookup';
-import { HeaderPart } from '../src/parts';
+import { HeaderPart } from '../src/dicom-parts';
 import { Tag } from '../src/tag';
 import { UID } from '../src/uid';
 

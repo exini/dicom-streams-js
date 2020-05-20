@@ -10,7 +10,7 @@ import {
     TagPathTracking,
 } from './dicom-flow';
 import { Lookup } from './lookup';
-import { DicomPart, HeaderPart, MetaPart, SequencePart, ValueChunk } from './parts';
+import { DicomPart, HeaderPart, MetaPart, SequencePart, ValueChunk } from './dicom-parts';
 import { emptyTagPath, TagPath } from './tag-path';
 import { VR } from './vr';
 

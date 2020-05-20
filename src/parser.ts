@@ -3,7 +3,6 @@ import { bytesToInt, bytesToUShortBE, groupNumber, indeterminateLength, isDeflat
 import { ByteParser, ByteReader, finishedParser, ParseResult, ParseStep } from './byte-parser';
 import {
     Element,
-    Elements,
     FragmentElement,
     FragmentsElement,
     ItemDelimitationElement,
@@ -12,7 +11,7 @@ import {
     SequenceElement,
     UnknownElement,
     ValueElement,
-} from './elements';
+} from './dicom-elements';
 import { ElementsBuilder } from './elements-builder';
 import { Lookup } from './lookup';
 import { AttributeInfo, dicomPreambleLength, isPreamble, readHeader, tryReadHeader } from './parsing';
@@ -20,6 +19,7 @@ import { Tag } from './tag';
 import { UID } from './uid';
 import { Value } from './value';
 import { VR } from './vr';
+import { Elements } from './elements';
 
 class Inflater {
     public inflate(bytes: Buffer): Buffer {

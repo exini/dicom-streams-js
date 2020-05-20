@@ -10,7 +10,7 @@ import {
     SequenceDelimitationElement,
     SequenceElement,
     ValueElement,
-} from './elements';
+} from './dicom-elements';
 import {
     DicomPart,
     FragmentsPart,
@@ -21,7 +21,7 @@ import {
     SequenceDelimitationPart,
     SequencePart,
     ValueChunk,
-} from './parts';
+} from './dicom-parts';
 import { Value } from './value';
 
 export function elementFlow(): any {
