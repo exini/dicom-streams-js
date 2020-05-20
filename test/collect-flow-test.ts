@@ -1,17 +1,16 @@
 import assert from 'assert';
-import { ElementsPart } from '../src';
-import { concat, concatv, emptyBuffer, pipe } from '../src/base';
+import { ElementsPart, TagTree } from '../src';
+import { concat, concatv, emptyBuffer, pipe, item, itemDelimitation, sequenceDelimitation } from '../src/base';
 import { collectFlow, collectFromTagPathsFlow } from '../src/collect-flow';
 import { parseFlow } from '../src/parse-flow';
 import { Tag } from '../src/tag';
-import { TagPath } from '../src/tag-path';
 import * as data from './test-data';
 import * as util from './test-util';
 
 describe('A collect elements flow', () => {
     it('should first produce an elements part followed by the input dicom parts', () => {
         const bytes = concat(data.studyDate(), data.patientNameJohnDoe());
-        const tags = [Tag.StudyDate, Tag.PatientName].map(TagPath.fromTag);
+        const tags = [Tag.StudyDate, Tag.PatientName].map(TagTree.fromTag);
         return util.testParts(bytes, pipe(parseFlow(), collectFromTagPathsFlow(tags, 'tag')), (parts) => {
             const e = parts.shift() as ElementsPart;
             assert.strictEqual(e.label, 'tag');
@@ -46,7 +45,7 @@ describe('A collect elements flow', () => {
             bytes,
             pipe(
                 parseFlow(),
-                collectFromTagPathsFlow([Tag.Modality, Tag.SeriesInstanceUID].map(TagPath.fromTag), 'tag'),
+                collectFromTagPathsFlow([Tag.Modality, Tag.SeriesInstanceUID].map(TagTree.fromTag), 'tag'),
             ),
             (parts) => {
                 const e = parts.shift() as ElementsPart;
@@ -67,7 +66,7 @@ describe('A collect elements flow', () => {
 
         return util.testParts(
             bytes,
-            pipe(parseFlow(500), collectFromTagPathsFlow([Tag.StudyDate, Tag.PatientName].map(TagPath.fromTag), 'tag')),
+            pipe(parseFlow(500), collectFromTagPathsFlow([Tag.StudyDate, Tag.PatientName].map(TagTree.fromTag), 'tag')),
             (parts) => {
                 const e = parts.shift() as ElementsPart;
                 assert.strictEqual(e.label, 'tag');
@@ -109,6 +108,67 @@ describe('A collect elements flow', () => {
                     // do nothing
                 },
             ),
+        );
+    });
+
+    it('should collect attributes in sequences', () => {
+        const bytes = concatv(
+            data.studyDate(),
+            data.sequence(Tag.DerivationCodeSequence, 8 + 16 + 12 + 8 + 16 + 8 + 8 + 16),
+            item(16 + 12 + 8 + 16 + 8 + 8 + 16),
+            data.studyDate(),
+            data.sequence(Tag.DerivationCodeSequence),
+            item(),
+            data.studyDate(),
+            itemDelimitation(),
+            sequenceDelimitation(),
+            data.patientNameJohnDoe(),
+            data.patientID(),
+        );
+
+        util.testParts(
+            bytes,
+            pipe(
+                parseFlow(500),
+                collectFromTagPathsFlow(
+                    [TagTree.fromTag(Tag.PatientID), TagTree.fromItem(Tag.DerivationCodeSequence, 1)],
+                    'tag',
+                ),
+            ),
+            (parts) => {
+                const e = parts.shift() as ElementsPart;
+                assert.strictEqual(e.label, 'tag');
+                assert.strictEqual(e.elements.size, 2);
+                assert(e.elements.elementByTag(Tag.PatientID) !== undefined);
+                assert(e.elements.elementByTag(Tag.DerivationCodeSequence) !== undefined);
+                assert.strictEqual(e.elements.sequenceByTag(Tag.DerivationCodeSequence).item(1).elements.size, 3);
+            },
+        );
+    });
+
+    it('should collect fragments', () => {
+        const bytes = concatv(
+            data.studyDate(),
+            data.pixeDataFragments(),
+            item(4),
+            new Buffer([1, 2, 3, 4]),
+            item(4),
+            new Buffer([5, 6, 7, 8]),
+            sequenceDelimitation(),
+        );
+
+        util.testParts(
+            bytes,
+            pipe(parseFlow(500), collectFromTagPathsFlow([TagTree.fromTag(Tag.PixelData)], 'tag')),
+            (parts) => {
+                const e = parts.shift() as ElementsPart;
+                assert.strictEqual(e.label, 'tag');
+                assert.strictEqual(e.elements.size, 1);
+                const f = e.elements.fragmentsByTag(Tag.PixelData);
+                assert(f !== undefined);
+                assert.strictEqual(f.offsets.length, 1);
+                assert.strictEqual(f.fragments.length, 1);
+            },
         );
     });
 });

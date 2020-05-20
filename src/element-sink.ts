@@ -16,7 +16,7 @@ export function elementSink(callback: (e: Elements) => void): Writable {
         },
     });
     sink.once('finish', () => {
-        callback(builder.result());
+        callback(builder.build());
     });
     return sink;
 }

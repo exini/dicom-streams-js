@@ -181,9 +181,9 @@ export function validateContextFlow(contexts: ValidationContext[]): any {
     return pipe(
         collectFromTagPathsFlow(
             [
-                TagPath.fromTag(Tag.MediaStorageSOPClassUID),
-                TagPath.fromTag(Tag.TransferSyntaxUID),
-                TagPath.fromTag(Tag.SOPClassUID),
+                TagTree.fromTag(Tag.MediaStorageSOPClassUID),
+                TagTree.fromTag(Tag.TransferSyntaxUID),
+                TagTree.fromTag(Tag.SOPClassUID),
             ],
             'validatecontext',
         ),
@@ -334,7 +334,7 @@ export function toIndeterminateLengthSequences(): any {
 
 export function toUtf8Flow(): any {
     return pipe(
-        collectFromTagPathsFlow([TagPath.fromTag(Tag.SpecificCharacterSet)], 'toutf8'),
+        collectFromTagPathsFlow([TagTree.fromTag(Tag.SpecificCharacterSet)], 'toutf8'),
         modifyFlow([], [new TagInsertion(TagPath.fromTag(Tag.SpecificCharacterSet), () => Buffer.from('ISO_IR 192'))]),
         createFlow(
             new (class extends IdentityFlow {

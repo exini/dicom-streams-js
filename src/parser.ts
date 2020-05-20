@@ -341,7 +341,7 @@ export class Parser {
      * Get the current elements as represented by the builder
      */
     public result(): Elements {
-        return this.builder.result();
+        return this.builder.build();
     }
 
     /**

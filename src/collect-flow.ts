@@ -1,6 +1,5 @@
 import { Transform } from 'stream';
-import { concat, prependToArray } from './base';
-import { CharacterSets } from './character-sets';
+import { concat, prependToArray, emptyBuffer } from './base';
 import {
     createFlow,
     DeferToPartFlow,
@@ -13,11 +12,31 @@ import {
     TagPathTracking,
     valueChunkMarker,
 } from './dicom-flow';
-import { Elements, ValueElement } from './elements';
-import { DicomPart, ElementsPart, HeaderPart, ValueChunk } from './parts';
-import { Tag } from './tag';
+import {
+    Element,
+    ValueElement,
+    FragmentElement,
+    SequenceElement,
+    FragmentsElement,
+    ItemElement,
+    ItemDelimitationElement,
+    SequenceDelimitationElement,
+} from './elements';
+import {
+    DicomPart,
+    ElementsPart,
+    HeaderPart,
+    ValueChunk,
+    ItemPart,
+    SequencePart,
+    FragmentsPart,
+    ItemDelimitationPart,
+    SequenceDelimitationPart,
+} from './parts';
 import { TagPath } from './tag-path';
 import { Value } from './value';
+import { ElementsBuilder } from './elements-builder';
+import { TagTree } from './tag-tree';
 
 export function collectFlow(
     tagCondition: (t: TagPath) => boolean,
@@ -29,18 +48,37 @@ export function collectFlow(
         new (class extends EndEvent(
             TagPathTracking(GuaranteedDelimitationEvents(GuaranteedValueEvent(InFragments(DeferToPartFlow)))),
         ) {
-            private reachedEnd = false;
-            private currentBufferSize = 0;
-            private currentElement: ValueElement = undefined;
             private buffer: DicomPart[] = [];
-            private elements = Elements.empty();
+            private currentBufferSize = 0;
+            private hasEmitted = false;
+            private bytes: Buffer = emptyBuffer;
+            private currentValue: ValueElement = undefined;
+            private currentFragment: FragmentElement = undefined;
+
+            private builder = new ElementsBuilder();
+
+            private elementsAndBuffer(): DicomPart[] {
+                const parts = prependToArray(new ElementsPart(label, this.builder.build()), this.buffer);
+
+                this.hasEmitted = true;
+                this.buffer = [];
+                this.currentBufferSize = 0;
+
+                return parts;
+            }
+
+            private maybeAdd(element: Element): ElementsBuilder {
+                return tagCondition(this.tagPath)
+                    ? this.builder.addElement(element)
+                    : this.builder.noteElement(element);
+            }
 
             public onEnd(): DicomPart[] {
-                return this.reachedEnd ? [] : this.elementsAndBuffer();
+                return this.hasEmitted ? [] : this.elementsAndBuffer();
             }
 
             public onPart(part: DicomPart): DicomPart[] {
-                if (this.reachedEnd) {
+                if (this.hasEmitted) {
                     return [part];
                 } else {
                     if (maxBufferSize > 0 && this.currentBufferSize > maxBufferSize) {
@@ -60,76 +98,98 @@ export function collectFlow(
                         return this.elementsAndBuffer();
                     }
 
-                    if (
-                        part instanceof HeaderPart &&
-                        (tagCondition(this.tagPath) || part.tag === Tag.SpecificCharacterSet)
-                    ) {
-                        this.currentElement = new ValueElement(
+                    if (part instanceof HeaderPart) {
+                        this.currentValue = new ValueElement(
                             part.tag,
                             part.vr,
                             Value.empty(),
                             part.bigEndian,
                             part.explicitVR,
                         );
+                        this.bytes = emptyBuffer;
                         return [];
                     }
 
-                    if (part instanceof HeaderPart) {
-                        this.currentElement = undefined;
+                    if (part instanceof ItemPart && this.inFragments) {
+                        this.currentFragment = new FragmentElement(
+                            part.index,
+                            part.length,
+                            Value.empty(),
+                            part.bigEndian,
+                        );
+                        this.bytes = emptyBuffer;
                         return [];
                     }
 
                     if (part instanceof ValueChunk) {
-                        if (this.currentElement !== undefined) {
-                            const element = this.currentElement;
-                            const updatedElement = new ValueElement(
-                                element.tag,
-                                element.vr,
-                                Value.fromBuffer(element.vr, concat(element.value.bytes, part.bytes)),
-                                element.bigEndian,
-                                element.explicitVR,
-                            );
-                            this.currentElement = updatedElement;
-                            if (part.last) {
-                                if (updatedElement.tag === Tag.SpecificCharacterSet) {
-                                    this.elements = this.elements.setCharacterSets(
-                                        CharacterSets.fromBytes(updatedElement.value.bytes),
-                                    );
-                                }
-                                if (tagCondition(this.tagPath)) {
-                                    this.elements = this.elements.setElementSet(updatedElement);
-                                }
-                                this.currentElement = undefined;
+                        this.bytes = concat(this.bytes, part.bytes);
+                        if (part.last) {
+                            if (this.inFragments && this.currentFragment) {
+                                this.maybeAdd(
+                                    new FragmentElement(
+                                        this.currentFragment.index,
+                                        this.currentFragment.length,
+                                        new Value(this.bytes),
+                                        this.currentFragment.bigEndian,
+                                    ),
+                                );
+                            } else if (this.currentValue) {
+                                this.maybeAdd(
+                                    new ValueElement(
+                                        this.currentValue.tag,
+                                        this.currentValue.vr,
+                                        new Value(this.bytes),
+                                        this.currentValue.bigEndian,
+                                        this.currentValue.explicitVR,
+                                    ),
+                                );
                             }
+                            this.currentFragment = undefined;
+                            this.currentValue = undefined;
                         }
 
                         return [];
                     }
 
+                    if (part instanceof SequencePart) {
+                        this.maybeAdd(new SequenceElement(part.tag, part.length, part.bigEndian, part.explicitVR));
+                        return [];
+                    }
+                    if (part instanceof FragmentsPart) {
+                        this.maybeAdd(new FragmentsElement(part.tag, part.vr, part.bigEndian, part.explicitVR));
+                        return [];
+                    }
+                    if (part instanceof ItemPart) {
+                        this.maybeAdd(new ItemElement(part.index, part.length, part.bigEndian));
+                        return [];
+                    }
+                    if (part instanceof ItemDelimitationPartMarker) {
+                        return [];
+                    }
+                    if (part instanceof ItemDelimitationPart) {
+                        this.maybeAdd(new ItemDelimitationElement(part.index, part.bigEndian));
+                        return [];
+                    }
+                    if (part === sequenceDelimitationPartMarker) {
+                        return [];
+                    }
+                    if (part instanceof SequenceDelimitationPart) {
+                        this.maybeAdd(new SequenceDelimitationElement(part.bigEndian));
+                        return [];
+                    }
                     return [];
                 }
-            }
-
-            private elementsAndBuffer(): DicomPart[] {
-                const parts = prependToArray(new ElementsPart(label, this.elements), this.buffer);
-
-                this.reachedEnd = true;
-                this.buffer = [];
-                this.currentBufferSize = 0;
-
-                return parts;
             }
         })(),
     );
 }
 
-export function collectFromTagPathsFlow(tagPaths: TagPath[], label: string, maxBufferSize?: number): Transform {
-    const maxTag = tagPaths.length > 0 ? Math.max(...tagPaths.map((t) => t.head().tag())) : 0;
-    const tagCondition = (tagPath: TagPath): boolean => tagPaths.some((tp) => tagPath.startsWith(tp));
-    const stopCondition =
-        tagPaths.length > 0
-            ? (tagPath: TagPath): boolean => tagPath.isRoot() && tagPath.tag() > maxTag
-            : (): boolean => true;
+export function collectFromTagPathsFlow(whitelist: TagTree[], label: string, maxBufferSize?: number): Transform {
+    const maxTag = whitelist.length > 0 ? Math.max(...whitelist.map((t) => t.head().tag())) : 0;
+    const tagCondition = (currentPath: TagPath): boolean =>
+        whitelist.find((t) => t.hasTrunk(currentPath) || t.isTrunkOf(currentPath)) !== undefined;
+    const stopCondition = (tagPath: TagPath): boolean =>
+        whitelist.length === 0 || (tagPath.isRoot() && tagPath.tag() > maxTag);
 
     return collectFlow(tagCondition, stopCondition, label, maxBufferSize);
 }
