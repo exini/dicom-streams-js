@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { convertBytes } from 'dicom-character-set/dist/dicom-character-set-no-polyfill';
+import { convertBytes } from 'dicom-character-set';
 import { VR } from './vr';
 
 export class CharacterSets {
