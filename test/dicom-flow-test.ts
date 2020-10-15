@@ -539,7 +539,7 @@ describe('The InSequence support', () => {
                 InSequence(GuaranteedDelimitationEvents(InFragments(DeferToPartFlow))),
             ) {
                 public onPart(part: DicomPart): DicomPart[] {
-                    check(this.sequenceDepth, this.inSequence);
+                    check(this.sequenceDepth(), this.inSequence());
                     return [part];
                 }
             })(),

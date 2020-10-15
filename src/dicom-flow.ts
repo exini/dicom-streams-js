@@ -321,17 +321,20 @@ export const GuaranteedDelimitationEvents = (Super: any): any =>
  */
 export const InSequence = (Super: any): any =>
     class extends Super {
-        public sequenceDepth = 0;
-        public inSequence = false;
+        public sequenceStack: SequencePart[] = [];
 
+        public sequenceDepth() {
+            return this.sequenceStack.length;
+        }
+        public inSequence() {
+            return this.sequenceStack.length > 0;
+        }
         public onSequence(part: SequencePart): DicomPart[] {
-            this.sequenceDepth += 1;
-            this.inSequence = this.sequenceDepth > 0;
+            this.sequenceStack.unshift(part);
             return super.onSequence(part);
         }
         public onSequenceDelimitation(part: SequenceDelimitationPart): DicomPart[] {
-            this.sequenceDepth -= 1;
-            this.inSequence = this.sequenceDepth > 0;
+            this.sequenceStack.shift();
             return super.onSequenceDelimitation(part);
         }
     };

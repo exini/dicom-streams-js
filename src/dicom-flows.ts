@@ -68,7 +68,7 @@ export function stopTagFlow(tag: number): any {
             new (class extends InSequence(GuaranteedDelimitationEvents(InFragments(IdentityFlow))) {
                 public onHeader(part: HeaderPart): DicomPart[] {
                     const out = super.onHeader(part);
-                    return this.inSequence || part.tag < tag ? out : [dicomEndMarker];
+                    return this.inSequence() || part.tag < tag ? out : [dicomEndMarker];
                 }
             })(),
         ),
