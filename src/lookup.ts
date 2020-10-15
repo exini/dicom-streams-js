@@ -24,7 +24,8 @@ export class Lookup {
         } else if ((tag & 0xff000000) === 0x7f000000 && (tag & 0xffff0000) !== 0x7fe00000) {
             tag2 = tag & 0xff00ffff;
         }
-        return Object.keys(Tag).find((key) => Tag[key] === tag2);
+        const keyword = Lookup.keywords.find((key) => Tag[key] === tag2);
+        return keyword == undefined ? '' : keyword;
     }
 
     public static vrOf(tag: number): VR {
