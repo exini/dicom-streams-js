@@ -337,7 +337,7 @@ export function toUtf8Flow(): any {
         collectFromTagPathsFlow([TagTree.fromTag(Tag.SpecificCharacterSet)], 'toutf8'),
         modifyFlow([], [new TagInsertion(TagPath.fromTag(Tag.SpecificCharacterSet), () => Buffer.from('ISO_IR 192'))]),
         createFlow(
-            new (class extends IdentityFlow {
+            new (class extends GroupLengthWarnings(IdentityFlow) {
                 private characterSets: CharacterSets = defaultCharacterSet;
                 private currentHeader: HeaderPart;
                 private currentValue: Buffer = emptyBuffer;
