@@ -126,7 +126,7 @@ export class ElementsBuilder {
         if (element instanceof ItemDelimitationElement && this.hasSequence()) {
             this.subtractLength(8);
             if (!this.itemIsIndeterminate() && this.lengthStack.length > 0) {
-                this.lengthStack.pop(); // determinate length item with delimitation - handle gracefully
+                this.lengthStack.shift(); // determinate length item with delimitation - handle gracefully
             }
             this.endItem();
             return this.maybeDelimit();
@@ -134,7 +134,7 @@ export class ElementsBuilder {
         if (element instanceof SequenceDelimitationElement && this.hasSequence()) {
             this.subtractLength(8);
             if (!this.sequenceIsIndeterminate() && this.lengthStack.length > 0) {
-                this.lengthStack.pop(); // determinate length sequence with delimitation - handle gracefully
+                this.lengthStack.shift(); // determinate length sequence with delimitation - handle gracefully
             }
             this.endSequence();
             return this.maybeDelimit();
