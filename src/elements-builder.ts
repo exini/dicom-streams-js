@@ -65,13 +65,13 @@ export class ElementsBuilder {
             return this;
         }
         if (element instanceof ValueElement) {
-            this.subtractLength(element.length + element.vr.headerLength);
+            this.subtractLength(element.length + (element.explicitVR ? element.vr.headerLength : 8));
             const builder = this.builderStack[0];
             builder.addElementSet(element);
             return this.maybeDelimit();
         }
         if (element instanceof FragmentsElement) {
-            this.subtractLength(element.vr.headerLength);
+            this.subtractLength(element.explicitVR ? element.vr.headerLength : 8);
             this.updateFragments(
                 new Fragments(element.tag, element.vr, undefined, [], element.bigEndian, element.explicitVR),
             );
@@ -95,7 +95,7 @@ export class ElementsBuilder {
             return this.maybeDelimit();
         }
         if (element instanceof SequenceElement) {
-            this.subtractLength(12);
+            this.subtractLength(element.explicitVR ? 12 : 8);
             if (!element.indeterminate) {
                 this.pushLength(element, element.length);
             }
@@ -125,11 +125,17 @@ export class ElementsBuilder {
         }
         if (element instanceof ItemDelimitationElement && this.hasSequence()) {
             this.subtractLength(8);
+            if (!this.itemIsIndeterminate() && this.lengthStack.length > 0) {
+                this.lengthStack.pop(); // determinate length item with delimitation - handle gracefully
+            }
             this.endItem();
             return this.maybeDelimit();
         }
         if (element instanceof SequenceDelimitationElement && this.hasSequence()) {
             this.subtractLength(8);
+            if (!this.sequenceIsIndeterminate() && this.lengthStack.length > 0) {
+                this.lengthStack.pop(); // determinate length sequence with delimitation - handle gracefully
+            }
             this.endSequence();
             return this.maybeDelimit();
         }
@@ -184,6 +190,16 @@ export class ElementsBuilder {
     private hasFragments(): boolean {
         return this.fragments !== undefined;
     }
+    private sequenceIsIndeterminate(): boolean {
+        return this.sequenceStack.length > 0 && this.sequenceStack[0].indeterminate;
+    }
+    private itemIsIndeterminate(): boolean {
+        return (
+            this.sequenceStack.length > 0 &&
+            this.sequenceStack[0].items.length > 0 &&
+            this.sequenceStack[0].items[this.sequenceStack[0].items.length - 1].indeterminate
+        );
+    }
     private endItem(): void {
         const builder = this.builderStack[0];
         const sequence = this.sequenceStack[0];
@@ -204,7 +220,9 @@ export class ElementsBuilder {
     }
     private endSequence(): void {
         const sequence = this.sequenceStack[0];
-        const sequenceLength = sequence.indeterminate ? sequence.length : sequence.toBytes().length - 12;
+        const sequenceLength = sequence.indeterminate
+            ? sequence.length
+            : sequence.toBytes().length - (sequence.explicitVR ? 12 : 8);
         const updatedSequence = new Sequence(
             sequence.tag,
             sequenceLength,
