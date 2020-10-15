@@ -3,8 +3,8 @@ const {
     TagPath,
     TagTree,
     parseFlow,
-    whitelistFilter,
-    blacklistFilter,
+    allowFilter,
+    denyFilter,
     toUtf8Flow,
     toIndeterminateLengthSequences,
     modifyFlow,
@@ -23,7 +23,7 @@ pipe(
     parseFlow(),
     toIndeterminateLengthSequences(),
     toUtf8Flow(),
-    whitelistFilter([
+    allowFilter([
         TagTree.fromTag(Tag.SpecificCharacterSet),
         TagTree.fromTag(Tag.PatientName),
         TagTree.fromTag(Tag.PatientName),
@@ -31,7 +31,7 @@ pipe(
         TagTree.fromTag(Tag.SeriesDate),
         TagTree.fromAnyItem(Tag.MACParametersSequence),
     ]),
-    blacklistFilter([TagTree.fromAnyItem(Tag.MACParametersSequence).thenTag(Tag.DataElementsSigned)]),
+    denyFilter([TagTree.fromAnyItem(Tag.MACParametersSequence).thenTag(Tag.DataElementsSigned)]),
     modifyFlow(
         [TagModification.equals(TagPath.fromTag(Tag.PatientName), () => Buffer.from('Anon 001'))],
         [new TagInsertion(TagPath.fromTag(Tag.PatientIdentityRemoved), () => Buffer.from('YES'))],

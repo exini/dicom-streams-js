@@ -113,25 +113,25 @@ export function tagFilter(
     );
 }
 
-export function whitelistFilter(
-    whitelist: TagTree[],
+export function allowFilter(
+    allowlist: TagTree[],
     defaultCondition?: (p: DicomPart) => boolean,
     logGroupLengthWarnings?: boolean,
 ): any {
     return tagFilter(
-        (currentPath) => whitelist.some((t) => t.hasTrunk(currentPath) || t.isTrunkOf(currentPath)),
+        (currentPath) => allowlist.some((t) => t.hasTrunk(currentPath) || t.isTrunkOf(currentPath)),
         defaultCondition,
         logGroupLengthWarnings,
     );
 }
 
-export function blacklistFilter(
-    blacklist: TagTree[],
+export function denyFilter(
+    denylist: TagTree[],
     defaultCondition?: (p: DicomPart) => boolean,
     logGroupLengthWarnings?: boolean,
 ): any {
     return tagFilter(
-        (currentPath) => !blacklist.some((t) => t.isTrunkOf(currentPath)),
+        (currentPath) => !denylist.some((t) => t.isTrunkOf(currentPath)),
         defaultCondition,
         logGroupLengthWarnings,
     );

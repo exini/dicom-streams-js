@@ -184,12 +184,12 @@ export function collectFlow(
     );
 }
 
-export function collectFromTagPathsFlow(whitelist: TagTree[], label: string, maxBufferSize?: number): Transform {
-    const maxTag = whitelist.length > 0 ? Math.max(...whitelist.map((t) => t.head().tag())) : 0;
+export function collectFromTagPathsFlow(allowlist: TagTree[], label: string, maxBufferSize?: number): Transform {
+    const maxTag = allowlist.length > 0 ? Math.max(...allowlist.map((t) => t.head().tag())) : 0;
     const tagCondition = (currentPath: TagPath): boolean =>
-        whitelist.find((t) => t.hasTrunk(currentPath) || t.isTrunkOf(currentPath)) !== undefined;
+        allowlist.find((t) => t.hasTrunk(currentPath) || t.isTrunkOf(currentPath)) !== undefined;
     const stopCondition = (tagPath: TagPath): boolean =>
-        whitelist.length === 0 || (tagPath.isRoot() && tagPath.tag() > maxTag);
+        allowlist.length === 0 || (tagPath.isRoot() && tagPath.tag() > maxTag);
 
     return collectFlow(tagCondition, stopCondition, label, maxBufferSize);
 }
