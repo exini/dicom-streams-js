@@ -15,6 +15,7 @@ import {
     SequenceDelimitationElement,
     SequenceElement,
     ValueElement,
+    preambleElement,
 } from './dicom-elements';
 import { Tag } from './tag';
 import { VR } from './vr';
@@ -44,6 +45,10 @@ class DatasetBuilder {
         return this;
     }
 
+    public isEmpty(): boolean {
+        return this.data.length == 0;
+    }
+
     public build(): Elements {
         return new Elements(this.characterSets, this.zoneOffset, this.data.slice(0, this.pos));
     }
@@ -56,6 +61,9 @@ export class ElementsBuilder {
     private fragments: Fragments;
 
     public addElement(element: Element): ElementsBuilder {
+        if (element == preambleElement && this.builderStack.length == 1 && this.builderStack[0].isEmpty()) {
+            return this;
+        }
         if (element instanceof ValueElement) {
             this.subtractLength(element.length + element.vr.headerLength);
             const builder = this.builderStack[0];
