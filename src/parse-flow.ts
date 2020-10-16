@@ -14,7 +14,7 @@ import {
 import { ByteParser, ByteReader, finishedParser, ParseResult, ParseStep } from './byte-parser';
 import { Detour } from './detour';
 import { Lookup } from './lookup';
-import { dicomPreambleLength, isPreamble, readHeader, tryReadHeader } from './parsing';
+import { dicomPreambleLength, isPreamble, readHeader, tryReadHeader, warnIfOdd } from './parsing';
 import {
     DeflatedChunk,
     DicomPart,
@@ -171,9 +171,7 @@ class InFmiHeader extends DicomParseStep {
 
     public parse(reader: ByteReader): ParseResult {
         const header = readHeader(reader, this.state);
-        if (header.valueLength % 2 > 0) {
-            console.warn(`Element ${tagToString(header.tag)} has odd length`);
-        }
+        warnIfOdd(header.tag, header.vr, header.valueLength);
         if (groupNumber(header.tag) !== 2) {
             console.warn('Missing or wrong File Meta Information Group Length (0002,0000)');
             return new ParseResult(undefined, this.toDatasetStep(reader, header.valueLength));
@@ -235,9 +233,7 @@ class InDatasetHeader extends DicomParseStep {
 
     public readDatasetHeader(reader: ByteReader): DicomPart {
         const header = readHeader(reader, this.state);
-        if (header.valueLength % 2 > 0) {
-            console.warn(`Element ${tagToString(header.tag)} has odd length`);
-        }
+        warnIfOdd(header.tag, header.vr, header.valueLength);
         if (header.vr) {
             const bytes = reader.take(header.headerLength);
             if (header.vr === VR.SQ || (header.vr === VR.UN && header.valueLength === indeterminateLength)) {
@@ -355,9 +351,6 @@ class InFragments extends DicomParseStep {
 
     public parse(reader: ByteReader): ParseResult {
         const header = readHeader(reader, this.state);
-        if (header.valueLength % 2 > 0) {
-            console.warn(`Element ${tagToString(header.tag)} has odd length`);
-        }
         if (header.tag === 0xfffee000) {
             // begin fragment
             const nextState =

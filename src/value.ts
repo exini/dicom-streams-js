@@ -480,7 +480,7 @@ function dateTimeBytes(vr: VR, value: ZonedDateTime): Buffer {
 
 function personNameBytes(vr: VR, value: PersonName): Buffer {
     if (vr === VR.PN) {
-        return new Buffer(value.toString());
+        return Buffer.from(value.toString());
     }
     throw Error('Cannot create value of VR ' + vr + ' from person name');
 }

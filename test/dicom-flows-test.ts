@@ -607,14 +607,14 @@ describe('The FMI group length flow', () => {
 });
 
 describe('The utf8 flow', () => {
-    it('should transform a japanese patient name encoded with multiple character sets to valid utf8', () => {
+    it('should transform a japanese person name encoded with multiple character sets to valid utf8', () => {
         const specificCharacterSet = concatv(
             tagToBytesLE(Tag.SpecificCharacterSet),
             Buffer.from('CS'),
             shortToBytesLE(0x0010),
             padToEvenLength(Buffer.from('\\ISO 2022 IR 149'), VR.CS),
         );
-        const patientName = concatv(
+        const personName = concatv(
             tagToBytesLE(0x00100010),
             Buffer.from('PN'),
             shortToBytesLE(0x002c),
@@ -669,7 +669,7 @@ describe('The utf8 flow', () => {
             ),
         );
 
-        const bytes = concat(specificCharacterSet, patientName);
+        const bytes = concat(specificCharacterSet, personName);
 
         return util.testParts(bytes, pipe(parseFlow(), toUtf8Flow()), (parts) => {
             util.partProbe(parts)
@@ -717,7 +717,7 @@ describe('The utf8 flow', () => {
             shortToBytesLE(0x000a),
             padToEvenLength(Buffer.from('ISO_IR 13'), VR.CS),
         );
-        const patientName = concatv(
+        const personName = concatv(
             tagToBytesLE(0x00100010),
             Buffer.from('PN'),
             shortToBytesLE(0x0008),
@@ -728,7 +728,7 @@ describe('The utf8 flow', () => {
             specificCharacterSet,
             data.sequence(Tag.DerivationCodeSequence),
             item(),
-            patientName,
+            personName,
             itemDelimitation(),
             sequenceDelimitation(),
         );
@@ -754,14 +754,14 @@ describe('The utf8 flow', () => {
             shortToBytesLE(0x0010),
             padToEvenLength(Buffer.from('\\ISO 2022 IR 149'), VR.CS),
         );
-        const patientNameCS = concatv(
+        const personNameCS = concatv(
             tagToBytesLE(0x00100010),
             Buffer.from('CS'),
             shortToBytesLE(0x0004),
             padToEvenLength(Buffer.from([0xd4, 0xcf, 0xc0, 0xde]), VR.PN),
         );
 
-        const bytes = concat(specificCharacterSet, patientNameCS);
+        const bytes = concat(specificCharacterSet, personNameCS);
 
         return util.testParts(bytes, pipe(parseFlow(), toUtf8Flow()), (parts) => {
             util.partProbe(parts)
@@ -780,13 +780,13 @@ describe('The utf8 flow', () => {
             shortToBytesLE(0x000a),
             Buffer.from('ISO_IR 192'),
         );
-        const patientName = concatv(
+        const personName = concatv(
             tagToBytesLE(Tag.PatientName),
             Buffer.from('PN'),
             shortToBytesLE(0x000c),
             Buffer.from('ABC^ÅÖ^ﾔ'),
         );
-        const bytes = concat(specificCharacterSet, patientName);
+        const bytes = concat(specificCharacterSet, personName);
 
         return util.testParts(bytes, pipe(parseFlow(), toUtf8Flow()), (parts) => {
             const newBytes = parts.map((p) => p.bytes).reduce((b1, b2) => concat(b1, b2), emptyBuffer);

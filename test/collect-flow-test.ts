@@ -151,9 +151,9 @@ describe('A collect elements flow', () => {
             data.studyDate(),
             data.pixeDataFragments(),
             item(4),
-            new Buffer([1, 2, 3, 4]),
+            Buffer.from([1, 2, 3, 4]),
             item(4),
-            new Buffer([5, 6, 7, 8]),
+            Buffer.from([5, 6, 7, 8]),
             sequenceDelimitation(),
         );
 

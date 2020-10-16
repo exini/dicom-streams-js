@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { concatv, intToBytesLE, item, sequenceDelimitation } from '../src/base';
+import { concatv, indeterminateLength, intToBytesLE, item, itemDelimitation, sequenceDelimitation } from '../src/base';
 import { elementFlow } from '../src/element-flows';
 import { elementSink } from '../src/element-sink';
 import {
@@ -129,6 +129,88 @@ describe('An element sink', () => {
                 const fragments = elements.fragmentsByTag(Tag.PixelData);
                 assert(fragments.offsets !== undefined);
                 assert.deepStrictEqual(fragments.offsets, [1, 2, 3, 4]);
+            }),
+        );
+    });
+
+    it('should handle determinate length items and sequences', () => {
+        const elementList = [
+            new SequenceElement(Tag.DerivationCodeSequence, 68),
+            new ItemElement(1, 16),
+            new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, '20040329')),
+            new ItemElement(2, 36),
+            new SequenceElement(Tag.DerivationCodeSequence, 24),
+            new ItemElement(1, 16),
+            new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, '20040329')),
+        ];
+
+        return util.streamPromise(
+            arraySource(elementList, true),
+            elementSink((elements) => {
+                assert.deepStrictEqual(elements.toElements(false), elementList);
+            }),
+        );
+    });
+
+    it('should "handle item and sequence delimitations in when items and sequences are of determinate length', () => {
+        const elementList = [
+            new SequenceElement(Tag.DerivationCodeSequence, 108),
+            new ItemElement(1, 24),
+            new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, '20040329')),
+            new ItemDelimitationElement(1),
+            new ItemElement(2, 60),
+            new SequenceElement(Tag.DerivationCodeSequence, 40),
+            new ItemElement(1, 24),
+            new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, '20040329')),
+            new ItemDelimitationElement(1),
+            new SequenceDelimitationElement(),
+            new ItemDelimitationElement(2),
+            new SequenceDelimitationElement(),
+        ];
+
+        const expectedElementList = [
+            new SequenceElement(Tag.DerivationCodeSequence, 68),
+            new ItemElement(1, 16),
+            new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, '20040329')),
+            new ItemElement(2, 36),
+            new SequenceElement(Tag.DerivationCodeSequence, 24),
+            new ItemElement(1, 16),
+            new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, '20040329')),
+        ];
+
+        return util.streamPromise(
+            arraySource(elementList, true),
+            elementSink((elements) => {
+                assert.deepStrictEqual(elements.toElements(false), expectedElementList);
+            }),
+        );
+    });
+
+    it('should "handle implicit VR encoding', () => {
+        const bytes = concatv(
+            data.preamble,
+            data.fmiGroupLength(data.transferSyntaxUID(UID.ImplicitVRLittleEndian)),
+            data.transferSyntaxUID(UID.ImplicitVRLittleEndian),
+            data.patientNameJohnDoe(false, false),
+            data.sequence(Tag.DerivationCodeSequence, indeterminateLength, false, false),
+            item(),
+            data.patientNameJohnDoe(false, false),
+            data.studyDate(false, false),
+            itemDelimitation(),
+            item(),
+            data.sequence(Tag.DerivationCodeSequence, 24, false, false),
+            item(16),
+            data.patientNameJohnDoe(false, false),
+            itemDelimitation(),
+            sequenceDelimitation(),
+        );
+
+        return util.streamPromise(
+            singleSource(bytes, true),
+            parseFlow(),
+            elementFlow(),
+            elementSink((elements) => {
+                assert.deepStrictEqual(elements.toBytes(), bytes);
             }),
         );
     });

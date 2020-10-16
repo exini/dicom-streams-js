@@ -1,5 +1,6 @@
 import { Readable } from 'stream';
 
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function singleSource(element: any, objectMode = false): Readable {
     return new Readable({
         objectMode,
