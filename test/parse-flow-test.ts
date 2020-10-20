@@ -1,3 +1,6 @@
+import { Lookup } from '../src/lookup';
+import { ValueElement } from '../src/dicom-elements';
+import { Value } from '../src/value';
 import {
     concat,
     concatv,
@@ -88,6 +91,47 @@ describe('DICOM parse flow', () => {
         });
     });
 
+    it('should output a warning message when file meta information group length is too long', () => {
+        const bytes = concatv(
+            data.fmiGroupLength(data.transferSyntaxUID(), data.studyDate()),
+            data.transferSyntaxUID(),
+            data.studyDate(),
+        );
+
+        return util.testParts(bytes, parseFlow(), (parts) => {
+            util.partProbe(parts)
+                .expectHeader(Tag.FileMetaInformationGroupLength)
+                .expectValueChunk()
+                .expectHeader(Tag.TransferSyntaxUID)
+                .expectValueChunk()
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
+    it('should output a warning message when file meta information group length is too short', () => {
+        const bytes = concatv(
+            data.fmiGroupLength(data.mediaStorageSOPInstanceUID()),
+            data.mediaStorageSOPInstanceUID(),
+            data.transferSyntaxUID(),
+            data.studyDate(),
+        );
+
+        return util.testParts(bytes, parseFlow(), (parts) => {
+            util.partProbe(parts)
+                .expectHeader(Tag.FileMetaInformationGroupLength)
+                .expectValueChunk()
+                .expectHeader(Tag.MediaStorageSOPInstanceUID)
+                .expectValueChunk()
+                .expectHeader(Tag.TransferSyntaxUID)
+                .expectValueChunk()
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
     it('should output a warning id when non-meta information is included in the header', () => {
         const bytes = concatv(
             data.fmiGroupLength(data.transferSyntaxUID(), data.studyDate()),
@@ -144,6 +188,41 @@ describe('DICOM parse flow', () => {
                 // do nothing
             }),
         );
+    });
+
+    it('should handle odd-length attributes', () => {
+        const element = (tag: number, value: string): Buffer =>
+            new ValueElement(tag, Lookup.vrOf(tag), new Value(Buffer.from(value)), false, true).toBytes();
+
+        const mediaSopUidOdd = element(
+            Tag.MediaStorageSOPInstanceUID,
+            '1.2.276.0.7230010.3.1.4.1536491920.17152.1480884676.735',
+        );
+        const sopUidOdd = element(Tag.SOPInstanceUID, '1.2.276.0.7230010.3.1.4.1536491920.17152.1480884676.735');
+        const personNameOdd = element(Tag.PatientName, 'Jane^Mary');
+        const bytes = concatv(
+            data.fmiGroupLength(mediaSopUidOdd),
+            mediaSopUidOdd,
+            sopUidOdd,
+            data.sequence(Tag.DerivationCodeSequence, 25),
+            item(17),
+            personNameOdd,
+        );
+
+        return util.testParts(bytes, parseFlow(), (parts) => {
+            util.partProbe(parts)
+                .expectHeader(Tag.FileMetaInformationGroupLength, VR.UL, 4)
+                .expectValueChunk()
+                .expectHeader(Tag.MediaStorageSOPInstanceUID, VR.UI, 55)
+                .expectValueChunk(Buffer.from('1.2.276.0.7230010.3.1.4.1536491920.17152.1480884676.735'))
+                .expectHeader(Tag.SOPInstanceUID, VR.UI, 55)
+                .expectValueChunk(Buffer.from('1.2.276.0.7230010.3.1.4.1536491920.17152.1480884676.735'))
+                .expectSequence(Tag.DerivationCodeSequence, 25)
+                .expectItem(1, 17)
+                .expectHeader(Tag.PatientName, VR.PN, 9)
+                .expectValueChunk(Buffer.from('Jane^Mary'))
+                .expectDicomComplete();
+        });
     });
 
     it('should inflate deflated datasets', () => {

@@ -63,8 +63,8 @@ The next, longer, example reads the file specified by the first input argument t
 1. Parsing the binary data into `DicomPart`s for further processing
 2. Re-encoding the data to always use indeterminate length sequences and items with explicit sequence and item delimitations
 3. Re-encoding the data to use the UTF-8 character set
-4. Filtering of the elements to preserve only those on a white list specified as an array of `TagTree`s (trees of pointers into a dataset)
-5. Filtering of the remaining elements according to a black list of tag trees
+4. Filtering of the elements to preserve only those on a allow list specified as an array of `TagTree`s (trees of pointers into a dataset)
+5. Filtering of the remaining elements according to a deny list of tag trees
 6. Modification of the remaining elements to set Patient Name to `Anon 001`, add or modifiy the attribute Patient Identity Removed to `YES`, and leave other elements unmodified
 7. Map the resulting elements to their corresponding byte representations
 8. Write the results to disk using the file name specified by the second input argument.
@@ -76,8 +76,8 @@ const {
     TagTree,
     parseFlow,
     toBytesFlow,
-    whitelistFilter,
-    blacklistFilter,
+    allowFilter,
+    denyFilter,
     toUtf8Flow,
     toIndeterminateLengthSequences,
     modifyFlow,
@@ -94,7 +94,7 @@ pipe(
     parseFlow(),
     toIndeterminateLengthSequences(),
     toUtf8Flow(),
-    whitelistFilter([
+    allowFilter([
         TagTree.fromTag(Tag.SpecificCharacterSet),
         TagTree.fromTag(Tag.PatientName),
         TagTree.fromTag(Tag.PatientName),
@@ -102,7 +102,7 @@ pipe(
         TagTree.fromTag(Tag.SeriesDate),
         TagTree.fromAnyItem(Tag.MACParametersSequence),
     ]),
-    blacklistFilter([TagTree.fromAnyItem(Tag.MACParametersSequence).thenTag(Tag.DataElementsSigned)]),
+    denyFilter([TagTree.fromAnyItem(Tag.MACParametersSequence).thenTag(Tag.DataElementsSigned)]),
     modifyFlow(
         [TagModification.equals(TagPath.fromTag(Tag.PatientName), () => Buffer.from('Anon 001'))],
         [new TagInsertion(TagPath.fromTag(Tag.PatientIdentityRemoved), () => Buffer.from('YES'))],

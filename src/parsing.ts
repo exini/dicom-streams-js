@@ -1,4 +1,13 @@
-import { bytesToTag, bytesToUInt, bytesToUShort, bytesToVR, groupNumber, isFileMetaInformation } from './base';
+import {
+    bytesToTag,
+    bytesToUInt,
+    bytesToUShort,
+    bytesToVR,
+    groupNumber,
+    indeterminateLength,
+    isFileMetaInformation,
+    tagToString,
+} from './base';
 import { ByteReader } from './byte-parser';
 import { Lookup } from './lookup';
 import { VR } from './vr';
@@ -94,4 +103,10 @@ export function readHeader(reader: ByteReader, state: any): AttributeInfo {
         );
     }
     return new AttributeInfo(tagVr.tag, tagVr.vr, 8, bytesToUInt(tagVrBytes.slice(4), state.bigEndian));
+}
+
+export function warnIfOdd(tag: number, vr: VR, valueLength: number): void {
+    if (valueLength % 2 > 0 && valueLength != indeterminateLength && vr != null && vr != VR.SQ) {
+        console.warn(`Element ${tagToString(tag)} has odd length`);
+    }
 }

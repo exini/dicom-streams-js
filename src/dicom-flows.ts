@@ -68,7 +68,7 @@ export function stopTagFlow(tag: number): any {
             new (class extends InSequence(GuaranteedDelimitationEvents(InFragments(IdentityFlow))) {
                 public onHeader(part: HeaderPart): DicomPart[] {
                     const out = super.onHeader(part);
-                    return this.inSequence || part.tag < tag ? out : [dicomEndMarker];
+                    return this.inSequence() || part.tag < tag ? out : [dicomEndMarker];
                 }
             })(),
         ),
@@ -113,25 +113,25 @@ export function tagFilter(
     );
 }
 
-export function whitelistFilter(
-    whitelist: TagTree[],
+export function allowFilter(
+    allowlist: TagTree[],
     defaultCondition?: (p: DicomPart) => boolean,
     logGroupLengthWarnings?: boolean,
 ): any {
     return tagFilter(
-        (currentPath) => whitelist.some((t) => t.hasTrunk(currentPath) || t.isTrunkOf(currentPath)),
+        (currentPath) => allowlist.some((t) => t.hasTrunk(currentPath) || t.isTrunkOf(currentPath)),
         defaultCondition,
         logGroupLengthWarnings,
     );
 }
 
-export function blacklistFilter(
-    blacklist: TagTree[],
+export function denyFilter(
+    denylist: TagTree[],
     defaultCondition?: (p: DicomPart) => boolean,
     logGroupLengthWarnings?: boolean,
 ): any {
     return tagFilter(
-        (currentPath) => !blacklist.some((t) => t.isTrunkOf(currentPath)),
+        (currentPath) => !denylist.some((t) => t.isTrunkOf(currentPath)),
         defaultCondition,
         logGroupLengthWarnings,
     );
@@ -337,7 +337,7 @@ export function toUtf8Flow(): any {
         collectFromTagPathsFlow([TagTree.fromTag(Tag.SpecificCharacterSet)], 'toutf8'),
         modifyFlow([], [new TagInsertion(TagPath.fromTag(Tag.SpecificCharacterSet), () => Buffer.from('ISO_IR 192'))]),
         createFlow(
-            new (class extends IdentityFlow {
+            new (class extends GroupLengthWarnings(IdentityFlow) {
                 private characterSets: CharacterSets = defaultCharacterSet;
                 private currentHeader: HeaderPart;
                 private currentValue: Buffer = emptyBuffer;

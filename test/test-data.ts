@@ -26,7 +26,16 @@ export function element(tag: number, value: Buffer | string, bigEndian = false, 
 export function fmiGroupLength(...fmis: Buffer[]): Buffer {
     return element(
         Tag.FileMetaInformationGroupLength,
-        intToBytesLE(fmis.map((fmi) => fmi.length).reduce((p, c) => p + c)),
+        intToBytesLE(fmis.map((fmi) => fmi.length + (fmi.length % 2)).reduce((p, c) => p + c)),
+    );
+}
+
+export function fmiGroupLengthImplicit(...fmis: Buffer[]): Buffer {
+    return element(
+        Tag.FileMetaInformationGroupLength,
+        intToBytesLE(fmis.map((fmi) => fmi.length + (fmi.length % 2)).reduce((p, c) => p + c)),
+        false,
+        false,
     );
 }
 

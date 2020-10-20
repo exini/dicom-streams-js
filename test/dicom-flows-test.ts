@@ -16,7 +16,7 @@ import {
     tagToBytesLE,
 } from '../src/base';
 import {
-    blacklistFilter,
+    denyFilter,
     deflateDatasetFlow,
     fmiDiscardFilter,
     fmiGroupLengthFlow,
@@ -29,7 +29,7 @@ import {
     toUtf8Flow,
     validateContextFlow,
     ValidationContext,
-    whitelistFilter,
+    allowFilter,
 } from '../src/dicom-flows';
 import { prependFlow } from '../src/flows';
 import { modifyFlow, TagModification } from '../src/modify-flow';
@@ -244,8 +244,8 @@ describe('The tag filter', () => {
     });
 });
 
-describe('The whitelist filter', () => {
-    it('should block all elements not on the white list', () => {
+describe('The allow filter', () => {
+    it('should block all elements not on the allow list', () => {
         const bytes = concatv(
             data.preamble,
             data.fmiGroupLength(data.transferSyntaxUID()),
@@ -258,7 +258,7 @@ describe('The whitelist filter', () => {
             bytes,
             pipe(
                 parseFlow(),
-                whitelistFilter([TagTree.fromTag(Tag.StudyDate)], () => false),
+                allowFilter([TagTree.fromTag(Tag.StudyDate)], () => false),
             ),
             (parts) => {
                 util.partProbe(parts).expectHeader(Tag.StudyDate).expectValueChunk().expectDicomComplete();
@@ -276,7 +276,7 @@ describe('The whitelist filter', () => {
             sequenceDelimitation(),
         );
 
-        return util.testParts(bytes, pipe(parseFlow(), whitelistFilter([TagTree.fromTag(Tag.StudyDate)])), (parts) => {
+        return util.testParts(bytes, pipe(parseFlow(), allowFilter([TagTree.fromTag(Tag.StudyDate)])), (parts) => {
             util.partProbe(parts).expectDicomComplete();
         });
     });
@@ -291,7 +291,7 @@ describe('The whitelist filter', () => {
             sequenceDelimitation(),
         );
 
-        return util.testParts(bytes, pipe(parseFlow(), whitelistFilter([])), (parts) => {
+        return util.testParts(bytes, pipe(parseFlow(), allowFilter([])), (parts) => {
             util.partProbe(parts).expectDicomComplete();
         });
     });
@@ -309,10 +309,7 @@ describe('The whitelist filter', () => {
 
         return util.testParts(
             bytes,
-            pipe(
-                parseFlow(),
-                whitelistFilter([TagTree.fromAnyItem(Tag.DerivationCodeSequence).thenTag(Tag.StudyDate)]),
-            ),
+            pipe(parseFlow(), allowFilter([TagTree.fromAnyItem(Tag.DerivationCodeSequence).thenTag(Tag.StudyDate)])),
             (parts) => {
                 util.partProbe(parts)
                     .expectSequence(Tag.DerivationCodeSequence)
@@ -341,10 +338,7 @@ describe('The whitelist filter', () => {
 
         return util.testParts(
             bytes,
-            pipe(
-                parseFlow(),
-                whitelistFilter([TagTree.fromItem(Tag.DerivationCodeSequence, 2).thenTag(Tag.StudyDate)]),
-            ),
+            pipe(parseFlow(), allowFilter([TagTree.fromItem(Tag.DerivationCodeSequence, 2).thenTag(Tag.StudyDate)])),
             (parts) => {
                 util.partProbe(parts)
                     .expectSequence(Tag.DerivationCodeSequence)
@@ -359,8 +353,8 @@ describe('The whitelist filter', () => {
     });
 });
 
-describe('The blacklist filter', () => {
-    it('should block the entire sequence when a sequence tag is on the black list', () => {
+describe('The deny filter', () => {
+    it('should block the entire sequence when a sequence tag is on the deny list', () => {
         const bytes = concatv(
             data.studyDate(),
             data.sequence(Tag.DerivationCodeSequence),
@@ -378,7 +372,7 @@ describe('The blacklist filter', () => {
 
         return util.testParts(
             bytes,
-            pipe(parseFlow(), blacklistFilter([TagTree.fromAnyItem(Tag.DerivationCodeSequence)])),
+            pipe(parseFlow(), denyFilter([TagTree.fromAnyItem(Tag.DerivationCodeSequence)])),
             (parts) => {
                 util.partProbe(parts)
                     .expectHeader(Tag.StudyDate)
@@ -407,7 +401,7 @@ describe('The blacklist filter', () => {
             bytes,
             pipe(
                 parseFlow(),
-                blacklistFilter([TagTree.fromTag(Tag.StudyDate), TagTree.fromItem(Tag.DerivationCodeSequence, 1)]),
+                denyFilter([TagTree.fromTag(Tag.StudyDate), TagTree.fromItem(Tag.DerivationCodeSequence, 1)]),
             ),
             (parts) => {
                 util.partProbe(parts)
@@ -437,10 +431,7 @@ describe('The blacklist filter', () => {
 
         return util.testParts(
             bytes,
-            pipe(
-                parseFlow(),
-                blacklistFilter([TagTree.fromItem(Tag.DerivationCodeSequence, 1).thenTag(Tag.StudyDate)]),
-            ),
+            pipe(parseFlow(), denyFilter([TagTree.fromItem(Tag.DerivationCodeSequence, 1).thenTag(Tag.StudyDate)])),
             (parts) => {
                 util.partProbe(parts)
                     .expectHeader(Tag.StudyDate)
@@ -513,7 +504,7 @@ describe('The FMI group length flow', () => {
 
         return util.testParts(
             bytes,
-            pipe(parseFlow(), blacklistFilter([TagTree.fromTag(Tag.FileMetaInformationVersion)]), fmiGroupLengthFlow()),
+            pipe(parseFlow(), denyFilter([TagTree.fromTag(Tag.FileMetaInformationVersion)]), fmiGroupLengthFlow()),
             (parts) => {
                 util.partProbe(parts)
                     .expectPreamble()
@@ -616,14 +607,14 @@ describe('The FMI group length flow', () => {
 });
 
 describe('The utf8 flow', () => {
-    it('should transform a japanese patient name encoded with multiple character sets to valid utf8', () => {
+    it('should transform a japanese person name encoded with multiple character sets to valid utf8', () => {
         const specificCharacterSet = concatv(
             tagToBytesLE(Tag.SpecificCharacterSet),
             Buffer.from('CS'),
             shortToBytesLE(0x0010),
             padToEvenLength(Buffer.from('\\ISO 2022 IR 149'), VR.CS),
         );
-        const patientName = concatv(
+        const personName = concatv(
             tagToBytesLE(0x00100010),
             Buffer.from('PN'),
             shortToBytesLE(0x002c),
@@ -678,7 +669,7 @@ describe('The utf8 flow', () => {
             ),
         );
 
-        const bytes = concat(specificCharacterSet, patientName);
+        const bytes = concat(specificCharacterSet, personName);
 
         return util.testParts(bytes, pipe(parseFlow(), toUtf8Flow()), (parts) => {
             util.partProbe(parts)
@@ -726,7 +717,7 @@ describe('The utf8 flow', () => {
             shortToBytesLE(0x000a),
             padToEvenLength(Buffer.from('ISO_IR 13'), VR.CS),
         );
-        const patientName = concatv(
+        const personName = concatv(
             tagToBytesLE(0x00100010),
             Buffer.from('PN'),
             shortToBytesLE(0x0008),
@@ -737,7 +728,7 @@ describe('The utf8 flow', () => {
             specificCharacterSet,
             data.sequence(Tag.DerivationCodeSequence),
             item(),
-            patientName,
+            personName,
             itemDelimitation(),
             sequenceDelimitation(),
         );
@@ -763,14 +754,14 @@ describe('The utf8 flow', () => {
             shortToBytesLE(0x0010),
             padToEvenLength(Buffer.from('\\ISO 2022 IR 149'), VR.CS),
         );
-        const patientNameCS = concatv(
+        const personNameCS = concatv(
             tagToBytesLE(0x00100010),
             Buffer.from('CS'),
             shortToBytesLE(0x0004),
             padToEvenLength(Buffer.from([0xd4, 0xcf, 0xc0, 0xde]), VR.PN),
         );
 
-        const bytes = concat(specificCharacterSet, patientNameCS);
+        const bytes = concat(specificCharacterSet, personNameCS);
 
         return util.testParts(bytes, pipe(parseFlow(), toUtf8Flow()), (parts) => {
             util.partProbe(parts)
@@ -789,13 +780,13 @@ describe('The utf8 flow', () => {
             shortToBytesLE(0x000a),
             Buffer.from('ISO_IR 192'),
         );
-        const patientName = concatv(
+        const personName = concatv(
             tagToBytesLE(Tag.PatientName),
             Buffer.from('PN'),
             shortToBytesLE(0x000c),
             Buffer.from('ABC^ÅÖ^ﾔ'),
         );
-        const bytes = concat(specificCharacterSet, patientName);
+        const bytes = concat(specificCharacterSet, personName);
 
         return util.testParts(bytes, pipe(parseFlow(), toUtf8Flow()), (parts) => {
             const newBytes = parts.map((p) => p.bytes).reduce((b1, b2) => concat(b1, b2), emptyBuffer);

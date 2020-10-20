@@ -1,5 +1,5 @@
 import { Transform } from 'stream';
-import { emptyBuffer, isGroupLength, pipe } from './base';
+import { emptyBuffer, indeterminateLength, isGroupLength, pipe } from './base';
 import { appendFlow, flatMapFlow, identityFlow, prependFlow } from './flows';
 import {
     DeflatedChunk,
@@ -258,27 +258,29 @@ export const GuaranteedDelimitationEvents = (Super: any): any =>
         public partStack: { part: DicomPart; bytesLeft: number }[] = [];
 
         public onSequence(part: SequencePart): DicomPart[] {
-            if (!part.indeterminate) {
-                this.subtractLength(part);
-                this.partStack.unshift({ part, bytesLeft: part.length });
-                return super.onSequence(part).concat(this.maybeDelimit());
-            }
-            return this.subtractAndEmit(part, super.onSequence.bind(this));
+            this.subtractLength(part);
+            this.partStack.unshift({ part, bytesLeft: part.length });
+            return super.onSequence(part).concat(this.maybeDelimit());
         }
         public onItem(part: ItemPart): DicomPart[] {
-            if (!this.inFragments && !part.indeterminate) {
-                this.subtractLength(part);
+            this.subtractLength(part);
+            if (!this.inFragments) {
                 this.partStack.unshift({ part, bytesLeft: part.length });
-                return super.onItem(part).concat(this.maybeDelimit());
             }
-            return this.subtractAndEmit(part, super.onItem.bind(this));
+            return super.onItem(part).concat(this.maybeDelimit());
         }
         public onSequenceDelimitation(part: SequenceDelimitationPart): DicomPart[] {
+            if (this.partStack.length > 0 && part != sequenceDelimitationPartMarker && !this.inFragments) {
+                this.partStack.shift();
+            }
             return this.subtractAndEmit(part, (p) =>
                 super.onSequenceDelimitation(p).filter((d: DicomPart) => d !== sequenceDelimitationPartMarker),
             );
         }
         public onItemDelimitation(part: ItemDelimitationPart): DicomPart[] {
+            if (this.partStack.length > 0 && !(part instanceof ItemDelimitationPartMarker)) {
+                this.partStack.shift();
+            }
             return this.subtractAndEmit(part, (p) =>
                 super.onItemDelimitation(p).filter((d: DicomPart) => !(d instanceof ItemDelimitationPartMarker)),
             );
@@ -294,19 +296,27 @@ export const GuaranteedDelimitationEvents = (Super: any): any =>
         }
 
         public subtractLength(part: DicomPart): void {
-            this.partStack.forEach((p) => (p.bytesLeft -= part.bytes.length));
+            this.partStack.forEach((p) => {
+                if (p.bytesLeft != indeterminateLength) {
+                    p.bytesLeft -= part.bytes.length;
+                }
+            });
         }
         public maybeDelimit(): DicomPart[] {
-            const delimits = this.partStack
-                .filter((p) => p.bytesLeft <= 0) // find items and sequences that have ended
-                .map((p) =>
-                    p.part instanceof ItemPart
-                        ? new ItemDelimitationPartMarker(p.part.index)
-                        : sequenceDelimitationPartMarker,
-                );
-            this.partStack = this.partStack.filter((p) => p.bytesLeft > 0); // only keep items and sequences with bytes left to subtract
-            const out = delimits.map((d) =>
-                d instanceof ItemDelimitationPart ? this.onItemDelimitation(d) : this.onSequenceDelimitation(d),
+            let splitIndex = 0;
+            while (
+                splitIndex < this.partStack.length &&
+                this.partStack[splitIndex].bytesLeft != indeterminateLength &&
+                this.partStack[splitIndex].bytesLeft <= 0
+            ) {
+                splitIndex++;
+            }
+            const inactive = this.partStack.slice(0, splitIndex);
+            this.partStack = this.partStack.slice(splitIndex);
+            const out = inactive.map((i) =>
+                i.part instanceof ItemPart
+                    ? this.onItemDelimitation(new ItemDelimitationPartMarker((<ItemPart>i.part).index))
+                    : this.onSequenceDelimitation(sequenceDelimitationPartMarker),
             );
             return [].concat(...out);
         }
@@ -321,17 +331,20 @@ export const GuaranteedDelimitationEvents = (Super: any): any =>
  */
 export const InSequence = (Super: any): any =>
     class extends Super {
-        public sequenceDepth = 0;
-        public inSequence = false;
+        public sequenceStack: SequencePart[] = [];
 
+        public sequenceDepth() {
+            return this.sequenceStack.length;
+        }
+        public inSequence() {
+            return this.sequenceStack.length > 0;
+        }
         public onSequence(part: SequencePart): DicomPart[] {
-            this.sequenceDepth += 1;
-            this.inSequence = this.sequenceDepth > 0;
+            this.sequenceStack.unshift(part);
             return super.onSequence(part);
         }
         public onSequenceDelimitation(part: SequenceDelimitationPart): DicomPart[] {
-            this.sequenceDepth -= 1;
-            this.inSequence = this.sequenceDepth > 0;
+            this.sequenceStack.shift();
             return super.onSequenceDelimitation(part);
         }
     };

@@ -504,6 +504,46 @@ describe('The guaranteed delimitation flow', () => {
             assert.strictEqual(nSeqDelims, 1);
         });
     });
+
+    it('should gracefully handle determinate length sequences and items that end with a sequence delimiter', () => {
+        const bytes = concatv(
+            data.studyDate(),
+            data.sequence(Tag.DerivationCodeSequence, 92),
+            item(84),
+            data.studyDate(),
+            data.sequence(Tag.DerivationCodeSequence, 40),
+            item(24),
+            data.studyDate(),
+            itemDelimitation(),
+            sequenceDelimitation(),
+            itemDelimitation(),
+            sequenceDelimitation(),
+            data.patientNameJohnDoe(),
+        );
+
+        const testFlow = toIndeterminateLengthSequences();
+
+        return util.testParts(bytes, pipe(parseFlow(), testFlow), (parts) => {
+            util.partProbe(parts)
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectSequence(Tag.DerivationCodeSequence)
+                .expectItem(1)
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectSequence(Tag.DerivationCodeSequence)
+                .expectItem(1)
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectItemDelimitation()
+                .expectSequenceDelimitation()
+                .expectItemDelimitation()
+                .expectSequenceDelimitation()
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
 });
 
 describe('The InSequence support', () => {
@@ -539,7 +579,7 @@ describe('The InSequence support', () => {
                 InSequence(GuaranteedDelimitationEvents(InFragments(DeferToPartFlow))),
             ) {
                 public onPart(part: DicomPart): DicomPart[] {
-                    check(this.sequenceDepth, this.inSequence);
+                    check(this.sequenceDepth(), this.inSequence());
                     return [part];
                 }
             })(),

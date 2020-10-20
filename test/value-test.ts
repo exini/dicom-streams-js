@@ -487,14 +487,14 @@ describe('Parsing a single person name', () => {
 
 describe('Parsing a URL', () => {
     it('should work for valid URL strings', () => {
-        const url = new Value(new Buffer('https://example.com:8080/path?q1=45&q2=46')).toURL();
+        const url = new Value(Buffer.from('https://example.com:8080/path?q1=45&q2=46')).toURL();
         assert.equal(url.protocol, 'https:');
         assert.equal(url.host, 'example.com:8080');
         assert.equal(url.port, 8080);
     });
 
     it('should not parse invalid URIs', () => {
-        const url = new Value(new Buffer('not < a > uri')).toURL();
+        const url = new Value(Buffer.from('not < a > uri')).toURL();
         assert(url === undefined);
     });
 });

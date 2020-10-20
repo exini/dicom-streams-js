@@ -343,13 +343,13 @@ describe('Elements', () => {
     });
 
     it('should set bytes', () => {
-        const updated = elements.setBytes(Tag.SeriesDate, VR.DA, new Buffer('20100101'));
+        const updated = elements.setBytes(Tag.SeriesDate, VR.DA, Buffer.from('20100101'));
         assert.deepStrictEqual(updated.dateByTag(Tag.SeriesDate), LocalDate.parse('2010-01-01'));
     });
 
     it('should set nested bytes', () => {
         const tagPath = TagPath.fromItem(Tag.DerivationCodeSequence, 1).thenTag(Tag.SeriesDate);
-        const updated = elements.setNestedBytes(tagPath, VR.DA, new Buffer('20100101'));
+        const updated = elements.setNestedBytes(tagPath, VR.DA, Buffer.from('20100101'));
         assert.deepStrictEqual(updated.dateByPath(tagPath), LocalDate.parse('2010-01-01'));
     });
 
@@ -482,7 +482,7 @@ describe('Elements', () => {
     });
 
     it('should update character sets', () => {
-        const updatedCs1 = elements.setCharacterSets(CharacterSets.fromBytes(new Buffer('\\ISO 2022 IR 127')))
+        const updatedCs1 = elements.setCharacterSets(CharacterSets.fromBytes(Buffer.from('\\ISO 2022 IR 127')))
             .characterSets;
         assert.equal(updatedCs1.charsets.trim(), '\\ISO 2022 IR 127');
         const updatedCs2 = elements.setElementSet(

@@ -1,11 +1,20 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { Transform } from 'stream';
 import zlib from 'zlib';
-import { bytesToInt, bytesToUShortBE, groupNumber, indeterminateLength, isDeflated, tagToString, trim } from './base';
+import {
+    bytesToInt,
+    bytesToShort,
+    bytesToUShortBE,
+    groupNumber,
+    indeterminateLength,
+    isDeflated,
+    tagToString,
+    trim,
+} from './base';
 import { ByteParser, ByteReader, finishedParser, ParseResult, ParseStep } from './byte-parser';
 import { Detour } from './detour';
 import { Lookup } from './lookup';
-import { dicomPreambleLength, isPreamble, readHeader, tryReadHeader } from './parsing';
+import { dicomPreambleLength, isPreamble, readHeader, tryReadHeader, warnIfOdd } from './parsing';
 import {
     DeflatedChunk,
     DicomPart,
@@ -86,12 +95,21 @@ class AtBeginning extends DicomParseStep {
         reader.ensure(8);
         const info = tryReadHeader(reader.remainingData());
         if (info) {
-            const nextState = info.hasFmi
-                ? new InFmiHeader(
-                      new FmiHeaderState(undefined, info.bigEndian, info.explicitVR, info.hasFmi, 0, undefined),
-                      this.flow,
-                  )
-                : new InDatasetHeader(new DatasetHeaderState(0, info.bigEndian, info.explicitVR), this.flow);
+            let nextState: DicomParseStep;
+            if (info.hasFmi) {
+                if (!info.explicitVR) {
+                    console.warn('File meta information uses implicit VR encoding');
+                }
+                if (info.bigEndian) {
+                    console.warn('File meta information uses big-endian encoding');
+                }
+                nextState = new InFmiHeader(
+                    new FmiHeaderState(undefined, info.bigEndian, info.explicitVR, info.hasFmi, 0, undefined),
+                    this.flow,
+                );
+            } else {
+                nextState = new InDatasetHeader(new DatasetHeaderState(0, info.bigEndian, info.explicitVR), this.flow);
+            }
             return new ParseResult(maybePreamble, nextState);
         } else {
             throw new Error('Not a DICOM stream');
@@ -153,6 +171,7 @@ class InFmiHeader extends DicomParseStep {
 
     public parse(reader: ByteReader): ParseResult {
         const header = readHeader(reader, this.state);
+        warnIfOdd(header.tag, header.vr, header.valueLength);
         if (groupNumber(header.tag) !== 2) {
             console.warn('Missing or wrong File Meta Information Group Length (0002,0000)');
             return new ParseResult(undefined, this.toDatasetStep(reader, header.valueLength));
@@ -184,7 +203,21 @@ class InFmiHeader extends DicomParseStep {
         );
         let nextStep: ParseStep = new InFmiHeader(this.state, this.flow);
         if (this.state.fmiEndPos && this.state.fmiEndPos <= this.state.pos) {
-            nextStep = this.toDatasetStep(reader, header.valueLength);
+            if (
+                reader.remainingSize() >= header.valueLength + 2 &&
+                !(this.state.tsuid && this.state.tsuid == UID.DeflatedExplicitVRLittleEndian) &&
+                bytesToShort(
+                    reader.remainingData().slice(header.valueLength, header.valueLength + 2),
+                    this.state.bigEndian,
+                ) == 2
+            ) {
+                console.warn('Wrong File Meta Information Group Length (0002,0000)');
+            } else {
+                if (this.state.fmiEndPos != this.state.pos) {
+                    console.warn('Wrong File Meta Information Group Length (0002,0000)');
+                }
+                nextStep = this.toDatasetStep(reader, header.valueLength);
+            }
         }
         return new ParseResult(
             part,
@@ -200,6 +233,7 @@ class InDatasetHeader extends DicomParseStep {
 
     public readDatasetHeader(reader: ByteReader): DicomPart {
         const header = readHeader(reader, this.state);
+        warnIfOdd(header.tag, header.vr, header.valueLength);
         if (header.vr) {
             const bytes = reader.take(header.headerLength);
             if (header.vr === VR.SQ || (header.vr === VR.UN && header.valueLength === indeterminateLength)) {
