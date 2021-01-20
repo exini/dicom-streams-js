@@ -19,6 +19,8 @@ import { VR } from '../src/vr';
 import { Chunker } from './chunker';
 import * as data from './test-data';
 import * as util from './test-util';
+import { element } from './test-data';
+import { printFlow } from '../src';
 
 describe('DICOM parse flow', () => {
     it('should produce a preamble, FMI tags and dataset tags for a complete DICOM file', () => {
@@ -636,6 +638,38 @@ describe('DICOM parse flow', () => {
                 .expectValueChunk()
                 .expectHeader(Tag.CTExposureSequence, VR.UN, 24)
                 .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
+    it('should parse sequences of indefinite length with VR UN as a regular sequence', () => {
+        const unSequence = concatv(
+            tagToBytes(Tag.CTDIPhantomTypeCodeSequence),
+            Buffer.from('UN'),
+            Buffer.from([0, 0, 0xff, 0xff, 0xff, 0xff]),
+        );
+        const bytes = concatv(
+            data.patientNameJohnDoe(),
+            unSequence,
+            item(60),
+            element(Tag.CodeValue, '113691', false, false),
+            element(Tag.CodingSchemeDesignator, 'DCM', false, false),
+            element(Tag.CodeMeaning, 'IEC Body Dosimetry Phantom', false, false),
+            sequenceDelimitation(),
+        );
+        return util.testParts(bytes, parseFlow(), (parts) => {
+            util.partProbe(parts)
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectSequence(Tag.CTDIPhantomTypeCodeSequence)
+                .expectItem(1, 60)
+                .expectHeader(Tag.CodeValue, VR.SH, 6)
+                .expectValueChunk()
+                .expectHeader(Tag.CodingSchemeDesignator, VR.SH, 4)
+                .expectValueChunk()
+                .expectHeader(Tag.CodeMeaning, VR.LO, 26)
+                .expectValueChunk()
+                .expectSequenceDelimitation()
                 .expectDicomComplete();
         });
     });

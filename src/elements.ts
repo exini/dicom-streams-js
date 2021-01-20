@@ -214,7 +214,6 @@ export class Elements {
             );
         }
         if (elementSet instanceof ValueElement && elementSet.tag === Tag.TimezoneOffsetFromUTC) {
-            console.log(elementSet.value.toString(VR.SH));
             const newOffset = parseZoneOffset(elementSet.value.toString(VR.SH));
             const zone = newOffset || systemZone;
             return new Elements(this.characterSets, zone, this._insertOrdered(elementSet));

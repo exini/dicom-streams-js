@@ -31,7 +31,7 @@ export class CharacterSets {
         try {
             return convertBytes(this.charsets, bytes, { vr: vr.name });
         } catch (err) {
-            console.warn('Invalid character set: ' + this.charsets + ', using default instead.');
+            console.warn('Cannot decode using character set: ' + this.charsets + ', using default instead: ' + err);
             return defaultCharacterSet.decode(bytes, vr);
         }
     }

@@ -66,9 +66,13 @@ export class TagVr {
     constructor(public readonly tag: number, public readonly vr: VR) {}
 }
 
+export function isSpecial(tag: number): boolean {
+    return tag === 0xfffee000 || tag === 0xfffee00d || tag === 0xfffee0dd;
+}
+
 export function readTagVr(data: Buffer, bigEndian: boolean, explicitVr: boolean): TagVr {
     const tag = bytesToTag(data, bigEndian);
-    if (tag === 0xfffee000 || tag === 0xfffee00d || tag === 0xfffee0dd) {
+    if (isSpecial(tag)) {
         return new TagVr(tag, undefined);
     }
     if (explicitVr) {
@@ -89,8 +93,17 @@ export class AttributeInfo {
 export function readHeader(reader: ByteReader, state: any): AttributeInfo {
     reader.ensure(8);
     const tagVrBytes = reader.remainingData().slice(0, 8);
-    const tagVr = readTagVr(tagVrBytes, state.bigEndian, state.explicitVR);
-    if (tagVr.vr && state.explicitVR) {
+    let explicitVR = state.explicitVR;
+    let tagVr = readTagVr(tagVrBytes, state.bigEndian, explicitVR);
+    if (!tagVr.vr && !isSpecial(tagVr.tag)) {
+        // cannot parse VR and not item or delimitation, try switching implicit/explicit as last resort
+        explicitVR = !explicitVR;
+        const TagVrSwitched = readTagVr(tagVrBytes, state.bigEndian, explicitVR);
+        if (TagVrSwitched.vr && TagVrSwitched.vr != VR.UN) {
+            tagVr = TagVrSwitched;
+        }
+    }
+    if (tagVr.vr && explicitVR) {
         if (tagVr.vr.headerLength === 8) {
             return new AttributeInfo(tagVr.tag, tagVr.vr, 8, bytesToUShort(tagVrBytes.slice(6), state.bigEndian));
         }
