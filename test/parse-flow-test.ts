@@ -20,7 +20,6 @@ import { Chunker } from './chunker';
 import * as data from './test-data';
 import * as util from './test-util';
 import { element } from './test-data';
-import { printFlow } from '../src';
 
 describe('DICOM parse flow', () => {
     it('should produce a preamble, FMI tags and dataset tags for a complete DICOM file', () => {
