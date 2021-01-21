@@ -616,15 +616,13 @@ describe('DICOM parse flow', () => {
             util.partProbe(parts)
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
-                .expectSequence(Tag.CTExposureSequence, 24)
-                .expectItem(1, 16)
-                .expectHeader(Tag.StudyDate)
+                .expectHeader(Tag.CTExposureSequence, VR.UN, 24)
                 .expectValueChunk()
                 .expectDicomComplete();
         });
     });
 
-    it('should handle sequences with VR UN where the nested data set(s) have implicit VR', () => {
+    it('should parse sequences with VR UN, and where the nested data set(s) have implicit VR, as a block of bytes', () => {
         const unSequence = concatv(
             tagToBytes(Tag.CTExposureSequence),
             Buffer.from('UN'),
@@ -637,9 +635,7 @@ describe('DICOM parse flow', () => {
             util.partProbe(parts)
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
-                .expectSequence(Tag.CTExposureSequence, 24)
-                .expectItem(1, 16)
-                .expectHeader(Tag.StudyDate)
+                .expectHeader(Tag.CTExposureSequence, VR.UN, 24)
                 .expectValueChunk()
                 .expectDicomComplete();
         });

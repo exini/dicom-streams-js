@@ -236,7 +236,7 @@ class InDatasetHeader extends DicomParseStep {
         warnIfOdd(header.tag, header.vr, header.valueLength);
         if (header.vr) {
             const bytes = reader.take(header.headerLength);
-            if (header.vr === VR.SQ || (header.vr === VR.UN && Lookup.vrOf(header.tag) == VR.SQ)) {
+            if (header.vr === VR.SQ || (header.vr === VR.UN && header.valueLength === indeterminateLength)) {
                 return new SequencePart(
                     header.tag,
                     header.valueLength,
