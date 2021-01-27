@@ -1,6 +1,6 @@
 const path = require('path');
 const nodeExternals = require('webpack-node-externals');
-const { merge } = require('webpack-merge');
+const webpackMerge = require('webpack-merge');
 
 const commonConfig = {
     entry: {
@@ -38,15 +38,6 @@ const webConfig = {
         libraryTarget: 'umd',
     },
     externals: ['js-joda'],
-    resolve: {
-        fallback: {
-            stream: require.resolve('stream-browserify'),
-            zlib: require.resolve('browserify-zlib'),
-            buffer: require.resolve('buffer/'),
-            util: require.resolve('util/'),
-            assert: require.resolve('assert/'),
-        },
-    },
 };
 
-module.exports = [merge(commonConfig, nodeConfig), merge(commonConfig, webConfig)];
+module.exports = [webpackMerge(commonConfig, nodeConfig), webpackMerge(commonConfig, webConfig)];
