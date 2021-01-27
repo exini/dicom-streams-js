@@ -315,7 +315,7 @@ export const GuaranteedDelimitationEvents = (Super: any): any =>
             this.partStack = this.partStack.slice(splitIndex);
             const out = inactive.map((i) =>
                 i.part instanceof ItemPart
-                    ? this.onItemDelimitation(new ItemDelimitationPartMarker((<ItemPart>i.part).index))
+                    ? this.onItemDelimitation(new ItemDelimitationPartMarker((i.part as ItemPart).index))
                     : this.onSequenceDelimitation(sequenceDelimitationPartMarker),
             );
             return [].concat(...out);

@@ -1,6 +1,6 @@
 {
     "name": "@exini/dicom-streams-js",
-    "version": "2.1.2",
+    "version": "2.1.3",
     "description": "Streaming parsing and processing of DICOM data",
     "main": "node/index.js",
     "browser": "web/index.js",
