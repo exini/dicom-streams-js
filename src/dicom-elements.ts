@@ -109,18 +109,17 @@ export class ValueElement extends ElementSet {
         const vm = strings.length + '';
         return (
             'ValueElement(' +
-            tagToString(this.tag) +
-            ' ' +
-            this.vr.name +
-            ' [' +
-            s +
-            '] # ' +
-            this.length +
-            ', ' +
-            vm +
-            ' ' +
-            Lookup.keywordOf(this.tag) +
-            ')'
+                tagToString(this.tag) +
+                ' ' +
+                this.vr.name +
+                ' [' +
+                s +
+                '] # ' +
+                this.length +
+                ', ' +
+                vm +
+                ' ' +
+                Lookup.keywordOf(this.tag) || '' + ')'
         );
     }
 }
@@ -147,7 +146,8 @@ export class SequenceElement extends Element {
     }
     public toString(): string {
         return (
-            'SequenceElement(' + tagToString(this.tag) + ' SQ # ' + this.length + ' ' + Lookup.keywordOf(this.tag) + ')'
+            'SequenceElement(' + tagToString(this.tag) + ' SQ # ' + this.length + ' ' + Lookup.keywordOf(this.tag) ||
+            '' + ')'
         );
     }
 }
@@ -179,7 +179,8 @@ export class FragmentsElement extends Element {
     }
     public toString(): string {
         return (
-            'FragmentsElement(' + tagToString(this.tag) + ' ' + this.vr.name + ' # ' + Lookup.keywordOf(this.tag) + ')'
+            'FragmentsElement(' + tagToString(this.tag) + ' ' + this.vr.name + ' # ' + Lookup.keywordOf(this.tag) ||
+            '' + ')'
         );
     }
 }
@@ -317,14 +318,13 @@ export class Sequence extends ElementSet {
     public toString(): string {
         return (
             'Sequence(' +
-            tagToString(this.tag) +
-            ' SQ # ' +
-            this.length +
-            ' ' +
-            this.size +
-            ' ' +
-            Lookup.keywordOf(this.tag) +
-            ')'
+                tagToString(this.tag) +
+                ' SQ # ' +
+                this.length +
+                ' ' +
+                this.size +
+                ' ' +
+                Lookup.keywordOf(this.tag) || '' + ')'
         );
     }
 }
@@ -459,8 +459,8 @@ export class Fragments extends ElementSet {
         return new Fragments(this.tag, this.vr, this.offsets, newFragments, this.bigEndian, this.explicitVR);
     }
     public toString(): string {
-        return `Fragments(${tagToString(this.tag)} ${this.vr.name} # ${this.fragments.length} ${Lookup.keywordOf(
-            this.tag,
-        )})`;
+        return `Fragments(${tagToString(this.tag)} ${this.vr.name} # ${this.fragments.length} ${
+            Lookup.keywordOf(this.tag) || ''
+        })`;
     }
 }
