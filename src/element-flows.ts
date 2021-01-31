@@ -49,7 +49,7 @@ export function elementFlow(): any {
                 }
 
                 if (part instanceof ItemPart && this.inFragments) {
-                    this.currentFragment = new FragmentElement(part.index, part.length, Value.empty(), part.bigEndian);
+                    this.currentFragment = new FragmentElement(part.length, Value.empty(), part.bigEndian);
                     this.bytes = emptyBuffer;
                     return [];
                 }
@@ -63,7 +63,6 @@ export function elementFlow(): any {
                             } else {
                                 return [
                                     new FragmentElement(
-                                        this.currentFragment.index,
                                         this.currentFragment.length,
                                         new Value(this.bytes),
                                         this.currentFragment.bigEndian,
@@ -95,11 +94,11 @@ export function elementFlow(): any {
                 }
 
                 if (part instanceof ItemPart) {
-                    return [new ItemElement(part.index, part.length, part.bigEndian)];
+                    return [new ItemElement(part.length, part.bigEndian)];
                 }
 
                 if (part instanceof ItemDelimitationPart) {
-                    return [new ItemDelimitationElement(part.index, part.bigEndian)];
+                    return [new ItemDelimitationElement(part.bigEndian)];
                 }
 
                 if (part instanceof SequenceDelimitationPart) {

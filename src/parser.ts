@@ -40,7 +40,6 @@ class FmiAttributeState {
 
 class AttributeState {
     constructor(
-        public readonly itemIndex: number,
         public readonly bigEndian: boolean,
         public readonly explicitVR: boolean,
         public readonly inflater: Inflater,
@@ -49,7 +48,6 @@ class AttributeState {
 
 class FragmentsState {
     constructor(
-        public readonly fragmentIndex: number,
         public readonly bigEndian: boolean,
         public readonly explicitVR: boolean,
         public readonly inflater: Inflater,
@@ -88,7 +86,7 @@ class AtBeginning extends DicomParseStep {
                       new FmiAttributeState(undefined, info.bigEndian, info.explicitVR, info.hasFmi, 0, undefined),
                       this.stop,
                   )
-                : new InAttribute(new AttributeState(0, info.bigEndian, info.explicitVR, undefined), this.stop);
+                : new InAttribute(new AttributeState(info.bigEndian, info.explicitVR, undefined), this.stop);
             return new ParseResult(undefined, nextState);
         } else {
             throw new Error('Not a DICOM file');
@@ -166,7 +164,7 @@ class InFmiAttribute extends DicomParseStep {
 
             reader.setInput(inflater.inflate(reader.remainingData()));
         }
-        return new InAttribute(new AttributeState(0, bigEndian, explicitVR, inflater), this.stop);
+        return new InAttribute(new AttributeState(bigEndian, explicitVR, inflater), this.stop);
     }
 }
 
@@ -186,7 +184,7 @@ class InAttribute extends DicomParseStep {
                 return new ParseResult(
                     new SequenceElement(header.tag, header.valueLength, this.state.bigEndian, this.state.explicitVR),
                     new InAttribute(
-                        new AttributeState(0, this.state.bigEndian, this.state.explicitVR, this.state.inflater),
+                        new AttributeState(this.state.bigEndian, this.state.explicitVR, this.state.inflater),
                         this.stop,
                     ),
                 );
@@ -195,7 +193,7 @@ class InAttribute extends DicomParseStep {
                 return new ParseResult(
                     new FragmentsElement(header.tag, header.vr, this.state.bigEndian, this.state.explicitVR),
                     new InFragments(
-                        new FragmentsState(0, this.state.bigEndian, this.state.explicitVR, this.state.inflater),
+                        new FragmentsState(this.state.bigEndian, this.state.explicitVR, this.state.inflater),
                         this.stop,
                     ),
                 );
@@ -214,27 +212,17 @@ class InAttribute extends DicomParseStep {
         switch (header.tag) {
             case 0xfffee000:
                 return new ParseResult(
-                    new ItemElement(this.state.itemIndex + 1, header.valueLength, this.state.bigEndian),
+                    new ItemElement(header.valueLength, this.state.bigEndian),
                     new InAttribute(
-                        new AttributeState(
-                            this.state.itemIndex + 1,
-                            this.state.bigEndian,
-                            this.state.explicitVR,
-                            this.state.inflater,
-                        ),
+                        new AttributeState(this.state.bigEndian, this.state.explicitVR, this.state.inflater),
                         this.stop,
                     ),
                 );
             case 0xfffee00d:
                 return new ParseResult(
-                    new ItemDelimitationElement(this.state.itemIndex, this.state.bigEndian),
+                    new ItemDelimitationElement(this.state.bigEndian),
                     new InAttribute(
-                        new AttributeState(
-                            this.state.itemIndex,
-                            this.state.bigEndian,
-                            this.state.explicitVR,
-                            this.state.inflater,
-                        ),
+                        new AttributeState(this.state.bigEndian, this.state.explicitVR, this.state.inflater),
                         this.stop,
                     ),
                 );
@@ -242,12 +230,7 @@ class InAttribute extends DicomParseStep {
                 return new ParseResult(
                     new SequenceDelimitationElement(this.state.bigEndian),
                     new InAttribute(
-                        new AttributeState(
-                            this.state.itemIndex,
-                            this.state.bigEndian,
-                            this.state.explicitVR,
-                            this.state.inflater,
-                        ),
+                        new AttributeState(this.state.bigEndian, this.state.explicitVR, this.state.inflater),
                         this.stop,
                     ),
                 );
@@ -268,19 +251,9 @@ class InFragments extends DicomParseStep {
             // begin fragment
             const valueBytes = reader.take(header.valueLength);
             return new ParseResult(
-                new FragmentElement(
-                    this.state.fragmentIndex + 1,
-                    header.valueLength,
-                    new Value(valueBytes),
-                    this.state.bigEndian,
-                ),
+                new FragmentElement(header.valueLength, new Value(valueBytes), this.state.bigEndian),
                 new InFragments(
-                    new FragmentsState(
-                        this.state.fragmentIndex + 1,
-                        this.state.bigEndian,
-                        this.state.explicitVR,
-                        this.state.inflater,
-                    ),
+                    new FragmentsState(this.state.bigEndian, this.state.explicitVR, this.state.inflater),
                     this.stop,
                 ),
             );
@@ -293,7 +266,7 @@ class InFragments extends DicomParseStep {
             return new ParseResult(
                 new SequenceDelimitationElement(this.state.bigEndian),
                 new InAttribute(
-                    new AttributeState(0, this.state.bigEndian, this.state.explicitVR, this.state.inflater),
+                    new AttributeState(this.state.bigEndian, this.state.explicitVR, this.state.inflater),
                     this.stop,
                 ),
             );

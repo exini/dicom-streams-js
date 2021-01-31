@@ -219,7 +219,7 @@ describe('DICOM parse flow', () => {
                 .expectHeader(Tag.SOPInstanceUID, VR.UI, 55)
                 .expectValueChunk(Buffer.from('1.2.276.0.7230010.3.1.4.1536491920.17152.1480884676.735'))
                 .expectSequence(Tag.DerivationCodeSequence, 25)
-                .expectItem(1, 17)
+                .expectItem(17)
                 .expectHeader(Tag.PatientName, VR.PN, 9)
                 .expectValueChunk(Buffer.from('Jane^Mary'))
                 .expectDicomComplete();
@@ -299,9 +299,9 @@ describe('DICOM parse flow', () => {
         return util.testParts(bytes, parseFlow(), (parts) => {
             util.partProbe(parts)
                 .expectFragments()
-                .expectFragment(1, 4)
+                .expectFragment(4)
                 .expectValueChunk()
-                .expectFragment(2, 4)
+                .expectFragment(4)
                 .expectValueChunk()
                 .expectFragmentsDelimitation()
                 .expectDicomComplete();
@@ -321,9 +321,9 @@ describe('DICOM parse flow', () => {
         return util.testParts(bytes, parseFlow(), (parts) => {
             util.partProbe(parts)
                 .expectFragments()
-                .expectFragment(1, 4)
+                .expectFragment(4)
                 .expectValueChunk()
-                .expectFragment(2, 4)
+                .expectFragment(4)
                 .expectValueChunk()
                 .expectFragmentsDelimitation()
                 .expectDicomComplete();
@@ -344,10 +344,10 @@ describe('DICOM parse flow', () => {
         return util.testParts(bytes, parseFlow(), (parts) => {
             util.partProbe(parts)
                 .expectFragments()
-                .expectFragment(1, 4)
+                .expectFragment(4)
                 .expectValueChunk()
                 .expectUnknownPart()
-                .expectFragment(2, 4)
+                .expectFragment(4)
                 .expectValueChunk()
                 .expectFragmentsDelimitation()
                 .expectDicomComplete();
@@ -367,7 +367,7 @@ describe('DICOM parse flow', () => {
         return util.testParts(bytes, parseFlow(), (parts) => {
             util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence)
-                .expectItem(1)
+                .expectItem()
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
                 .expectHeader(Tag.StudyDate)
@@ -395,9 +395,9 @@ describe('DICOM parse flow', () => {
         return util.testParts(bytes, parseFlow(), (parts) => {
             util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence)
-                .expectItem(1)
+                .expectItem()
                 .expectSequence(Tag.DerivationCodeSequence)
-                .expectItem(1)
+                .expectItem()
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
                 .expectItemDelimitation()
@@ -572,7 +572,7 @@ describe('DICOM parse flow', () => {
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
                 .expectSequence(Tag.DerivationCodeSequence, 8 + 16 + 16)
-                .expectItem(1, 16 + 16)
+                .expectItem(16 + 16)
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
                 .expectHeader(Tag.PatientName)
@@ -595,8 +595,8 @@ describe('DICOM parse flow', () => {
         return util.testParts(bytes, parseFlow(), (parts) => {
             util.partProbe(parts)
                 .expectFragments()
-                .expectFragment(1, 0)
-                .expectFragment(2, 4)
+                .expectFragment(0)
+                .expectFragment(4)
                 .expectValueChunk()
                 .expectFragmentsDelimitation()
                 .expectDicomComplete();
@@ -661,7 +661,7 @@ describe('DICOM parse flow', () => {
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
                 .expectSequence(Tag.CTDIPhantomTypeCodeSequence)
-                .expectItem(1, 60)
+                .expectItem(60)
                 .expectHeader(Tag.CodeValue, VR.SH, 6)
                 .expectValueChunk()
                 .expectHeader(Tag.CodingSchemeDesignator, VR.SH, 4)

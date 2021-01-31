@@ -111,12 +111,7 @@ export function collectFlow(
                     }
 
                     if (part instanceof ItemPart && this.inFragments) {
-                        this.currentFragment = new FragmentElement(
-                            part.index,
-                            part.length,
-                            Value.empty(),
-                            part.bigEndian,
-                        );
+                        this.currentFragment = new FragmentElement(part.length, Value.empty(), part.bigEndian);
                         this.bytes = emptyBuffer;
                         return [];
                     }
@@ -127,7 +122,6 @@ export function collectFlow(
                             if (this.inFragments && this.currentFragment) {
                                 this.maybeAdd(
                                     new FragmentElement(
-                                        this.currentFragment.index,
                                         this.currentFragment.length,
                                         new Value(this.bytes),
                                         this.currentFragment.bigEndian,
@@ -160,14 +154,14 @@ export function collectFlow(
                         return [];
                     }
                     if (part instanceof ItemPart) {
-                        this.maybeAdd(new ItemElement(part.index, part.length, part.bigEndian));
+                        this.maybeAdd(new ItemElement(part.length, part.bigEndian));
                         return [];
                     }
                     if (part instanceof ItemDelimitationPartMarker) {
                         return [];
                     }
                     if (part instanceof ItemDelimitationPart) {
-                        this.maybeAdd(new ItemDelimitationElement(part.index, part.bigEndian));
+                        this.maybeAdd(new ItemDelimitationElement(part.bigEndian));
                         return [];
                     }
                     if (part === sequenceDelimitationPartMarker) {

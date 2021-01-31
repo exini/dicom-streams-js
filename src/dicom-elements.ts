@@ -188,7 +188,7 @@ export class FragmentsElement extends Element {
 export class ItemElement extends Element {
     public indeterminate: boolean;
 
-    constructor(public readonly index: number, public readonly length = indeterminateLength, bigEndian?: boolean) {
+    constructor(public readonly length = indeterminateLength, bigEndian?: boolean) {
         super(bigEndian);
         this.indeterminate = this.length === indeterminateLength;
     }
@@ -197,20 +197,15 @@ export class ItemElement extends Element {
         return concat(tagToBytes(Tag.Item, this.bigEndian), intToBytes(this.length, this.bigEndian));
     }
     public toParts(): DicomPart[] {
-        return [new ItemPart(this.index, this.length, this.bigEndian, this.toBytes())];
+        return [new ItemPart(this.length, this.bigEndian, this.toBytes())];
     }
     public toString(): string {
-        return 'ItemElement(index = ' + this.index + ', length = ' + this.length + ')';
+        return 'ItemElement(length = ' + this.length + ')';
     }
 }
 
 export class FragmentElement extends Element {
-    constructor(
-        public readonly index: number,
-        public readonly length: number,
-        public readonly value: Value,
-        bigEndian?: boolean,
-    ) {
+    constructor(public readonly length: number, public readonly value: Value, bigEndian?: boolean) {
         super(bigEndian);
     }
 
@@ -220,19 +215,19 @@ export class FragmentElement extends Element {
             .reduce(concat);
     }
     public toParts(): DicomPart[] {
-        const itemParts: DicomPart[] = new ItemElement(this.index, this.value.length, this.bigEndian).toParts();
+        const itemParts: DicomPart[] = new ItemElement(this.value.length, this.bigEndian).toParts();
         if (this.value.length !== 0) {
             itemParts.push(new ValueChunk(this.bigEndian, this.value.bytes, true));
         }
         return itemParts;
     }
     public toString(): string {
-        return 'FragmentElement(index = ' + this.index + ', length = ' + this.length + ')';
+        return 'FragmentElement(length = ' + this.length + ')';
     }
 }
 
 export class ItemDelimitationElement extends Element {
-    constructor(public readonly index: number, bigEndian?: boolean) {
+    constructor(bigEndian?: boolean) {
         super(bigEndian);
     }
 
@@ -240,10 +235,10 @@ export class ItemDelimitationElement extends Element {
         return concat(tagToBytes(Tag.ItemDelimitationItem, this.bigEndian), Buffer.from([0, 0, 0, 0]));
     }
     public toParts(): DicomPart[] {
-        return [new ItemDelimitationPart(this.index, this.bigEndian, this.toBytes())];
+        return [new ItemDelimitationPart(this.bigEndian, this.toBytes())];
     }
     public toString(): string {
-        return 'ItemDelimitationElement(index = ' + this.index + ')';
+        return 'ItemDelimitationElement';
     }
 }
 
@@ -302,7 +297,7 @@ export class Sequence extends ElementSet {
         const elements = [];
         elements.push(new SequenceElement(this.tag, this.length, this.bigEndian, this.explicitVR));
         for (let i = 1; i <= this.items.length; i++) {
-            const itemElements = this.item(i).toElements(i);
+            const itemElements = this.item(i).toElements();
             itemElements.forEach((e) => elements.push(e));
         }
         if (this.indeterminate) {
@@ -340,17 +335,17 @@ export class Item {
         this.indeterminate = length === indeterminateLength;
     }
 
-    public toElements(index: number): Element[] {
+    public toElements(): Element[] {
         const elements: Element[] = [];
-        elements.push(new ItemElement(index, this.length, this.bigEndian));
+        elements.push(new ItemElement(this.length, this.bigEndian));
         this.elements.toElements(false).forEach((e) => elements.push(e));
         if (this.indeterminate) {
-            elements.push(new ItemDelimitationElement(index, this.bigEndian));
+            elements.push(new ItemDelimitationElement(this.bigEndian));
         }
         return elements;
     }
     public toBytes(): Buffer {
-        return this.toElements(1)
+        return this.toElements()
             .map((e) => e.toBytes())
             .reduce(concat);
     }
@@ -370,8 +365,8 @@ export class Fragment {
         public readonly bigEndian: boolean = false,
     ) {}
 
-    public toElement(index: number): Element {
-        return new FragmentElement(index, this.length, this.value, this.bigEndian);
+    public toElement(): Element {
+        return new FragmentElement(this.length, this.value, this.bigEndian);
     }
     public toString(): string {
         return 'Fragment(length = ' + this.length + ', value length = ' + this.value.length + ')';
@@ -434,7 +429,6 @@ export class Fragments extends ElementSet {
         if (this.offsets !== undefined) {
             elements.push(
                 new FragmentElement(
-                    1,
                     4 * this.offsets.length,
                     new Value(
                         this.offsets
@@ -445,10 +439,10 @@ export class Fragments extends ElementSet {
                 ),
             );
         } else {
-            elements.push(new FragmentElement(1, 0, Value.empty()));
+            elements.push(new FragmentElement(0, Value.empty()));
         }
         for (let i = 1; i <= this.fragments.length; i++) {
-            elements.push(this.fragment(i).toElement(i + 1));
+            elements.push(this.fragment(i).toElement());
         }
         elements.push(new SequenceDelimitationElement(this.bigEndian));
         return elements;

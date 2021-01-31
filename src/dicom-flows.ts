@@ -311,7 +311,6 @@ export function toIndeterminateLengthSequences(): any {
                 return super.onItem(part).map((p: DicomPart) => {
                     if (p instanceof ItemPart && !this.inFragments && !p.indeterminate) {
                         return new ItemPart(
-                            part.index,
                             indeterminateLength,
                             part.bigEndian,
                             concat(part.bytes.slice(0, part.bytes.length - 4), this.indeterminateBytes),
@@ -324,7 +323,7 @@ export function toIndeterminateLengthSequences(): any {
             public onItemDelimitation(part: ItemDelimitationPart): DicomPart[] {
                 const out = super.onItemDelimitation(part);
                 if (part.bytes.length <= 0) {
-                    out.push(new ItemDelimitationPart(part.index, part.bigEndian, itemDelimitation(part.bigEndian)));
+                    out.push(new ItemDelimitationPart(part.bigEndian, itemDelimitation(part.bigEndian)));
                 }
                 return out;
             }

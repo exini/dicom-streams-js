@@ -149,23 +149,23 @@ export class DeflatedChunk extends DicomPart {
 export class ItemPart extends DicomPart {
     public indeterminate = false;
 
-    constructor(public readonly index: number, public readonly length: number, bigEndian: boolean, bytes: Buffer) {
+    constructor(public readonly length: number, bigEndian: boolean, bytes: Buffer) {
         super(bigEndian, bytes);
         this.indeterminate = length === indeterminateLength;
     }
 
     public toString(): string {
-        return 'Item [length = ' + this.length + ', index = ' + this.index + ']';
+        return 'Item [length = ' + this.length + ']';
     }
 }
 
 export class ItemDelimitationPart extends DicomPart {
-    constructor(public readonly index: number, bigEndian: boolean, bytes: Buffer) {
+    constructor(bigEndian: boolean, bytes: Buffer) {
         super(bigEndian, bytes);
     }
 
     public toString(): string {
-        return 'ItemDelimitation [index = ' + this.index + ']';
+        return 'ItemDelimitation';
     }
 }
 

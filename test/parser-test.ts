@@ -171,9 +171,9 @@ describe('DICOM parser', () => {
 
         probe(bytes)
             .expectFragments()
-            .expectFragment(1, 4)
+            .expectFragment(4)
             .expectValueChunk()
-            .expectFragment(2, 4)
+            .expectFragment(4)
             .expectValueChunk()
             .expectFragmentsDelimitation()
             .expectDicomComplete();
@@ -191,9 +191,9 @@ describe('DICOM parser', () => {
 
         probe(bytes)
             .expectFragments()
-            .expectFragment(1, 4)
+            .expectFragment(4)
             .expectValueChunk()
-            .expectFragment(2, 4)
+            .expectFragment(4)
             .expectValueChunk()
             .expectFragmentsDelimitation()
             .expectDicomComplete();
@@ -212,9 +212,9 @@ describe('DICOM parser', () => {
 
         probe(bytes)
             .expectFragments()
-            .expectFragment(1, 4)
+            .expectFragment(4)
             .expectValueChunk()
-            .expectFragment(2, 4)
+            .expectFragment(4)
             .expectValueChunk()
             .expectFragmentsDelimitation()
             .expectDicomComplete();
@@ -232,7 +232,7 @@ describe('DICOM parser', () => {
 
         probe(bytes)
             .expectSequence(Tag.DerivationCodeSequence)
-            .expectItem(1)
+            .expectItem()
             .expectHeader(Tag.PatientName)
             .expectValueChunk()
             .expectHeader(Tag.StudyDate)
@@ -258,9 +258,9 @@ describe('DICOM parser', () => {
 
         probe(bytes)
             .expectSequence(Tag.DerivationCodeSequence)
-            .expectItem(1)
+            .expectItem()
             .expectSequence(Tag.DerivationCodeSequence)
-            .expectItem(1)
+            .expectItem()
             .expectHeader(Tag.PatientName)
             .expectValueChunk()
             .expectItemDelimitation()
@@ -371,7 +371,7 @@ describe('DICOM parser', () => {
             .expectHeader(Tag.StudyDate)
             .expectValueChunk()
             .expectSequence(Tag.DerivationCodeSequence, 8 + 16 + 16)
-            .expectItem(1, 16 + 16)
+            .expectItem(16 + 16)
             .expectHeader(Tag.StudyDate)
             .expectValueChunk()
             .expectHeader(Tag.PatientName)
@@ -392,8 +392,8 @@ describe('DICOM parser', () => {
 
         probe(bytes)
             .expectFragments()
-            .expectFragment(1, 0)
-            .expectFragment(2, 4)
+            .expectFragment(0)
+            .expectFragment(4)
             .expectValueChunk()
             .expectFragmentsDelimitation()
             .expectDicomComplete();
@@ -456,7 +456,7 @@ describe('DICOM parser', () => {
             .expectHeader(Tag.StudyDate)
             .expectValueChunk()
             .expectSequence(Tag.DerivationCodeSequence)
-            .expectItem(1)
+            .expectItem()
             .expectHeader(Tag.PatientName)
             .expectValueChunk()
             .expectItemDelimitation()

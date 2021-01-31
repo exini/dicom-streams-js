@@ -26,21 +26,21 @@ describe('An element sink', () => {
             new ValueElement(Tag.TransferSyntaxUID, VR.UI, Value.fromString(VR.UI, UID.ExplicitVRLittleEndian)),
             new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, '20040329')),
             new SequenceElement(Tag.DerivationCodeSequence),
-            new ItemElement(1),
+            new ItemElement(),
             new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, '20040329')),
-            new ItemDelimitationElement(1),
-            new ItemElement(2),
+            new ItemDelimitationElement(),
+            new ItemElement(),
             new SequenceElement(Tag.DerivationCodeSequence),
-            new ItemElement(1),
+            new ItemElement(),
             new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, '20040329')),
-            new ItemDelimitationElement(1),
+            new ItemDelimitationElement(),
             new SequenceDelimitationElement(),
-            new ItemDelimitationElement(2),
+            new ItemDelimitationElement(),
             new SequenceDelimitationElement(),
             new ValueElement(Tag.PatientName, VR.PN, Value.fromString(VR.PN, 'Doe^John')),
             new FragmentsElement(Tag.PixelData, VR.OB),
-            new FragmentElement(1, 4, Value.fromBytes(VR.OB, [1, 2, 3, 4])),
-            new FragmentElement(2, 4, Value.fromBytes(VR.OB, [1, 2, 3, 4])),
+            new FragmentElement(4, Value.fromBytes(VR.OB, [1, 2, 3, 4])),
+            new FragmentElement(4, Value.fromBytes(VR.OB, [1, 2, 3, 4])),
             new SequenceDelimitationElement(),
         ];
 
@@ -59,12 +59,12 @@ describe('An element sink', () => {
             new SequenceDelimitationElement(),
             new SequenceElement(Tag.DerivationCodeSequence, 0),
             new SequenceElement(Tag.DerivationCodeSequence),
-            new ItemElement(1),
-            new ItemDelimitationElement(1),
-            new ItemElement(2, 0),
+            new ItemElement(),
+            new ItemDelimitationElement(),
+            new ItemElement(0),
             new SequenceDelimitationElement(),
             new FragmentsElement(Tag.PixelData, VR.OB),
-            new FragmentElement(1, 0, Value.empty()),
+            new FragmentElement(0, Value.empty()),
             new SequenceDelimitationElement(),
         ];
 
@@ -80,7 +80,7 @@ describe('An element sink', () => {
         const elementList = [
             new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, '20040329')),
             new SequenceElement(Tag.DerivationCodeSequence, 8 + 16 + 16),
-            new ItemElement(1, 16 + 16),
+            new ItemElement(16 + 16),
             new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, '20040329')),
             new ValueElement(Tag.PatientName, VR.DA, Value.fromString(VR.DA, 'Doe^John')),
             new ValueElement(Tag.PatientName, VR.DA, Value.fromString(VR.DA, 'Doe^John')),
@@ -97,8 +97,8 @@ describe('An element sink', () => {
     it('should convert an empty offsets table item to an empty list of offsets', () => {
         const elementList = [
             new FragmentsElement(Tag.PixelData, VR.OB),
-            new FragmentElement(1, 0, Value.empty()),
-            new FragmentElement(2, 0, Value.fromBytes(VR.OB, [1, 2, 3, 4])),
+            new FragmentElement(0, Value.empty()),
+            new FragmentElement(0, Value.fromBytes(VR.OB, [1, 2, 3, 4])),
             new SequenceDelimitationElement(),
         ];
 
@@ -116,7 +116,6 @@ describe('An element sink', () => {
         const elementList = [
             new FragmentsElement(Tag.PixelData, VR.OB),
             new FragmentElement(
-                1,
                 0,
                 Value.fromBuffer(VR.OB, concatv(intToBytesLE(1), intToBytesLE(2), intToBytesLE(3), intToBytesLE(4))),
             ),
@@ -136,11 +135,11 @@ describe('An element sink', () => {
     it('should handle determinate length items and sequences', () => {
         const elementList = [
             new SequenceElement(Tag.DerivationCodeSequence, 68),
-            new ItemElement(1, 16),
+            new ItemElement(16),
             new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, '20040329')),
-            new ItemElement(2, 36),
+            new ItemElement(36),
             new SequenceElement(Tag.DerivationCodeSequence, 24),
-            new ItemElement(1, 16),
+            new ItemElement(16),
             new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, '20040329')),
         ];
 
@@ -155,26 +154,26 @@ describe('An element sink', () => {
     it('should "handle item and sequence delimitations in when items and sequences are of determinate length', () => {
         const elementList = [
             new SequenceElement(Tag.DerivationCodeSequence, 108),
-            new ItemElement(1, 24),
+            new ItemElement(24),
             new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, '20040329')),
-            new ItemDelimitationElement(1),
-            new ItemElement(2, 60),
+            new ItemDelimitationElement(),
+            new ItemElement(60),
             new SequenceElement(Tag.DerivationCodeSequence, 40),
-            new ItemElement(1, 24),
+            new ItemElement(24),
             new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, '20040329')),
-            new ItemDelimitationElement(1),
+            new ItemDelimitationElement(),
             new SequenceDelimitationElement(),
-            new ItemDelimitationElement(2),
+            new ItemDelimitationElement(),
             new SequenceDelimitationElement(),
         ];
 
         const expectedElementList = [
             new SequenceElement(Tag.DerivationCodeSequence, 68),
-            new ItemElement(1, 16),
+            new ItemElement(16),
             new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, '20040329')),
-            new ItemElement(2, 36),
+            new ItemElement(36),
             new SequenceElement(Tag.DerivationCodeSequence, 24),
-            new ItemElement(1, 16),
+            new ItemElement(16),
             new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, '20040329')),
         ];
 

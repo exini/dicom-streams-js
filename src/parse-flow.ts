@@ -39,11 +39,7 @@ abstract class DicomParseStep extends ParseStep {
 }
 
 class DatasetHeaderState {
-    constructor(
-        public readonly itemIndex: number,
-        public readonly bigEndian: boolean,
-        public readonly explicitVR: boolean,
-    ) {}
+    constructor(public readonly bigEndian: boolean, public readonly explicitVR: boolean) {}
 }
 
 class FmiHeaderState {
@@ -66,11 +62,7 @@ class ValueState {
 }
 
 class FragmentsState {
-    constructor(
-        public readonly fragmentIndex: number,
-        public readonly bigEndian: boolean,
-        public readonly explicitVR: boolean,
-    ) {}
+    constructor(public readonly bigEndian: boolean, public readonly explicitVR: boolean) {}
 }
 
 class AtBeginning extends DicomParseStep {
@@ -108,7 +100,7 @@ class AtBeginning extends DicomParseStep {
                     this.flow,
                 );
             } else {
-                nextState = new InDatasetHeader(new DatasetHeaderState(0, info.bigEndian, info.explicitVR), this.flow);
+                nextState = new InDatasetHeader(new DatasetHeaderState(info.bigEndian, info.explicitVR), this.flow);
             }
             return new ParseResult(maybePreamble, nextState);
         } else {
@@ -166,7 +158,7 @@ class InFmiHeader extends DicomParseStep {
                 return new InDeflatedData(this.state, this.flow);
             }
         }
-        return new InDatasetHeader(new DatasetHeaderState(0, bigEndian, explicitVR), this.flow);
+        return new InDatasetHeader(new DatasetHeaderState(bigEndian, explicitVR), this.flow);
     }
 
     public parse(reader: ByteReader): ParseResult {
@@ -267,9 +259,9 @@ class InDatasetHeader extends DicomParseStep {
         }
         switch (header.tag) {
             case 0xfffee000:
-                return new ItemPart(this.state.itemIndex + 1, header.valueLength, this.state.bigEndian, reader.take(8));
+                return new ItemPart(header.valueLength, this.state.bigEndian, reader.take(8));
             case 0xfffee00d:
-                return new ItemDelimitationPart(this.state.itemIndex, this.state.bigEndian, reader.take(8));
+                return new ItemDelimitationPart(this.state.bigEndian, reader.take(8));
             case 0xfffee0dd:
                 return new SequenceDelimitationPart(this.state.bigEndian, reader.take(8));
         }
@@ -290,25 +282,25 @@ class InDatasetHeader extends DicomParseStep {
                     nextState = new InDatasetHeader(this.state, this.flow);
                 }
             } else if (part instanceof FragmentsPart) {
-                nextState = new InFragments(new FragmentsState(0, part.bigEndian, this.state.explicitVR), this.flow);
+                nextState = new InFragments(new FragmentsState(part.bigEndian, this.state.explicitVR), this.flow);
             } else if (part instanceof SequencePart) {
                 nextState = new InDatasetHeader(
-                    new DatasetHeaderState(0, this.state.bigEndian, this.state.explicitVR),
+                    new DatasetHeaderState(this.state.bigEndian, this.state.explicitVR),
                     this.flow,
                 );
             } else if (part instanceof ItemPart) {
                 nextState = new InDatasetHeader(
-                    new DatasetHeaderState(part.index, this.state.bigEndian, this.state.explicitVR),
+                    new DatasetHeaderState(this.state.bigEndian, this.state.explicitVR),
                     this.flow,
                 );
             } else if (part instanceof ItemDelimitationPart) {
                 nextState = new InDatasetHeader(
-                    new DatasetHeaderState(part.index, this.state.bigEndian, this.state.explicitVR),
+                    new DatasetHeaderState(this.state.bigEndian, this.state.explicitVR),
                     this.flow,
                 );
             } else if (part instanceof SequenceDelimitationPart) {
                 nextState = new InDatasetHeader(
-                    new DatasetHeaderState(0, this.state.bigEndian, this.state.explicitVR),
+                    new DatasetHeaderState(this.state.bigEndian, this.state.explicitVR),
                     this.flow,
                 );
             } else {
@@ -360,27 +352,15 @@ class InFragments extends DicomParseStep {
                               this.state.bigEndian,
                               header.valueLength,
                               new InFragments(
-                                  new FragmentsState(
-                                      this.state.fragmentIndex + 1,
-                                      this.state.bigEndian,
-                                      this.state.explicitVR,
-                                  ),
+                                  new FragmentsState(this.state.bigEndian, this.state.explicitVR),
                                   this.flow,
                               ),
                           ),
                           this.flow,
                       )
-                    : new InFragments(
-                          new FragmentsState(this.state.fragmentIndex + 1, this.state.bigEndian, this.state.explicitVR),
-                          this.flow,
-                      );
+                    : new InFragments(new FragmentsState(this.state.bigEndian, this.state.explicitVR), this.flow);
             return new ParseResult(
-                new ItemPart(
-                    this.state.fragmentIndex + 1,
-                    header.valueLength,
-                    this.state.bigEndian,
-                    reader.take(header.headerLength),
-                ),
+                new ItemPart(header.valueLength, this.state.bigEndian, reader.take(header.headerLength)),
                 nextState,
             );
         }
@@ -391,7 +371,7 @@ class InFragments extends DicomParseStep {
             }
             return new ParseResult(
                 new SequenceDelimitationPart(this.state.bigEndian, reader.take(header.headerLength)),
-                new InDatasetHeader(new DatasetHeaderState(0, this.state.bigEndian, this.state.explicitVR), this.flow),
+                new InDatasetHeader(new DatasetHeaderState(this.state.bigEndian, this.state.explicitVR), this.flow),
             );
         }
         console.warn(
