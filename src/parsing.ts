@@ -93,17 +93,8 @@ export class AttributeInfo {
 export function readHeader(reader: ByteReader, state: any): AttributeInfo {
     reader.ensure(8);
     const tagVrBytes = reader.remainingData().slice(0, 8);
-    let explicitVR = state.explicitVR;
-    let tagVr = readTagVr(tagVrBytes, state.bigEndian, explicitVR);
-    if (!tagVr.vr && !isSpecial(tagVr.tag)) {
-        // cannot parse VR and not item or delimitation, try switching implicit/explicit as last resort
-        explicitVR = !explicitVR;
-        const TagVrSwitched = readTagVr(tagVrBytes, state.bigEndian, explicitVR);
-        if (TagVrSwitched.vr && TagVrSwitched.vr != VR.UN) {
-            tagVr = TagVrSwitched;
-        }
-    }
-    if (tagVr.vr && explicitVR) {
+    const tagVr = readTagVr(tagVrBytes, state.bigEndian, state.explicitVR);
+    if (tagVr.vr && state.explicitVR) {
         if (tagVr.vr.headerLength === 8) {
             return new AttributeInfo(tagVr.tag, tagVr.vr, 8, bytesToUShort(tagVrBytes.slice(6), state.bigEndian));
         }

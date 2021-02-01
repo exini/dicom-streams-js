@@ -1,5 +1,15 @@
 import zlib from 'zlib';
-import { bytesToInt, bytesToUShortBE, groupNumber, indeterminateLength, isDeflated, tagToString, trim } from './base';
+import {
+    bytesToInt,
+    bytesToTag,
+    bytesToUShortBE,
+    bytesToVR,
+    groupNumber,
+    indeterminateLength,
+    isDeflated,
+    tagToString,
+    trim,
+} from './base';
 import { ByteParser, ByteReader, finishedParser, ParseResult, ParseStep } from './byte-parser';
 import {
     Element,
@@ -14,7 +24,7 @@ import {
 } from './dicom-elements';
 import { ElementsBuilder } from './elements-builder';
 import { Lookup } from './lookup';
-import { AttributeInfo, dicomPreambleLength, isPreamble, readHeader, tryReadHeader } from './parsing';
+import { AttributeInfo, dicomPreambleLength, isPreamble, isSpecial, readHeader, tryReadHeader } from './parsing';
 import { Tag } from './tag';
 import { UID } from './uid';
 import { Value } from './value';
@@ -40,6 +50,7 @@ class FmiAttributeState {
 
 class AttributeState {
     constructor(
+        public readonly maySwitchTs: boolean,
         public readonly bigEndian: boolean,
         public readonly explicitVR: boolean,
         public readonly inflater: Inflater,
@@ -86,7 +97,7 @@ class AtBeginning extends DicomParseStep {
                       new FmiAttributeState(undefined, info.bigEndian, info.explicitVR, info.hasFmi, 0, undefined),
                       this.stop,
                   )
-                : new InAttribute(new AttributeState(info.bigEndian, info.explicitVR, undefined), this.stop);
+                : new InAttribute(new AttributeState(false, info.bigEndian, info.explicitVR, undefined), this.stop);
             return new ParseResult(undefined, nextState);
         } else {
             throw new Error('Not a DICOM file');
@@ -164,7 +175,7 @@ class InFmiAttribute extends DicomParseStep {
 
             reader.setInput(inflater.inflate(reader.remainingData()));
         }
-        return new InAttribute(new AttributeState(bigEndian, explicitVR, inflater), this.stop);
+        return new InAttribute(new AttributeState(true, bigEndian, explicitVR, inflater), this.stop);
     }
 }
 
@@ -173,8 +184,30 @@ class InAttribute extends DicomParseStep {
         super(state, stop);
     }
 
+    public maybeSwitchTs(reader: ByteReader, state: any): AttributeState {
+        reader.ensure(8);
+        const data = reader.remainingData().slice(0, 8);
+        const tag = bytesToTag(data, state.bigEndian);
+        let explicitVR = undefined;
+        try {
+            explicitVR = VR.valueOf(bytesToVR(data.slice(4)));
+        } catch (e) {}
+        if (isSpecial(tag)) {
+            return new AttributeState(false, state.bigEndian, state.explicitVR, state.inflater);
+        }
+        if (state.explicitVR && !explicitVR) {
+            console.log('Implicit VR attributes detected in explicit VR dataset');
+            return new AttributeState(false, state.bigEndian, false, state.inflater);
+        }
+        if (!state.explicitVR && explicitVR) {
+            return new AttributeState(false, state.bigEndian, true, state.inflater);
+        }
+        return new AttributeState(false, state.bigEndian, state.explicitVR, state.inflater);
+    }
+
     public parse(reader: ByteReader): ParseResult {
-        const header = readHeader(reader, this.state);
+        const state = this.state.maySwitchTs ? this.maybeSwitchTs(reader, this.state) : this.state;
+        const header = readHeader(reader, state);
         reader.take(header.headerLength);
         if (header.vr) {
             if (this.stop(header)) {
@@ -182,20 +215,17 @@ class InAttribute extends DicomParseStep {
             }
             if (header.vr === VR.SQ || (header.vr === VR.UN && header.valueLength === indeterminateLength)) {
                 return new ParseResult(
-                    new SequenceElement(header.tag, header.valueLength, this.state.bigEndian, this.state.explicitVR),
+                    new SequenceElement(header.tag, header.valueLength, state.bigEndian, state.explicitVR),
                     new InAttribute(
-                        new AttributeState(this.state.bigEndian, this.state.explicitVR, this.state.inflater),
+                        new AttributeState(false, state.bigEndian, state.explicitVR, state.inflater),
                         this.stop,
                     ),
                 );
             }
             if (header.valueLength === indeterminateLength) {
                 return new ParseResult(
-                    new FragmentsElement(header.tag, header.vr, this.state.bigEndian, this.state.explicitVR),
-                    new InFragments(
-                        new FragmentsState(this.state.bigEndian, this.state.explicitVR, this.state.inflater),
-                        this.stop,
-                    ),
+                    new FragmentsElement(header.tag, header.vr, state.bigEndian, state.explicitVR),
+                    new InFragments(new FragmentsState(state.bigEndian, state.explicitVR, state.inflater), this.stop),
                 );
             }
             return new ParseResult(
@@ -203,8 +233,8 @@ class InAttribute extends DicomParseStep {
                     header.tag,
                     header.vr,
                     new Value(reader.take(header.valueLength)),
-                    this.state.bigEndian,
-                    this.state.explicitVR,
+                    state.bigEndian,
+                    state.explicitVR,
                 ),
                 this,
             );
@@ -212,30 +242,30 @@ class InAttribute extends DicomParseStep {
         switch (header.tag) {
             case 0xfffee000:
                 return new ParseResult(
-                    new ItemElement(header.valueLength, this.state.bigEndian),
+                    new ItemElement(header.valueLength, state.bigEndian),
                     new InAttribute(
-                        new AttributeState(this.state.bigEndian, this.state.explicitVR, this.state.inflater),
+                        new AttributeState(true, state.bigEndian, state.explicitVR, state.inflater),
                         this.stop,
                     ),
                 );
             case 0xfffee00d:
                 return new ParseResult(
-                    new ItemDelimitationElement(this.state.bigEndian),
+                    new ItemDelimitationElement(state.bigEndian),
                     new InAttribute(
-                        new AttributeState(this.state.bigEndian, this.state.explicitVR, this.state.inflater),
+                        new AttributeState(false, state.bigEndian, state.explicitVR, state.inflater),
                         this.stop,
                     ),
                 );
             case 0xfffee0dd:
                 return new ParseResult(
-                    new SequenceDelimitationElement(this.state.bigEndian),
+                    new SequenceDelimitationElement(state.bigEndian),
                     new InAttribute(
-                        new AttributeState(this.state.bigEndian, this.state.explicitVR, this.state.inflater),
+                        new AttributeState(true, state.bigEndian, state.explicitVR, state.inflater),
                         this.stop,
                     ),
                 );
         }
-        return new ParseResult(new UnknownElement(this.state.bigEndian), this);
+        return new ParseResult(new UnknownElement(state.bigEndian), this);
     }
 }
 
@@ -266,7 +296,7 @@ class InFragments extends DicomParseStep {
             return new ParseResult(
                 new SequenceDelimitationElement(this.state.bigEndian),
                 new InAttribute(
-                    new AttributeState(this.state.bigEndian, this.state.explicitVR, this.state.inflater),
+                    new AttributeState(false, this.state.bigEndian, this.state.explicitVR, this.state.inflater),
                     this.stop,
                 ),
             );

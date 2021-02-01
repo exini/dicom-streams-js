@@ -100,6 +100,12 @@ export function sequence(
     return concatv(tagToBytes(tag, bigEndian), vrBytes, intToBytes(length, bigEndian));
 }
 
+export const cp264Sequence = concatv(
+    tagToBytes(Tag.CTDIPhantomTypeCodeSequence),
+    Buffer.from('UN'),
+    Buffer.from([0, 0, 0xff, 0xff, 0xff, 0xff]),
+);
+
 export function pixelData(length: number, bigEndian?: boolean, explicitVR?: boolean): Buffer {
     return element(Tag.PixelData, Buffer.from(new Array(length).fill(0)), bigEndian, explicitVR);
 }

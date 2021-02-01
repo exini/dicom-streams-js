@@ -4,7 +4,9 @@ import zlib from 'zlib';
 import {
     bytesToInt,
     bytesToShort,
+    bytesToTag,
     bytesToUShortBE,
+    bytesToVR,
     groupNumber,
     indeterminateLength,
     isDeflated,
@@ -14,7 +16,7 @@ import {
 import { ByteParser, ByteReader, finishedParser, ParseResult, ParseStep } from './byte-parser';
 import { Detour } from './detour';
 import { Lookup } from './lookup';
-import { dicomPreambleLength, isPreamble, readHeader, tryReadHeader, warnIfOdd } from './parsing';
+import { dicomPreambleLength, isPreamble, isSpecial, readHeader, tryReadHeader, warnIfOdd } from './parsing';
 import {
     DeflatedChunk,
     DicomPart,
@@ -39,7 +41,11 @@ abstract class DicomParseStep extends ParseStep {
 }
 
 class DatasetHeaderState {
-    constructor(public readonly bigEndian: boolean, public readonly explicitVR: boolean) {}
+    constructor(
+        public readonly maySwitchTs: boolean,
+        public readonly bigEndian: boolean,
+        public readonly explicitVR: boolean,
+    ) {}
 }
 
 class FmiHeaderState {
@@ -100,7 +106,10 @@ class AtBeginning extends DicomParseStep {
                     this.flow,
                 );
             } else {
-                nextState = new InDatasetHeader(new DatasetHeaderState(info.bigEndian, info.explicitVR), this.flow);
+                nextState = new InDatasetHeader(
+                    new DatasetHeaderState(false, info.bigEndian, info.explicitVR),
+                    this.flow,
+                );
             }
             return new ParseResult(maybePreamble, nextState);
         } else {
@@ -158,7 +167,7 @@ class InFmiHeader extends DicomParseStep {
                 return new InDeflatedData(this.state, this.flow);
             }
         }
-        return new InDatasetHeader(new DatasetHeaderState(bigEndian, explicitVR), this.flow);
+        return new InDatasetHeader(new DatasetHeaderState(true, bigEndian, explicitVR), this.flow);
     }
 
     public parse(reader: ByteReader): ParseResult {
@@ -223,27 +232,42 @@ class InDatasetHeader extends DicomParseStep {
         super(state, flow);
     }
 
-    public readDatasetHeader(reader: ByteReader): DicomPart {
-        const header = readHeader(reader, this.state);
+    public maybeSwitchTs(reader: ByteReader, state: any): DatasetHeaderState {
+        reader.ensure(8);
+        const data = reader.remainingData().slice(0, 8);
+        const tag = bytesToTag(data, state.bigEndian);
+        let explicitVR = undefined;
+        try {
+            explicitVR = VR.valueOf(bytesToVR(data.slice(4)));
+        } catch (e) {}
+        if (isSpecial(tag)) {
+            return new DatasetHeaderState(false, state.bigEndian, state.explicitVR);
+        }
+        if (state.explicitVR && !explicitVR) {
+            console.log('Implicit VR attributes detected in explicit VR dataset');
+            return new DatasetHeaderState(false, state.bigEndian, false);
+        }
+        if (!state.explicitVR && explicitVR) {
+            return new DatasetHeaderState(false, state.bigEndian, true);
+        }
+        return new DatasetHeaderState(false, state.bigEndian, state.explicitVR);
+    }
+
+    public readDatasetHeader(reader: ByteReader, state: any): DicomPart {
+        const header = readHeader(reader, state);
         warnIfOdd(header.tag, header.vr, header.valueLength);
         if (header.vr) {
             const bytes = reader.take(header.headerLength);
             if (header.vr === VR.SQ || (header.vr === VR.UN && header.valueLength === indeterminateLength)) {
-                return new SequencePart(
-                    header.tag,
-                    header.valueLength,
-                    this.state.bigEndian,
-                    this.state.explicitVR,
-                    bytes,
-                );
+                return new SequencePart(header.tag, header.valueLength, state.bigEndian, state.explicitVR, bytes);
             }
             if (header.valueLength === indeterminateLength) {
                 return new FragmentsPart(
                     header.tag,
                     header.valueLength,
                     header.vr,
-                    this.state.bigEndian,
-                    this.state.explicitVR,
+                    state.bigEndian,
+                    state.explicitVR,
                     bytes,
                 );
             }
@@ -252,59 +276,63 @@ class InDatasetHeader extends DicomParseStep {
                 header.vr,
                 header.valueLength,
                 false,
-                this.state.bigEndian,
-                this.state.explicitVR,
+                state.bigEndian,
+                state.explicitVR,
                 bytes,
             );
         }
         switch (header.tag) {
             case 0xfffee000:
-                return new ItemPart(header.valueLength, this.state.bigEndian, reader.take(8));
+                return new ItemPart(header.valueLength, state.bigEndian, reader.take(8));
             case 0xfffee00d:
-                return new ItemDelimitationPart(this.state.bigEndian, reader.take(8));
+                return new ItemDelimitationPart(state.bigEndian, reader.take(8));
             case 0xfffee0dd:
-                return new SequenceDelimitationPart(this.state.bigEndian, reader.take(8));
+                return new SequenceDelimitationPart(state.bigEndian, reader.take(8));
         }
-        return new UnknownPart(this.state.bigEndian, reader.take(header.headerLength));
+        return new UnknownPart(state.bigEndian, reader.take(header.headerLength));
     }
 
     public parse(reader: ByteReader): ParseResult {
-        const part = this.readDatasetHeader(reader);
+        const state = this.state.maySwitchTs ? this.maybeSwitchTs(reader, this.state) : this.state;
+        const part = this.readDatasetHeader(reader, state);
         let nextState: ParseStep = finishedParser;
         if (part) {
             if (part instanceof HeaderPart) {
                 if (part.length > 0) {
                     nextState = new InValue(
-                        new ValueState(part.bigEndian, part.length, new InDatasetHeader(this.state, this.flow)),
+                        new ValueState(part.bigEndian, part.length, new InDatasetHeader(state, this.flow)),
                         this.flow,
                     );
                 } else {
-                    nextState = new InDatasetHeader(this.state, this.flow);
+                    nextState = new InDatasetHeader(state, this.flow);
                 }
             } else if (part instanceof FragmentsPart) {
-                nextState = new InFragments(new FragmentsState(part.bigEndian, this.state.explicitVR), this.flow);
+                nextState = new InFragments(new FragmentsState(part.bigEndian, state.explicitVR), this.flow);
             } else if (part instanceof SequencePart) {
                 nextState = new InDatasetHeader(
-                    new DatasetHeaderState(this.state.bigEndian, this.state.explicitVR),
+                    new DatasetHeaderState(false, state.bigEndian, state.explicitVR),
                     this.flow,
                 );
             } else if (part instanceof ItemPart) {
                 nextState = new InDatasetHeader(
-                    new DatasetHeaderState(this.state.bigEndian, this.state.explicitVR),
+                    new DatasetHeaderState(true, state.bigEndian, state.explicitVR),
                     this.flow,
                 );
             } else if (part instanceof ItemDelimitationPart) {
                 nextState = new InDatasetHeader(
-                    new DatasetHeaderState(this.state.bigEndian, this.state.explicitVR),
+                    new DatasetHeaderState(false, state.bigEndian, state.explicitVR),
                     this.flow,
                 );
             } else if (part instanceof SequenceDelimitationPart) {
                 nextState = new InDatasetHeader(
-                    new DatasetHeaderState(this.state.bigEndian, this.state.explicitVR),
+                    new DatasetHeaderState(true, state.bigEndian, state.explicitVR),
                     this.flow,
                 );
             } else {
-                nextState = new InDatasetHeader(this.state, this.flow);
+                nextState = new InDatasetHeader(
+                    new DatasetHeaderState(false, state.bigEndian, state.explicitVR),
+                    this.flow,
+                );
             }
         }
         return new ParseResult(part, nextState);
@@ -371,7 +399,10 @@ class InFragments extends DicomParseStep {
             }
             return new ParseResult(
                 new SequenceDelimitationPart(this.state.bigEndian, reader.take(header.headerLength)),
-                new InDatasetHeader(new DatasetHeaderState(this.state.bigEndian, this.state.explicitVR), this.flow),
+                new InDatasetHeader(
+                    new DatasetHeaderState(false, this.state.bigEndian, this.state.explicitVR),
+                    this.flow,
+                ),
             );
         }
         console.warn(

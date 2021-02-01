@@ -345,7 +345,9 @@ export const InSequence = (Super: any): any =>
             return super.onSequence(part);
         }
         public onSequenceDelimitation(part: SequenceDelimitationPart): DicomPart[] {
-            this.sequenceStack.shift();
+            if (!this.inFragments) {
+                this.sequenceStack.shift();
+            }
             return super.onSequenceDelimitation(part);
         }
     };

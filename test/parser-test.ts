@@ -463,4 +463,32 @@ describe('DICOM parser', () => {
             .expectSequenceDelimitation()
             .expectDicomComplete();
     });
+
+    it('should handle sequences of indefinite length with VR UN with contents in implicit VR', () => {
+        const bytes = concatv(
+            data.patientNameJohnDoe(),
+            data.cp264Sequence,
+            item(60),
+            data.element(Tag.CodeValue, '113691', false, false),
+            data.element(Tag.CodingSchemeDesignator, 'DCM', false, false),
+            data.element(Tag.CodeMeaning, 'IEC Body Dosimetry Phantom', false, false),
+            sequenceDelimitation(),
+            data.pixelData(10),
+        );
+        probe(bytes)
+            .expectHeader(Tag.PatientName)
+            .expectValueChunk()
+            .expectSequence(Tag.CTDIPhantomTypeCodeSequence)
+            .expectItem(60)
+            .expectHeader(Tag.CodeValue, VR.SH, 6)
+            .expectValueChunk()
+            .expectHeader(Tag.CodingSchemeDesignator, VR.SH, 4)
+            .expectValueChunk()
+            .expectHeader(Tag.CodeMeaning, VR.LO, 26)
+            .expectValueChunk()
+            .expectSequenceDelimitation()
+            .expectHeader(Tag.PixelData)
+            .expectValueChunk()
+            .expectDicomComplete();
+    });
 });
