@@ -60,9 +60,8 @@ export class TagTree extends TagPathLike<TagTree> {
         const indexPart = (s: string): string => s.substring(s.lastIndexOf('[') + 1, s.length - 1);
         const tagPart = (s: string): string => s.substring(0, s.indexOf('['));
         const parseTag = (s: string): number => {
-            try {
-                return Lookup.tagOf(s);
-            } catch (error) {
+            const tag = Lookup.tagOf(s);
+            if (!tag) {
                 if (s.length === 11 && s[0] === '(' && s[5] === ',' && s[10] === ')') {
                     const i = parseInt(s.substring(1, 5) + s.substring(6, 10), 16);
                     if (!isNaN(i)) {
@@ -71,6 +70,7 @@ export class TagTree extends TagPathLike<TagTree> {
                 }
                 throw Error(s + ' is not a tag or name string');
             }
+            return tag;
         };
         const parseIndex = (s: string): number | undefined => {
             if (s === '*') {
@@ -319,7 +319,7 @@ export class TagTree extends TagPathLike<TagTree> {
         const toTagString = (tag: number): string => {
             if (lookup) {
                 const keyword = Lookup.keywordOf(tag);
-                if (keyword.length > 0) {
+                if (keyword) {
                     return keyword;
                 }
             }

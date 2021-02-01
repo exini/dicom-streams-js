@@ -643,11 +643,11 @@ describe('Elements data classes', () => {
         );
         assert.deepStrictEqual(new FragmentsElement(Tag.PixelData, VR.OW).toBytes(), data.pixeDataFragments());
         assert.deepStrictEqual(
-            new FragmentElement(1, 4, Value.fromBytes(VR.OW, [1, 2, 3, 4])).toBytes(),
+            new FragmentElement(4, Value.fromBytes(VR.OW, [1, 2, 3, 4])).toBytes(),
             concat(item(4), Buffer.from([1, 2, 3, 4])),
         );
-        assert.deepStrictEqual(new ItemElement(1, 10).toBytes(), item(10));
-        assert.deepStrictEqual(new ItemDelimitationElement(1).toBytes(), itemDelimitation());
+        assert.deepStrictEqual(new ItemElement(10).toBytes(), item(10));
+        assert.deepStrictEqual(new ItemDelimitationElement().toBytes(), itemDelimitation());
         assert.deepStrictEqual(new SequenceDelimitationElement().toBytes(), sequenceDelimitation());
         assert.deepStrictEqual(
             new Sequence(Tag.DerivationCodeSequence, indeterminateLength, [
@@ -670,9 +670,9 @@ describe('Elements data classes', () => {
         checkString(new ValueElement(Tag.StudyDate, VR.DA, Value.fromString(VR.DA, '20010101')).toString(), 1);
         checkString(new SequenceElement(Tag.DerivationCodeSequence, 10).toString(), 1);
         checkString(new FragmentsElement(Tag.PixelData, VR.OW).toString(), 1);
-        checkString(new FragmentElement(1, 4, Value.fromBytes(VR.OW, [1, 2, 3, 4])).toString(), 1);
-        checkString(new ItemElement(1, 10).toString(), 1);
-        checkString(new ItemDelimitationElement(1).toString(), 1);
+        checkString(new FragmentElement(4, Value.fromBytes(VR.OW, [1, 2, 3, 4])).toString(), 1);
+        checkString(new ItemElement(10).toString(), 1);
+        checkString(new ItemDelimitationElement().toString(), 1);
         checkString(new SequenceDelimitationElement().toString(), 1);
         checkString(
             new Sequence(Tag.DerivationCodeSequence, indeterminateLength, [

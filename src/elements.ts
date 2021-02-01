@@ -694,7 +694,7 @@ export class Elements {
                             ', ' +
                             vm +
                             space +
-                            Lookup.keywordOf(e.tag),
+                            Lookup.keywordOf(e.tag) || '',
                     ];
                 }
 
@@ -705,17 +705,17 @@ export class Elements {
                             : 'Sequence with explicit length ' + e.length;
                     const heading =
                         indent +
-                        tagToString(e.tag) +
-                        ' SQ ' +
-                        hDescription +
-                        space +
-                        space1(hDescription) +
-                        ' # ' +
-                        space2(toInt32(e.length)) +
-                        space +
-                        toInt32(e.length) +
-                        ', 1 ' +
-                        Lookup.keywordOf(e.tag);
+                            tagToString(e.tag) +
+                            ' SQ ' +
+                            hDescription +
+                            space +
+                            space1(hDescription) +
+                            ' # ' +
+                            space2(toInt32(e.length)) +
+                            space +
+                            toInt32(e.length) +
+                            ', 1 ' +
+                            Lookup.keywordOf(e.tag) || '';
                     const items = flatten(
                         e.items.map((i) => {
                             const iDescription = i.indeterminate
@@ -762,15 +762,15 @@ export class Elements {
                     const hDescription = 'Fragments with ' + e.size + ' fragment(s)';
                     const heading =
                         indent +
-                        tagToString(e.tag) +
-                        space +
-                        e.vr.name +
-                        space +
-                        hDescription +
-                        space +
-                        space1(hDescription) +
-                        ' #    na, 1 ' +
-                        Lookup.keywordOf(e.tag);
+                            tagToString(e.tag) +
+                            space +
+                            e.vr.name +
+                            space +
+                            hDescription +
+                            space +
+                            space1(hDescription) +
+                            ' #    na, 1 ' +
+                            Lookup.keywordOf(e.tag) || '';
                     let offsets: string[] = [];
                     if (e.offsets !== undefined) {
                         const len = e.offsets.length;

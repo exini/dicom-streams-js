@@ -1,5 +1,6 @@
 import { Tag } from './tag';
 import { TagToVR } from './tag-to-vr';
+import { UIDToName } from './uid-to-name';
 import { VR } from './vr';
 
 export class Lookup {
@@ -24,8 +25,7 @@ export class Lookup {
         } else if ((tag & 0xff000000) === 0x7f000000 && (tag & 0xffff0000) !== 0x7fe00000) {
             tag2 = tag & 0xff00ffff;
         }
-        const keyword = Lookup.keywords.find((key) => Tag[key] === tag2);
-        return keyword == undefined ? '' : keyword;
+        return Lookup.keywords.find((key) => Tag[key] === tag2);
     }
 
     public static vrOf(tag: number): VR {
@@ -33,10 +33,10 @@ export class Lookup {
     }
 
     public static tagOf(keyword: string): number {
-        const tag = Tag[keyword] as number;
-        if (tag === undefined) {
-            throw Error('Unknown keyword ' + keyword);
-        }
-        return tag;
+        return Tag[keyword] as number;
+    }
+
+    public static nameOf(uid: string): string {
+        return UIDToName.nameOf(uid);
     }
 }

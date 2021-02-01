@@ -171,9 +171,9 @@ describe('DICOM parser', () => {
 
         probe(bytes)
             .expectFragments()
-            .expectFragment(1, 4)
+            .expectFragment(4)
             .expectValueChunk()
-            .expectFragment(2, 4)
+            .expectFragment(4)
             .expectValueChunk()
             .expectFragmentsDelimitation()
             .expectDicomComplete();
@@ -191,9 +191,9 @@ describe('DICOM parser', () => {
 
         probe(bytes)
             .expectFragments()
-            .expectFragment(1, 4)
+            .expectFragment(4)
             .expectValueChunk()
-            .expectFragment(2, 4)
+            .expectFragment(4)
             .expectValueChunk()
             .expectFragmentsDelimitation()
             .expectDicomComplete();
@@ -212,9 +212,9 @@ describe('DICOM parser', () => {
 
         probe(bytes)
             .expectFragments()
-            .expectFragment(1, 4)
+            .expectFragment(4)
             .expectValueChunk()
-            .expectFragment(2, 4)
+            .expectFragment(4)
             .expectValueChunk()
             .expectFragmentsDelimitation()
             .expectDicomComplete();
@@ -232,7 +232,7 @@ describe('DICOM parser', () => {
 
         probe(bytes)
             .expectSequence(Tag.DerivationCodeSequence)
-            .expectItem(1)
+            .expectItem()
             .expectHeader(Tag.PatientName)
             .expectValueChunk()
             .expectHeader(Tag.StudyDate)
@@ -258,9 +258,9 @@ describe('DICOM parser', () => {
 
         probe(bytes)
             .expectSequence(Tag.DerivationCodeSequence)
-            .expectItem(1)
+            .expectItem()
             .expectSequence(Tag.DerivationCodeSequence)
-            .expectItem(1)
+            .expectItem()
             .expectHeader(Tag.PatientName)
             .expectValueChunk()
             .expectItemDelimitation()
@@ -371,7 +371,7 @@ describe('DICOM parser', () => {
             .expectHeader(Tag.StudyDate)
             .expectValueChunk()
             .expectSequence(Tag.DerivationCodeSequence, 8 + 16 + 16)
-            .expectItem(1, 16 + 16)
+            .expectItem(16 + 16)
             .expectHeader(Tag.StudyDate)
             .expectValueChunk()
             .expectHeader(Tag.PatientName)
@@ -392,8 +392,8 @@ describe('DICOM parser', () => {
 
         probe(bytes)
             .expectFragments()
-            .expectFragment(1, 0)
-            .expectFragment(2, 4)
+            .expectFragment(0)
+            .expectFragment(4)
             .expectValueChunk()
             .expectFragmentsDelimitation()
             .expectDicomComplete();
@@ -456,11 +456,39 @@ describe('DICOM parser', () => {
             .expectHeader(Tag.StudyDate)
             .expectValueChunk()
             .expectSequence(Tag.DerivationCodeSequence)
-            .expectItem(1)
+            .expectItem()
             .expectHeader(Tag.PatientName)
             .expectValueChunk()
             .expectItemDelimitation()
             .expectSequenceDelimitation()
+            .expectDicomComplete();
+    });
+
+    it('should handle sequences of indefinite length with VR UN with contents in implicit VR', () => {
+        const bytes = concatv(
+            data.patientNameJohnDoe(),
+            data.cp264Sequence,
+            item(60),
+            data.element(Tag.CodeValue, '113691', false, false),
+            data.element(Tag.CodingSchemeDesignator, 'DCM', false, false),
+            data.element(Tag.CodeMeaning, 'IEC Body Dosimetry Phantom', false, false),
+            sequenceDelimitation(),
+            data.pixelData(10),
+        );
+        probe(bytes)
+            .expectHeader(Tag.PatientName)
+            .expectValueChunk()
+            .expectSequence(Tag.CTDIPhantomTypeCodeSequence)
+            .expectItem(60)
+            .expectHeader(Tag.CodeValue, VR.SH, 6)
+            .expectValueChunk()
+            .expectHeader(Tag.CodingSchemeDesignator, VR.SH, 4)
+            .expectValueChunk()
+            .expectHeader(Tag.CodeMeaning, VR.LO, 26)
+            .expectValueChunk()
+            .expectSequenceDelimitation()
+            .expectHeader(Tag.PixelData)
+            .expectValueChunk()
             .expectDicomComplete();
     });
 });

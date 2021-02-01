@@ -108,14 +108,11 @@ export class PartProbe {
         return this;
     }
 
-    public expectItem(index?: number, length?: number): PartProbe {
+    public expectItem(length?: number): PartProbe {
         assert(this.array[this.offset] instanceof ItemPart);
         const part = this.array[this.offset] as ItemPart;
         if (length !== undefined) {
             assert.equal(part.length, length);
-        }
-        if (index !== undefined) {
-            assert.strictEqual(part.index, index);
         }
         this.offset++;
         return this;
@@ -133,14 +130,11 @@ export class PartProbe {
         return this;
     }
 
-    public expectFragment(index?: number, length?: number): PartProbe {
+    public expectFragment(length?: number): PartProbe {
         assert(this.array[this.offset] instanceof ItemPart);
         const part = this.array[this.offset] as ItemPart;
         if (length !== undefined) {
             assert.strictEqual(part.length, length);
-        }
-        if (index !== undefined) {
-            assert.strictEqual(part.index, index);
         }
         this.offset++;
         return this;
@@ -246,28 +240,22 @@ class ElementProbe {
         return this;
     }
 
-    public expectItem(index?: number, length?: number): ElementProbe {
+    public expectItem(length?: number): ElementProbe {
         const part = this.array[this.offset];
         assert(part instanceof ItemElement);
         if (part instanceof ItemElement) {
             if (length !== undefined) {
                 assert.strictEqual(part.length, length);
             }
-            if (index !== undefined) {
-                assert.strictEqual(part.index, index);
-            }
             this.offset++;
         }
         return this;
     }
 
-    public expectItemDelimitation(index?: number): ElementProbe {
+    public expectItemDelimitation(): ElementProbe {
         const part = this.array[this.offset];
         assert(part instanceof ItemDelimitationElement);
         if (part instanceof ItemDelimitationElement) {
-            if (index !== undefined) {
-                assert.strictEqual(part.index, index);
-            }
             this.offset++;
         }
         return this;

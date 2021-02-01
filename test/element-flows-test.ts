@@ -66,7 +66,7 @@ describe('A DICOM elements flow', () => {
         return util.testParts(bytes, pipe(parseFlow(), elementFlow()), (elements) => {
             util.elementProbe(elements)
                 .expectSequence(Tag.DerivationCodeSequence, 24)
-                .expectItem(1, 16)
+                .expectItem(16)
                 .expectElement(Tag.PatientName)
                 .expectDicomComplete();
         });

@@ -19,7 +19,6 @@ import { VR } from '../src/vr';
 import { Chunker } from './chunker';
 import * as data from './test-data';
 import * as util from './test-util';
-import { element } from './test-data';
 
 describe('DICOM parse flow', () => {
     it('should produce a preamble, FMI tags and dataset tags for a complete DICOM file', () => {
@@ -219,7 +218,7 @@ describe('DICOM parse flow', () => {
                 .expectHeader(Tag.SOPInstanceUID, VR.UI, 55)
                 .expectValueChunk(Buffer.from('1.2.276.0.7230010.3.1.4.1536491920.17152.1480884676.735'))
                 .expectSequence(Tag.DerivationCodeSequence, 25)
-                .expectItem(1, 17)
+                .expectItem(17)
                 .expectHeader(Tag.PatientName, VR.PN, 9)
                 .expectValueChunk(Buffer.from('Jane^Mary'))
                 .expectDicomComplete();
@@ -299,9 +298,9 @@ describe('DICOM parse flow', () => {
         return util.testParts(bytes, parseFlow(), (parts) => {
             util.partProbe(parts)
                 .expectFragments()
-                .expectFragment(1, 4)
+                .expectFragment(4)
                 .expectValueChunk()
-                .expectFragment(2, 4)
+                .expectFragment(4)
                 .expectValueChunk()
                 .expectFragmentsDelimitation()
                 .expectDicomComplete();
@@ -321,9 +320,9 @@ describe('DICOM parse flow', () => {
         return util.testParts(bytes, parseFlow(), (parts) => {
             util.partProbe(parts)
                 .expectFragments()
-                .expectFragment(1, 4)
+                .expectFragment(4)
                 .expectValueChunk()
-                .expectFragment(2, 4)
+                .expectFragment(4)
                 .expectValueChunk()
                 .expectFragmentsDelimitation()
                 .expectDicomComplete();
@@ -344,10 +343,10 @@ describe('DICOM parse flow', () => {
         return util.testParts(bytes, parseFlow(), (parts) => {
             util.partProbe(parts)
                 .expectFragments()
-                .expectFragment(1, 4)
+                .expectFragment(4)
                 .expectValueChunk()
                 .expectUnknownPart()
-                .expectFragment(2, 4)
+                .expectFragment(4)
                 .expectValueChunk()
                 .expectFragmentsDelimitation()
                 .expectDicomComplete();
@@ -367,7 +366,7 @@ describe('DICOM parse flow', () => {
         return util.testParts(bytes, parseFlow(), (parts) => {
             util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence)
-                .expectItem(1)
+                .expectItem()
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
                 .expectHeader(Tag.StudyDate)
@@ -395,9 +394,9 @@ describe('DICOM parse flow', () => {
         return util.testParts(bytes, parseFlow(), (parts) => {
             util.partProbe(parts)
                 .expectSequence(Tag.DerivationCodeSequence)
-                .expectItem(1)
+                .expectItem()
                 .expectSequence(Tag.DerivationCodeSequence)
-                .expectItem(1)
+                .expectItem()
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
                 .expectItemDelimitation()
@@ -572,7 +571,7 @@ describe('DICOM parse flow', () => {
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
                 .expectSequence(Tag.DerivationCodeSequence, 8 + 16 + 16)
-                .expectItem(1, 16 + 16)
+                .expectItem(16 + 16)
                 .expectHeader(Tag.StudyDate)
                 .expectValueChunk()
                 .expectHeader(Tag.PatientName)
@@ -595,8 +594,8 @@ describe('DICOM parse flow', () => {
         return util.testParts(bytes, parseFlow(), (parts) => {
             util.partProbe(parts)
                 .expectFragments()
-                .expectFragment(1, 0)
-                .expectFragment(2, 4)
+                .expectFragment(0)
+                .expectFragment(4)
                 .expectValueChunk()
                 .expectFragmentsDelimitation()
                 .expectDicomComplete();
@@ -622,7 +621,7 @@ describe('DICOM parse flow', () => {
         });
     });
 
-    it('should parse sequences with VR UN, and where the nested data set(s) have implicit VR, as a block of bytes', () => {
+    it('should parse sequences of determinate length with VR UN with contents in implicit VR as a block of bytes', () => {
         const unSequence = concatv(
             tagToBytes(Tag.CTExposureSequence),
             Buffer.from('UN'),
@@ -641,33 +640,179 @@ describe('DICOM parse flow', () => {
         });
     });
 
-    it('should parse sequences of indefinite length with VR UN as a regular sequence', () => {
-        const unSequence = concatv(
-            tagToBytes(Tag.CTDIPhantomTypeCodeSequence),
-            Buffer.from('UN'),
-            Buffer.from([0, 0, 0xff, 0xff, 0xff, 0xff]),
-        );
+    it('should handle sequences of indefinite length with VR UN with contents in implicit VR', () => {
         const bytes = concatv(
             data.patientNameJohnDoe(),
-            unSequence,
+            data.cp264Sequence,
             item(60),
-            element(Tag.CodeValue, '113691', false, false),
-            element(Tag.CodingSchemeDesignator, 'DCM', false, false),
-            element(Tag.CodeMeaning, 'IEC Body Dosimetry Phantom', false, false),
+            data.element(Tag.CodeValue, '113691', false, false),
+            data.element(Tag.CodingSchemeDesignator, 'DCM', false, false),
+            data.element(Tag.CodeMeaning, 'IEC Body Dosimetry Phantom', false, false),
             sequenceDelimitation(),
+            data.pixelData(10),
         );
         return util.testParts(bytes, parseFlow(), (parts) => {
             util.partProbe(parts)
                 .expectHeader(Tag.PatientName)
                 .expectValueChunk()
                 .expectSequence(Tag.CTDIPhantomTypeCodeSequence)
-                .expectItem(1, 60)
+                .expectItem(60)
                 .expectHeader(Tag.CodeValue, VR.SH, 6)
                 .expectValueChunk()
                 .expectHeader(Tag.CodingSchemeDesignator, VR.SH, 4)
                 .expectValueChunk()
                 .expectHeader(Tag.CodeMeaning, VR.LO, 26)
                 .expectValueChunk()
+                .expectSequenceDelimitation()
+                .expectHeader(Tag.PixelData)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
+    it('should handle data ending with a CP-246 sequence', function () {
+        const bytes = concatv(
+            data.patientNameJohnDoe(),
+            data.cp264Sequence,
+            item(),
+            data.patientNameJohnDoe(false, false),
+            itemDelimitation(),
+            sequenceDelimitation(),
+        );
+
+        return util.testParts(bytes, parseFlow(), (parts) => {
+            util.partProbe(parts)
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectSequence(Tag.CTDIPhantomTypeCodeSequence)
+                .expectItem()
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectItemDelimitation()
+                .expectSequenceDelimitation()
+                .expectDicomComplete();
+        });
+    });
+
+    it('handle a CP-246 sequence followed by a regular sequence', function () {
+        const bytes = concatv(
+            data.patientNameJohnDoe(),
+            data.cp264Sequence,
+            item(),
+            data.patientNameJohnDoe(false, false),
+            itemDelimitation(),
+            sequenceDelimitation(),
+            data.sequence(Tag.CollimatorShapeSequence),
+            item(),
+            data.studyDate(),
+            itemDelimitation(),
+            sequenceDelimitation(),
+        );
+
+        return util.testParts(bytes, parseFlow(), (parts) => {
+            util.partProbe(parts)
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectSequence(Tag.CTDIPhantomTypeCodeSequence)
+                .expectItem()
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectItemDelimitation()
+                .expectSequenceDelimitation()
+                .expectSequence(Tag.CollimatorShapeSequence)
+                .expectItem()
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectItemDelimitation()
+                .expectSequenceDelimitation()
+                .expectDicomComplete();
+        });
+    });
+
+    it('should handle a CP-246 sequence followed by a private attribute', function () {
+        const bytes = concatv(
+            data.patientNameJohnDoe(),
+            data.cp264Sequence,
+            item(),
+            data.patientNameJohnDoe(false, false),
+            itemDelimitation(),
+            sequenceDelimitation(),
+            new ValueElement(0x00990110, VR.SH, Value.fromString(VR.SH, 'Value'), false, true).toBytes(),
+        );
+
+        return util.testParts(bytes, parseFlow(), (parts) => {
+            util.partProbe(parts)
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectSequence(Tag.CTDIPhantomTypeCodeSequence)
+                .expectItem()
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectItemDelimitation()
+                .expectSequenceDelimitation()
+                .expectHeader(0x00990110)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
+    it('should handle a CP-246 sequence followed by fragments', function () {
+        const bytes = concatv(
+            data.patientNameJohnDoe(),
+            data.cp264Sequence,
+            item(),
+            data.patientNameJohnDoe(false, false),
+            itemDelimitation(),
+            sequenceDelimitation(),
+            data.pixeDataFragments(),
+            item(4),
+            Buffer.from([1, 2, 3, 4]),
+        );
+
+        return util.testParts(bytes, parseFlow(), (parts) => {
+            util.partProbe(parts)
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectSequence(Tag.CTDIPhantomTypeCodeSequence)
+                .expectItem()
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectItemDelimitation()
+                .expectSequenceDelimitation()
+                .expectFragments()
+                .expectFragment(4)
+                .expectValueChunk()
+                .expectDicomComplete();
+        });
+    });
+
+    it('should handle nested CP-246 sequences', function () {
+        const bytes = concatv(
+            data.patientNameJohnDoe(),
+            data.cp264Sequence,
+            item(),
+            data.sequence(Tag.DerivationCodeSequence),
+            item(),
+            data.studyDate(false, false),
+            itemDelimitation(),
+            sequenceDelimitation(),
+            itemDelimitation(),
+            sequenceDelimitation(),
+        );
+
+        return util.testParts(bytes, parseFlow(), (parts) => {
+            util.partProbe(parts)
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectSequence(Tag.CTDIPhantomTypeCodeSequence)
+                .expectItem()
+                .expectSequence(Tag.DerivationCodeSequence)
+                .expectItem()
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectItemDelimitation()
+                .expectSequenceDelimitation()
+                .expectItemDelimitation()
                 .expectSequenceDelimitation()
                 .expectDicomComplete();
         });

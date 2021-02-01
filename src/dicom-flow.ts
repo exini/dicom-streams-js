@@ -16,7 +16,7 @@ import {
     ValueChunk,
 } from './dicom-parts';
 import { Tag } from './tag';
-import { emptyTagPath, TagPath, TagPathItem } from './tag-path';
+import { emptyTagPath, TagPath, TagPathItem, TagPathItemEnd } from './tag-path';
 
 export function createFlow(flow: any): any {
     return pipe(flow.baseFlow(), flatMapFlow(flow.handlePart.bind(flow)));
@@ -241,14 +241,15 @@ class SequenceDelimitationPartMarker extends SequenceDelimitationPart {
 export const sequenceDelimitationPartMarker = new SequenceDelimitationPartMarker();
 
 export class ItemDelimitationPartMarker extends ItemDelimitationPart {
-    constructor(index: number) {
-        super(index, false, emptyBuffer);
+    constructor() {
+        super(false, emptyBuffer);
     }
 
     public toString(): string {
         return 'ItemDelimitationMarker []';
     }
 }
+export const itemDelimitationPartMarker = new ItemDelimitationPartMarker();
 
 /**
  * Depends on InFragments
@@ -315,7 +316,7 @@ export const GuaranteedDelimitationEvents = (Super: any): any =>
             this.partStack = this.partStack.slice(splitIndex);
             const out = inactive.map((i) =>
                 i.part instanceof ItemPart
-                    ? this.onItemDelimitation(new ItemDelimitationPartMarker((i.part as ItemPart).index))
+                    ? this.onItemDelimitation(itemDelimitationPartMarker)
                     : this.onSequenceDelimitation(sequenceDelimitationPartMarker),
             );
             return [].concat(...out);
@@ -333,10 +334,10 @@ export const InSequence = (Super: any): any =>
     class extends Super {
         public sequenceStack: SequencePart[] = [];
 
-        public sequenceDepth() {
+        public sequenceDepth(): number {
             return this.sequenceStack.length;
         }
-        public inSequence() {
+        public inSequence(): boolean {
             return this.sequenceStack.length > 0;
         }
         public onSequence(part: SequencePart): DicomPart[] {
@@ -344,7 +345,9 @@ export const InSequence = (Super: any): any =>
             return super.onSequence(part);
         }
         public onSequenceDelimitation(part: SequenceDelimitationPart): DicomPart[] {
-            this.sequenceStack.shift();
+            if (!this.inFragments) {
+                this.sequenceStack.shift();
+            }
             return super.onSequenceDelimitation(part);
         }
     };
@@ -381,7 +384,11 @@ export const TagPathTracking = (Super: any): any =>
         public onItem(part: ItemPart): DicomPart[] {
             const t = this.tagPath;
             if (!this.inFragments) {
-                this.tagPath = t.previous().thenItem(t.tag(), part.index);
+                if (t instanceof TagPathItemEnd) {
+                    this.tagPath = t.previous().thenItem(t.tag(), t.item + 1);
+                } else {
+                    this.tagPath = t.previous().thenItem(t.tag(), 1);
+                }
             }
             return super.onItem(part);
         }

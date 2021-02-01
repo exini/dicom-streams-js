@@ -23,9 +23,8 @@ export class TagPath extends TagPathLike<TagPath> {
         const indexPart = (s1: string): string => s1.substring(s1.lastIndexOf('[') + 1, s1.length - 1);
         const tagPart = (s1: string): string => s1.substring(0, s1.indexOf('['));
         const parseTag = (s1: string): number => {
-            try {
-                return Lookup.tagOf(s1);
-            } catch (error) {
+            const tag = Lookup.tagOf(s1);
+            if (!tag) {
                 if (s1.length === 11 && s1[0] === '(' && s1[5] === ',' && s1[10] === ')') {
                     const i = parseInt(s1.substring(1, 5) + s1.substring(6, 10), 16);
                     if (!isNaN(i)) {
@@ -34,6 +33,7 @@ export class TagPath extends TagPathLike<TagPath> {
                 }
                 throw Error(s1 + ' is not a tag or name string');
             }
+            return tag;
         };
         const parseIndex = (s1: string): number => {
             const i = parseInt(s1, 10);
@@ -222,7 +222,7 @@ export class TagPath extends TagPathLike<TagPath> {
         const toTagString = (tag: number): string => {
             if (lookup) {
                 const keyword = Lookup.keywordOf(tag);
-                if (keyword.length > 0) {
+                if (keyword) {
                     return keyword;
                 }
             }
