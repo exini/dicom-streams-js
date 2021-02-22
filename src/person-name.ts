@@ -3,10 +3,6 @@ import { multiValueDelimiter, trim } from './base';
 
 export class ComponentGroup {
     constructor(public alphabetic: string, public ideographic: string = '', public phonetic: string = '') {}
-
-    toString(): string {
-        return (this.alphabetic + '=' + this.ideographic + '=' + this.phonetic).replace(/=+$/, '');
-    }
 }
 
 export class PersonName {
@@ -26,16 +22,16 @@ export class PersonName {
     }
 
     toString(): string {
-        return (
-            this.familyName +
-            '^' +
-            this.givenName +
-            '^' +
-            this.middleName +
-            '^' +
-            this.prefix +
-            '^' +
-            this.suffix
-        ).replace('/\\^+$/', '');
+        const components = [this.familyName, this.givenName, this.middleName, this.prefix, this.suffix];
+        const representations = ['alphabetic', 'ideographic', 'phonetic'] as const;
+        return representations
+            .map((repr) => {
+                return components
+                    .map((c) => c[repr])
+                    .join('^')
+                    .replace(/\^+$/, ''); // Trim trailing ^ separators
+            })
+            .join('=')
+            .replace(/=+$/, ''); // Trim trailing = separators
     }
 }

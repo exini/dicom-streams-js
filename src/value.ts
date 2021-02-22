@@ -674,10 +674,14 @@ export function parsePersonName(s: string): PersonName {
         return ss.concat(new Array(Math.max(0, n - ss.length)).fill(''));
     }
 
-    const comps = ensureLength(s.split(/\^/), 5)
-        .map((s1) => ensureLength(s1.split(/=/), 3).map(trim))
-        .map((c) => new ComponentGroup(c[0], c[1], c[2]));
+    function transpose(matrix: string[][]): string[][] {
+        return matrix[0].map((_, i) => matrix.map((col) => col[i]));
+    }
 
+    const matrix = ensureLength(s.split(/=/), 3)
+        .map(trim)
+        .map((s1) => ensureLength(s1.split(/\^/), 5));
+    const comps = transpose(matrix).map((c) => new ComponentGroup(c[0], c[1], c[2]));
     return new PersonName(comps[0], comps[1], comps[2], comps[3], comps[4]);
 }
 
