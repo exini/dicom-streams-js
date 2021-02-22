@@ -177,10 +177,10 @@ describe('Creating an element', () => {
         assert.deepStrictEqual(Value.fromPersonName(VR.PN, pn1).toPersonName(), pn1);
         assert.deepStrictEqual(Value.fromPersonNames(VR.PN, [pn1, pn2]).toPersonNames(), [pn1, pn2]);
 
-        assert.deepStrictEqual(Value.fromPersonName(VR.PN, pn1).toString(VR.PN), 'Doe^John^^^');
+        assert.deepStrictEqual(Value.fromPersonName(VR.PN, pn1).toString(VR.PN), 'Doe^John');
         assert.deepStrictEqual(
             Value.fromPersonName(VR.PN, pn2).toString(VR.PN),
-            'Doe=iDoe=pDoe^Jane=iJane=pJane^Middle=iMiddle=pMiddle^Prefix=iPrefix=pPrefix^Suffix=iSuffix=pSuffix',
+            'Doe^Jane^Middle^Prefix^Suffix=iDoe^iJane^iMiddle^iPrefix^iSuffix=pDoe^pJane^pMiddle^pPrefix^pSuffix',
         );
     });
 
@@ -470,6 +470,18 @@ describe('Parsing person names', () => {
             pn2,
             pn3,
         ]);
+    });
+
+    it('should parse person names with ideographic and phonetic components', () => {
+        // http://dicom.nema.org/dicom/2013/output/chtml/part05/sect_H.3.html
+        const pn = new PersonName(
+            new ComponentGroup('Yamada', '山田', 'やまだ'),
+            new ComponentGroup('Tarou', '太郎', 'たろう'),
+        );
+        assert.deepStrictEqual(
+            Value.fromStrings(VR.PN, ['Yamada^Tarou=山田^太郎=やまだ^たろう']).toPersonNames(VR.PN),
+            [pn],
+        );
     });
 
     it('should trim whitespace', () => {

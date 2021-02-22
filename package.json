@@ -9,6 +9,7 @@
         "clean": "shx rm -rf build dist coverage",
         "lint": "eslint '*/**/*.ts' --quiet --fix",
         "test": "nyc mocha",
+        "test-watch": "nyc mocha --watch",
         "coverage": "nyc report --reporter=text-lcov | coveralls",
         "build-lib": "./node_modules/typescript/bin/tsc",
         "build-dev": "webpack --config config/webpack.config-dev.js",
