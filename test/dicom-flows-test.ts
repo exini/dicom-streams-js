@@ -805,6 +805,33 @@ describe('The utf8 flow', () => {
                 .expectDicomComplete();
         });
     });
+
+    it('should handle fragments appearing just after an updated attribute', () => {
+        const bytes = concatv(
+            tagToBytesLE(Tag.SpecificCharacterSet),
+            Buffer.from('CS'),
+            shortToBytesLE(0x0010),
+            padToEvenLength(Buffer.from('\\ISO 2022 IR 149'), VR.CS),
+            data.patientNameJohnDoe(),
+            data.pixeDataFragments(),
+            item(4),
+            Buffer.from([1, 2, 3, 4]),
+            sequenceDelimitation(),
+        );
+
+        return util.testParts(bytes, pipe(parseFlow(), toUtf8Flow()), (parts) => {
+            util.partProbe(parts)
+                .expectHeader(Tag.SpecificCharacterSet)
+                .expectValueChunk(Buffer.from('ISO_IR 192'))
+                .expectHeader(Tag.PatientName)
+                .expectValueChunk()
+                .expectFragments()
+                .expectFragment(4)
+                .expectValueChunk(Buffer.from([1, 2, 3, 4]))
+                .expectFragmentsDelimitation()
+                .expectDicomComplete();
+        });
+    });
 });
 
 describe('The sequence length filter', () => {
