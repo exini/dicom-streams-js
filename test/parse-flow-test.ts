@@ -767,6 +767,7 @@ describe('DICOM parse flow', () => {
             data.pixeDataFragments(),
             item(4),
             Buffer.from([1, 2, 3, 4]),
+            sequenceDelimitation(),
         );
 
         return util.testParts(bytes, parseFlow(), (parts) => {
@@ -782,6 +783,7 @@ describe('DICOM parse flow', () => {
                 .expectFragments()
                 .expectFragment(4)
                 .expectValueChunk()
+                .expectFragmentsDelimitation()
                 .expectDicomComplete();
         });
     });

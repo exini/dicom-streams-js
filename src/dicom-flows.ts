@@ -353,16 +353,16 @@ export function toUtf8Flow(): any {
                 }
 
                 public onValueChunk(part: ValueChunk): DicomPart[] {
-                    if (this.currentHeader !== undefined) {
+                    if (this.currentHeader !== undefined && !this.inFragments) {
                         this.currentValue = concat(this.currentValue, part.bytes);
                         if (part.last) {
-                            const newValue = Buffer.from(
-                                this.characterSets.decode(this.currentValue, this.currentHeader.vr),
-                            );
+                            const header = this.currentHeader;
+                            this.currentHeader = undefined;
+                            const newValue = Buffer.from(this.characterSets.decode(this.currentValue, header.vr));
                             const newLength = newValue.length;
                             return [
-                                this.currentHeader.withUpdatedLength(newLength),
-                                new ValueChunk(this.currentHeader.bigEndian, newValue, true),
+                                header.withUpdatedLength(newLength),
+                                new ValueChunk(header.bigEndian, newValue, true),
                             ];
                         } else {
                             return [];
