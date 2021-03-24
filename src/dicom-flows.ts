@@ -35,7 +35,6 @@ import {
     DeflatedChunk,
     DicomPart,
     ElementsPart,
-    FragmentsPart,
     HeaderPart,
     ItemDelimitationPart,
     ItemPart,
