@@ -122,9 +122,9 @@ export class TagPath extends TagPathLike<TagPath> {
             if (
                 'item' in thisPath &&
                 'item' in thatPath &&
-                (thisPath as ItemIndex).item !== (thatPath as ItemIndex).item
+                (thisPath as unknown as ItemIndex).item !== (thatPath as unknown as ItemIndex).item
             ) {
-                return (thisPath as ItemIndex).item < (thatPath as ItemIndex).item;
+                return (thisPath as unknown as ItemIndex).item < (thatPath as unknown as ItemIndex).item;
             }
             if (thisPath instanceof TagPathItem && thatPath instanceof TagPathItemEnd) {
                 return true;
@@ -229,7 +229,7 @@ export class TagPath extends TagPathLike<TagPath> {
             return tagToString(tag);
         };
         const toTagPathString = (path: TagPath, tail: string): string => {
-            const itemIndexSuffix = 'item' in path ? '[' + (path as ItemIndex).item + ']' : '';
+            const itemIndexSuffix = 'item' in path ? '[' + (path as unknown as ItemIndex).item + ']' : '';
             const head = toTagString(path.tag()) + itemIndexSuffix;
             const part = head + tail;
             return path.isRoot() ? part : toTagPathString(path.previous(), '.' + part);
