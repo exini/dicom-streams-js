@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-use-before-define */
 import { Transform } from 'stream';
 import zlib from 'zlib';
 import {

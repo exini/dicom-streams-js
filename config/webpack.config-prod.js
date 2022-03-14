@@ -1,4 +1,4 @@
-const webpackMerge = require('webpack-merge');
+const { merge } = require('webpack-merge');
 const configs = require('./webpack.config-base');
 
 const prodConfig = {
@@ -6,7 +6,7 @@ const prodConfig = {
         filename: 'index.min.js',
     },
     mode: 'production',
-    devtool: '',
+    devtool: false,
 };
 
-module.exports = [webpackMerge(configs[0], prodConfig), webpackMerge(configs[1], prodConfig)];
+module.exports = [merge(configs[0], prodConfig), merge(configs[1], prodConfig)];

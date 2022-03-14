@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-use-before-define */
 import { convertBytes } from 'dicom-character-set';
 import { VR } from './vr';
 

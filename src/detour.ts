@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { Transform, TransformOptions } from 'stream';
 
 export abstract class Detour extends Transform {
