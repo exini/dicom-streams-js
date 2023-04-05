@@ -6,23 +6,21 @@ const commonConfig = {
     entry: {
         main: [path.resolve(__dirname, '../src/index.ts')],
     },
-    output: {
-        library: 'dicomStreams',
-    },
     resolve: {
         extensions: ['.ts', '.tsx', '.js'],
-        fallback: { 
-            "stream": require.resolve("stream-browserify"),
-            "zlib": require.resolve("browserify-zlib"),
-            "buffer": require.resolve("buffer/"),
-            "assert": require.resolve("assert/"),
+        fallback: {
+            stream: require.resolve('stream-browserify'),
+            zlib: require.resolve('browserify-zlib'),
+            buffer: require.resolve('buffer/'),
+            assert: require.resolve('assert/'),
         },
     },
     module: {
         rules: [
             {
-                test: /\.tsx?$/,
-                loader: 'awesome-typescript-loader',
+                test: /\.ts?$/,
+                loader: 'ts-loader',
+                exclude: /node_modules/,
             },
         ],
     },
