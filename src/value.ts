@@ -178,16 +178,16 @@ export class Value {
         if (vr === VR.OD) {
             return [parseFD(this.bytes, bigEndian).join(' ')];
         }
-        if (vr === VR.ST || vr === VR.LT || vr === VR.UT || vr === VR.UR) {
-            return [trimPadding(characterSets.decode(this.bytes, vr), vr.paddingByte)];
+        if (vr === VR.ST || vr === VR.LT || vr === VR.UT) {
+            return [trimTrailing(characterSets.decode(this.bytes, vr), vr.paddingByte)];
         }
-        if (vr === VR.DA || vr === VR.TM || vr === VR.DT) {
-            return splitString(this.bytes.toString()).map(trim);
+        if (vr === VR.LO || vr === VR.SH || vr === VR.UC) {
+            return splitString(characterSets.decode(this.bytes, vr));
         }
-        if (vr === VR.UC) {
-            return splitString(trimPadding(characterSets.decode(this.bytes, vr), vr.paddingByte));
+        if (vr == VR.PN) {
+            return splitString(characterSets.decode(this.bytes, vr)).map(trim);
         }
-        return splitString(characterSets.decode(this.bytes, vr)).map(trim);
+        return splitString(this.bytes.toString()).map(trim);
     }
 
     public toSingleString(vr: VR, bigEndian = false, characterSets = defaultCharacterSet): string {
@@ -207,16 +207,16 @@ export class Value {
             const strings = this.toStrings(vr, bigEndian, characterSets);
             return strings.length === 0 ? '' : strings.join(multiValueDelimiter);
         }
-        if (vr === VR.ST || vr === VR.LT || vr === VR.UT || vr === VR.UR) {
-            return trimPadding(characterSets.decode(this.bytes, vr), vr.paddingByte);
+        if (vr === VR.ST || vr === VR.LT || vr === VR.UT) {
+            return trimTrailing(characterSets.decode(this.bytes, vr), vr.paddingByte);
         }
-        if (vr === VR.DA || vr === VR.TM || vr === VR.DT) {
-            return trim(this.bytes.toString());
+        if (vr === VR.LO || vr === VR.SH || vr === VR.UC) {
+            return characterSets.decode(this.bytes, vr);
         }
-        if (vr === VR.UC) {
-            return trimPadding(characterSets.decode(this.bytes, vr), vr.paddingByte);
+        if (vr == VR.PN) {
+            return trim(characterSets.decode(this.bytes, vr));
         }
-        return trim(characterSets.decode(this.bytes, vr));
+        return trim(this.bytes.toString());
     }
 
     public toNumbers(vr: VR, bigEndian = false): number[] {
@@ -326,7 +326,7 @@ export class Value {
     }
 }
 
-function trimPadding(s: string, paddingByte: number): string {
+function trimTrailing(s: string, paddingByte: number): string {
     let index = s.length;
     while (index > 0 && s.charCodeAt(index - 1) <= paddingByte) {
         index -= 1;

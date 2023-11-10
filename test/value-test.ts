@@ -18,18 +18,18 @@ describe('Formatting bytes into multiple strings', () => {
     });
 
     it('should split a string according to the DICOM multiple value delimiter', () => {
-        assert.deepStrictEqual(Value.fromString(VR.SH, 'one\\two\\three').toStrings(VR.SH), ['one', 'two', 'three']);
+        assert.deepStrictEqual(Value.fromString(VR.CS, 'one\\two\\three').toStrings(VR.CS), ['one', 'two', 'three']);
     });
 
     it('should trim any characters at beginning and end', () => {
         assert.deepStrictEqual(
-            Value.fromBytes(VR.SH, [0x20, 0x20, 0x20, 0x20, 0x41, 0x41, 0x20, 0x20, 0x20]).toStrings(VR.SH),
+            Value.fromBytes(VR.CS, [0x20, 0x20, 0x20, 0x20, 0x41, 0x41, 0x20, 0x20, 0x20]).toStrings(VR.CS),
             ['AA'],
         );
     });
 
     it('should trim any characters at or below 0x20 at beginning and end of each value', () => {
-        assert.deepStrictEqual(Value.fromString(VR.SH, '  one \\ two \\three  ').toStrings(VR.SH), [
+        assert.deepStrictEqual(Value.fromString(VR.CS, '  one \\ two \\three  ').toStrings(VR.CS), [
             'one',
             'two',
             'three',
@@ -96,11 +96,11 @@ describe('Formatting bytes into a single string', () => {
     });
 
     it('should not split a string with DICOM multiple value delimiters', () => {
-        assert.strictEqual(Value.fromString(VR.SH, 'one\\two\\three').toSingleString(VR.SH), 'one\\two\\three');
+        assert.strictEqual(Value.fromString(VR.SH, 'one\\two\\three').toSingleString(VR.SH), 'one\\two\\three ');
     });
 
-    it('should trim the string components', () => {
-        assert.strictEqual(Value.fromString(VR.SH, '   one two  ').toSingleString(VR.SH), 'one two');
+    it('should trim trailing spaces from string components', () => {
+        assert.strictEqual(Value.fromString(VR.ST, '   one two  ').toSingleString(VR.ST), '   one two');
     });
 });
 
