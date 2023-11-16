@@ -154,17 +154,23 @@ export class Value {
         if (vr === VR.FD) {
             return parseFD(this.bytes, bigEndian).map((v) => v.toString());
         }
+        if (vr === VR.SS) {
+            return parseSS(this.bytes, bigEndian).map((v) => v.toString());
+        }
         if (vr === VR.SL) {
             return parseSL(this.bytes, bigEndian).map((v) => v.toString());
         }
-        if (vr === VR.SS) {
-            return parseSS(this.bytes, bigEndian).map((v) => v.toString());
+        if (vr === VR.SV) {
+            return parseSV(this.bytes, bigEndian).map((v) => v.toString());
+        }
+        if (vr === VR.US) {
+            return parseUS(this.bytes, bigEndian).map((v) => v.toString());
         }
         if (vr === VR.UL) {
             return parseUL(this.bytes, bigEndian).map((v) => v.toString());
         }
-        if (vr === VR.US) {
-            return parseUS(this.bytes, bigEndian).map((v) => v.toString());
+        if (vr === VR.UV) {
+            return parseSV(this.bytes, bigEndian).map((v) => v.toString());
         }
         if (vr === VR.OB) {
             return [this.bytes.length + ' bytes'];
@@ -172,51 +178,33 @@ export class Value {
         if (vr === VR.OW) {
             return [this.bytes.length / 2 + ' words'];
         }
+        if (vr === VR.OL) {
+            return [this.bytes.length / 4 + ' longs'];
+        }
+        if (vr === VR.OV) {
+            return [this.bytes.length / 8 + ' very longs'];
+        }
         if (vr === VR.OF) {
-            return [parseFL(this.bytes, bigEndian).join(' ')];
+            return [this.bytes.length / 4 + ' floats'];
         }
         if (vr === VR.OD) {
-            return [parseFD(this.bytes, bigEndian).join(' ')];
+            return [this.bytes.length / 8 + ' doubles'];
         }
-        if (vr === VR.ST || vr === VR.LT || vr === VR.UT || vr === VR.UR) {
-            return [trimPadding(characterSets.decode(this.bytes, vr), vr.paddingByte)];
+        if (vr === VR.ST || vr === VR.LT || vr === VR.UT) {
+            return [trimTrailing(characterSets.decode(this.bytes, vr), vr.paddingByte)];
         }
-        if (vr === VR.DA || vr === VR.TM || vr === VR.DT) {
-            return splitString(this.bytes.toString()).map(trim);
+        if (vr === VR.LO || vr === VR.SH || vr === VR.UC) {
+            return splitString(characterSets.decode(this.bytes, vr));
         }
-        if (vr === VR.UC) {
-            return splitString(trimPadding(characterSets.decode(this.bytes, vr), vr.paddingByte));
+        if (vr == VR.PN) {
+            return splitString(characterSets.decode(this.bytes, vr)).map(trim);
         }
-        return splitString(characterSets.decode(this.bytes, vr)).map(trim);
+        return splitString(this.bytes.toString()).map(trim);
     }
 
     public toSingleString(vr: VR, bigEndian = false, characterSets = defaultCharacterSet): string {
-        if (
-            vr === VR.AT ||
-            vr === VR.FL ||
-            vr === VR.FD ||
-            vr === VR.SL ||
-            vr === VR.SS ||
-            vr === VR.UL ||
-            vr === VR.US ||
-            vr === VR.OB ||
-            vr === VR.OW ||
-            vr === VR.OF ||
-            vr === VR.OD
-        ) {
-            const strings = this.toStrings(vr, bigEndian, characterSets);
-            return strings.length === 0 ? '' : strings.join(multiValueDelimiter);
-        }
-        if (vr === VR.ST || vr === VR.LT || vr === VR.UT || vr === VR.UR) {
-            return trimPadding(characterSets.decode(this.bytes, vr), vr.paddingByte);
-        }
-        if (vr === VR.DA || vr === VR.TM || vr === VR.DT) {
-            return trim(this.bytes.toString());
-        }
-        if (vr === VR.UC) {
-            return trimPadding(characterSets.decode(this.bytes, vr), vr.paddingByte);
-        }
-        return trim(characterSets.decode(this.bytes, vr));
+        const strings = this.toStrings(vr, bigEndian, characterSets);
+        return strings.length === 0 ? '' : strings.join(multiValueDelimiter);
     }
 
     public toNumbers(vr: VR, bigEndian = false): number[] {
@@ -326,7 +314,7 @@ export class Value {
     }
 }
 
-function trimPadding(s: string, paddingByte: number): string {
+function trimTrailing(s: string, paddingByte: number): string {
     let index = s.length;
     while (index > 0 && s.charCodeAt(index - 1) <= paddingByte) {
         index -= 1;
@@ -514,6 +502,9 @@ function parseAT(value: Buffer, bigEndian = false): number[] {
 }
 function parseSL(value: Buffer, bigEndian = false): number[] {
     return splitFixed(value, 4).map((b) => bytesToInt(b, bigEndian));
+}
+function parseSV(value: Buffer, bigEndian = false): number[] {
+    return splitFixed(value, 8).map((b) => bytesToFloat(b, bigEndian));
 }
 function parseSS(value: Buffer, bigEndian = false): number[] {
     return splitFixed(value, 2).map((b) => bytesToShort(b, bigEndian));

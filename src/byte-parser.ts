@@ -168,11 +168,7 @@ export class ByteParser {
     private doParse(remainingRecursions: number): void {
         if (remainingRecursions === 0) {
             this.fail(
-                new Error(
-                    "Parsing logic didn't produce result. Aborting processing to avoid infinite cycles. " +
-                        'In the unlikely case that the parsing logic needs more recursion, override ' +
-                        'ParsingLogic.recursionLimit.',
-                ),
+                new Error("Parsing logic didn't produce result. Aborting processing to avoid infinite cycles."),
             );
         } else {
             const doRecurse = this.doParseInner();

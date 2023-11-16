@@ -13,7 +13,7 @@ export class CharacterSets {
     public static fromBytes(specificCharacterSetBytes: Buffer): CharacterSets {
         return !specificCharacterSetBytes || specificCharacterSetBytes.length === 0
             ? defaultCharacterSet
-            : new CharacterSets(specificCharacterSetBytes.toString());
+            : new CharacterSets(specificCharacterSetBytes.toString().trim());
     }
 
     public static encode(s: string): Buffer {
