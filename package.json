@@ -1,6 +1,6 @@
 {
     "name": "@exini/dicom-streams-js",
-    "version": "3.0.7",
+    "version": "3.0.9",
     "description": "Streaming parsing and processing of DICOM data",
     "main": "node/index.js",
     "browser": "web/index.js",
@@ -54,7 +54,7 @@
         "url": "https://github.com/exini/dicom-streams-js/issues"
     },
     "dependencies": {
-        "dicom-character-set": "^1.0.4",
+        "dicom-character-set": "^1.0.5",
         "js-joda": "^1.11.0",
         "multipipe": "^4.0.0",
         "uuid": "^9.0.0"
