@@ -120,6 +120,7 @@ export class PartProbe {
 
     public expectItemDelimitation(): PartProbe {
         assert(this.array[this.offset] instanceof ItemDelimitationPart);
+        console.log(this.array[this.offset])
         this.offset++;
         return this;
     }

@@ -991,6 +991,51 @@ describe('The sequence length filter', () => {
                 .expectDicomComplete();
         });
     });
+
+    it('should handle big-endian datasets', () => {
+        const bigEndian = true;
+
+        const bytes = concatv(
+            data.sequence(Tag.DerivationCodeSequence, 56, bigEndian),
+            item(16, bigEndian),
+            data.studyDate(bigEndian),
+            item(indeterminateLength, bigEndian),
+            data.studyDate(bigEndian),
+            itemDelimitation(bigEndian),
+            data.sequence(Tag.AbstractPriorCodeSequence, indeterminateLength, bigEndian),
+            item(indeterminateLength, bigEndian),
+            data.studyDate(bigEndian),
+            itemDelimitation(bigEndian),
+            item(16, bigEndian),
+            data.studyDate(bigEndian),
+            sequenceDelimitation(bigEndian),
+        );
+
+        return util.testParts(bytes, pipe(parseFlow(), toIndeterminateLengthSequences()), (parts) => {
+            util.partProbe(parts)
+                .expectSequence(Tag.DerivationCodeSequence, indeterminateLength)
+                .expectItem(indeterminateLength)
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectItemDelimitation() // inserted
+                .expectItem()
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectItemDelimitation()
+                .expectSequenceDelimitation() // inserted
+                .expectSequence(Tag.AbstractPriorCodeSequence, indeterminateLength)
+                .expectItem(indeterminateLength)
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectItemDelimitation()
+                .expectItem()
+                .expectHeader(Tag.StudyDate)
+                .expectValueChunk()
+                .expectItemDelimitation() // inserted
+                .expectSequenceDelimitation()
+                .expectDicomComplete();
+        });
+    });
 });
 
 describe('The context validation flow', () => {

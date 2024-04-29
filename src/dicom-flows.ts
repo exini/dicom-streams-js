@@ -323,6 +323,7 @@ export function toIndeterminateLengthSequences(): any {
             public onItemDelimitation(part: ItemDelimitationPart): DicomPart[] {
                 const out = super.onItemDelimitation(part);
                 if (part.bytes.length <= 0) {
+                    console.log(part);
                     out.push(new ItemDelimitationPart(part.bigEndian, itemDelimitation(part.bigEndian)));
                 }
                 return out;

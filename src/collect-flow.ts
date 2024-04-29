@@ -8,9 +8,9 @@ import {
     GuaranteedValueEvent,
     InFragments,
     ItemDelimitationPartMarker,
-    sequenceDelimitationPartMarker,
+    SequenceDelimitationPartMarker,
     TagPathTracking,
-    valueChunkMarker,
+    ValueChunkMarker,
 } from './dicom-flow';
 import {
     Element,
@@ -86,8 +86,8 @@ export function collectFlow(
                     }
 
                     if (
-                        part !== valueChunkMarker &&
-                        part !== sequenceDelimitationPartMarker &&
+                        !(part instanceof ValueChunkMarker) &&
+                        !(part instanceof SequenceDelimitationPartMarker) &&
                         !(part instanceof ItemDelimitationPartMarker)
                     ) {
                         this.buffer.push(part);
@@ -164,7 +164,7 @@ export function collectFlow(
                         this.maybeAdd(new ItemDelimitationElement(part.bigEndian));
                         return [];
                     }
-                    if (part === sequenceDelimitationPartMarker) {
+                    if (part instanceof SequenceDelimitationPartMarker) {
                         return [];
                     }
                     if (part instanceof SequenceDelimitationPart) {
