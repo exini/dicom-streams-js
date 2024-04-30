@@ -201,55 +201,52 @@ export const InFragments = (Super: any): any =>
         }
     };
 
-class ValueChunkMarker extends ValueChunk {
-    constructor() {
-        super(false, emptyBuffer, true);
+export class ValueChunkMarker extends ValueChunk {
+    constructor(bigEndian: boolean) {
+        super(bigEndian, emptyBuffer, true);
     }
 
     public toString(): string {
-        return 'Value Chunk Marker []';
+        return `Value Chunk Marker [bigEndian=${this.bigEndian}]`;
     }
 }
-export const valueChunkMarker = new ValueChunkMarker();
 
 export const GuaranteedValueEvent = (Super: any): any =>
     class extends Super {
         public onHeader(part: HeaderPart): DicomPart[] {
             return part.length === 0
-                ? super.onHeader(part).concat(this.onValueChunk(valueChunkMarker))
+                ? super.onHeader(part).concat(this.onValueChunk(new ValueChunkMarker(part.bigEndian)))
                 : super.onHeader(part);
         }
         public onItem(part: ItemPart): DicomPart[] {
             return this.inFragments && part.length === 0
-                ? super.onItem(part).concat(this.onValueChunk(valueChunkMarker))
+                ? super.onItem(part).concat(this.onValueChunk(new ValueChunkMarker(part.bigEndian)))
                 : super.onItem(part);
         }
         public onValueChunk(part: ValueChunk): DicomPart[] {
-            return super.onValueChunk(part).filter((c: any) => c !== valueChunkMarker);
+            return super.onValueChunk(part).filter((c: any) => !(c instanceof ValueChunkMarker));
         }
     };
 
-class SequenceDelimitationPartMarker extends SequenceDelimitationPart {
-    constructor() {
-        super(false, emptyBuffer);
+export class SequenceDelimitationPartMarker extends SequenceDelimitationPart {
+    constructor(bigEndian: boolean) {
+        super(bigEndian, emptyBuffer);
     }
 
     public toString(): string {
-        return 'SequenceDelimitationMarker []';
+        return `SequenceDelimitationMarker [bigEndian=${this.bigEndian}]`;
     }
 }
-export const sequenceDelimitationPartMarker = new SequenceDelimitationPartMarker();
 
 export class ItemDelimitationPartMarker extends ItemDelimitationPart {
-    constructor() {
-        super(false, emptyBuffer);
+    constructor(bigEndian: boolean) {
+        super(bigEndian, emptyBuffer);
     }
 
     public toString(): string {
-        return 'ItemDelimitationMarker []';
+        return `ItemDelimitationMarker [bigEndian=${this.bigEndian}]`;
     }
 }
-export const itemDelimitationPartMarker = new ItemDelimitationPartMarker();
 
 /**
  * Depends on InFragments
@@ -271,11 +268,11 @@ export const GuaranteedDelimitationEvents = (Super: any): any =>
             return super.onItem(part).concat(this.maybeDelimit());
         }
         public onSequenceDelimitation(part: SequenceDelimitationPart): DicomPart[] {
-            if (this.partStack.length > 0 && part != sequenceDelimitationPartMarker && !this.inFragments) {
+            if (this.partStack.length > 0 && !(part instanceof SequenceDelimitationPartMarker) && !this.inFragments) {
                 this.partStack.shift();
             }
             return this.subtractAndEmit(part, (p) =>
-                super.onSequenceDelimitation(p).filter((d: DicomPart) => d !== sequenceDelimitationPartMarker),
+                super.onSequenceDelimitation(p).filter((d: DicomPart) => !(d instanceof SequenceDelimitationPartMarker)),
             );
         }
         public onItemDelimitation(part: ItemDelimitationPart): DicomPart[] {
@@ -316,8 +313,8 @@ export const GuaranteedDelimitationEvents = (Super: any): any =>
             this.partStack = this.partStack.slice(splitIndex);
             const out = inactive.map((i) =>
                 i.part instanceof ItemPart
-                    ? this.onItemDelimitation(itemDelimitationPartMarker)
-                    : this.onSequenceDelimitation(sequenceDelimitationPartMarker),
+                    ? this.onItemDelimitation(new ItemDelimitationPartMarker(i.part.bigEndian))
+                    : this.onSequenceDelimitation(new SequenceDelimitationPartMarker(i.part.bigEndian)),
             );
             return [].concat(...out);
         }
