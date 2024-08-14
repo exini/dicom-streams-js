@@ -226,7 +226,7 @@ class InAttribute extends DicomParseStep {
             return new AttributeState(false, state.bigEndian, state.explicitVR, state.inflater);
         }
         if (state.explicitVR && !explicitVR) {
-            console.log('Implicit VR attributes detected in explicit VR dataset. Tag: %s', tag.toString(16));
+            console.log('Implicit VR attributes detected in explicit VR dataset');
             return new AttributeState(false, state.bigEndian, false, state.inflater);
         }
         if (!state.explicitVR && explicitVR) {
