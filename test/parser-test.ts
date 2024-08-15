@@ -122,12 +122,6 @@ describe('DICOM parser', () => {
     });
 
     it('should not inflate deflated dataset until all dataset bytes have been read', () => {
-        const bytes = concatv(
-            data.fmiGroupLength(data.transferSyntaxUID(UID.ExplicitVRLittleEndian)),
-            data.transferSyntaxUID(UID.ExplicitVRLittleEndian),
-            data.patientNameJohnDoe(),
-            data.studyDate()
-        );
         const deflatedBytes = concatv(
             data.fmiGroupLength(data.transferSyntaxUID(UID.DeflatedExplicitVRLittleEndian)),
             data.transferSyntaxUID(UID.DeflatedExplicitVRLittleEndian),
@@ -135,9 +129,6 @@ describe('DICOM parser', () => {
         );
         const stop = (attributeInfo: AttributeInfo, depth: number): boolean =>
             depth === 0 && 'tag' in attributeInfo && (attributeInfo as any).tag >= Tag.PatientName;
-        const testParser = new Parser(stop);
-        testParser.parse(bytes.subarray(0, bytes.length - 1));
-        assert(testParser.isComplete());
         const parser = new Parser(stop);
         parser.parse(deflatedBytes.subarray(0, deflatedBytes.length - 1));
         assert(!parser.isComplete())

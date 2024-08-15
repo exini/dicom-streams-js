@@ -181,6 +181,10 @@ class InFmiAttribute extends DicomParseStep {
     }
 }
 
+/**
+ * Some implementations of zlib, like the one used in browserify-zlib, can only inflate the complete array of deflated bytes. Therefore
+ * the parse method of this class will accumulate bytes and attempt inflate on parser.result() or when marked as done.
+ */
 class InDeflated extends DicomParseStep {
     private bufferedData = emptyBuffer;
     constructor(state: AttributeState, stop: (attributeInfo: AttributeInfo) => boolean) {
@@ -378,7 +382,6 @@ export class Parser {
             this.byteParser.parse(buff);
             this.byteParser.isCompleted = true;
         }
-        const elements = this.builder.build();
         return this.builder.build();
     }
 
