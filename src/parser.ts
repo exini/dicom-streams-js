@@ -4,11 +4,13 @@ import {
     bytesToTag,
     bytesToUShortBE,
     bytesToVR,
+    emptyBuffer,
     groupNumber,
     indeterminateLength,
     isDeflated,
     tagToString,
     trim,
+    concat,
 } from './base';
 import { ByteParser, ByteReader, finishedParser, ParseResult, ParseStep } from './byte-parser';
 import {
@@ -140,7 +142,7 @@ class InFmiAttribute extends DicomParseStep {
         );
     }
 
-    private toDatasetStep(reader: ByteReader): InAttribute {
+    private toDatasetStep(reader: ByteReader): DicomParseStep {
         let tsuid = this.state.tsuid;
         if (!tsuid) {
             console.warn('Missing Transfer Syntax (0002,0010) - assume Explicit VR Little Endian');
@@ -173,11 +175,43 @@ class InFmiAttribute extends DicomParseStep {
                 })();
             }
 
-            reader.setInput(inflater.inflate(reader.remainingData()));
+            return new InDeflated(new AttributeState(true, bigEndian, explicitVR, inflater), this.stop);
         }
         return new InAttribute(new AttributeState(true, bigEndian, explicitVR, inflater), this.stop);
     }
 }
+
+/**
+ * Some implementations of zlib, like the one used in browserify-zlib, can only inflate the complete array of deflated bytes. Therefore
+ * the parse method of this class will accumulate bytes and attempt inflate on parser.result() or when marked as done.
+ */
+class InDeflated extends DicomParseStep {
+    private bufferedData = emptyBuffer;
+    constructor(state: AttributeState, stop: (attributeInfo: AttributeInfo) => boolean) {
+        state.inflater
+        super(state, stop);
+    }
+
+    public inflate(): Buffer {
+        return this.state.inflater.inflate(this.bufferedData);
+    }
+
+    public bufferSize(): Number {
+        return this.bufferedData.length;
+    }
+
+    public parse(reader: ByteReader): ParseResult {
+        const done = !reader.hasRemaining()
+        this.bufferedData = concat(this.bufferedData, reader.take(reader.remainingSize()));
+        if (done) {
+            reader.setInput(this.state.inflater.inflate(this.bufferedData));
+            return new ParseResult(undefined, new InAttribute(this.state, this.stop));
+        } else {
+            return new ParseResult(undefined, this);
+        }
+    }
+}
+
 
 class InAttribute extends DicomParseStep {
     constructor(state: AttributeState, stop: (attributeInfo: AttributeInfo) => boolean) {
@@ -327,9 +361,6 @@ export class Parser {
     public parse(chunk: Buffer): void {
         const step: DicomParseStep =
             this.byteParser.current instanceof DicomParseStep ? (this.byteParser.current as DicomParseStep) : undefined;
-        if (step && step.state && step.state.inflater) {
-            chunk = step.state.inflater.inflate(chunk);
-        }
         this.byteParser.parse(chunk);
     }
 
@@ -344,6 +375,13 @@ export class Parser {
      * Get the current elements as represented by the builder
      */
     public result(): Elements {
+        if (this.byteParser.current instanceof InDeflated) {
+            const inDeflatedStep = (this.byteParser.current as InDeflated)
+            this.byteParser.startWith(new InAttribute(inDeflatedStep.state, inDeflatedStep.stop));
+            const buff = inDeflatedStep.inflate();
+            this.byteParser.parse(buff);
+            this.byteParser.isCompleted = true;
+        }
         return this.builder.build();
     }
 

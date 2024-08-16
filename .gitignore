@@ -1,4 +1,5 @@
 .DS_Store
+.fleet
 .idea
 .vscode
 .nyc_output
