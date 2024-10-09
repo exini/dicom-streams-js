@@ -1,5 +1,6 @@
 const fs = require('fs');
 const {
+    Tag,
     TagPath,
     TagTree,
     parseFlow,
