@@ -72,6 +72,7 @@ The next, longer, example reads the file specified by the first input argument t
 ```javascript
 const fs = require('fs');
 const {
+    Tag
     TagPath,
     TagTree,
     parseFlow,
