@@ -380,8 +380,8 @@ export class Parser {
             this.byteParser.startWith(new InAttribute(inDeflatedStep.state, inDeflatedStep.stop));
             const buff = inDeflatedStep.inflate();
             this.byteParser.parse(buff);
-            this.byteParser.isCompleted = true;
         }
+        this.byteParser.flush();
         return this.builder.build();
     }
 
