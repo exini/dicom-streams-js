@@ -1,5 +1,9 @@
 # Dicom Streams JS RELEASE NOTES
 
+## Release 3.1.1
+
+- Fixed `Parser` succeeding on truncated files.
+
 ## Release 3.1.0
 
 - Fixed parsing of deflated objects in chunked, non-streaming parsing.
