@@ -507,4 +507,23 @@ describe('DICOM parser', () => {
             .expectValueChunk()
             .expectDicomComplete();
     });
+
+    it('should handle truncated input', () => {
+        const bytes = concatv(
+            data.patientNameJohnDoe(),
+            data.pixelData(10),
+        );
+
+        const parser = new Parser();
+        parser.parse(bytes);
+        assert(parser.result().bytesByTag(Tag.PixelData)!.length === 10)
+        assert(parser.isComplete())
+
+        const truncatedBytes = bytes.subarray(0, bytes.length - 1);
+        const truncatedParser = new Parser();
+        truncatedParser.parse(truncatedBytes);
+        assert.throws(() => {
+            truncatedParser.result()
+        }, new Error('Parsing failed: 21 bytes remain after finished parsing'));
+    });
 });
