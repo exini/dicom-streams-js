@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { LocalDate, LocalTime, ZonedDateTime, ZoneOffset } from 'js-joda';
+import { LocalDate, LocalTime, ZonedDateTime, ZoneOffset } from '@js-joda/core';
 import { concat, doubleToBytes, floatToBytes, intToBytes, intToBytesLE, shortToBytes } from '../src/base';
 import { CharacterSets } from '../src/character-sets';
 import { Value } from '../src/value';

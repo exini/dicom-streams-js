@@ -41,7 +41,7 @@ const webConfig = {
         path: path.resolve(__dirname, '../dist/web'),
         libraryTarget: 'umd',
     },
-    externals: ['js-joda'],
+    externals: ['@js-joda/core'],
 };
 
 module.exports = [merge(commonConfig, nodeConfig), merge(commonConfig, webConfig)];

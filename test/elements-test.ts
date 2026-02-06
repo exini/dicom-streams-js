@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { LocalDate, LocalTime, ZoneOffset } from 'js-joda';
+import { LocalDate, LocalTime, ZoneOffset } from '@js-joda/core';
 import {
     appendToArray,
     concat,

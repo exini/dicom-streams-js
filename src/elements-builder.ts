@@ -1,4 +1,4 @@
-import { ZoneId } from 'js-joda';
+import { ZoneId } from '@js-joda/core';
 import { defaultCharacterSet, systemZone } from './base';
 import { CharacterSets } from './character-sets';
 import {

@@ -1,4 +1,4 @@
-import { LocalDate, LocalTime, ZonedDateTime, ZoneId, ZoneOffset } from 'js-joda';
+import { LocalDate, LocalTime, ZonedDateTime, ZoneId, ZoneOffset } from '@js-joda/core';
 import { Element, ElementSet, ValueElement, Sequence, Item, Fragments, preambleElement } from './dicom-elements';
 import {
     concat,
