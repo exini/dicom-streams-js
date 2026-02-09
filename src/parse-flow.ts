@@ -34,7 +34,10 @@ import { UID } from './uid';
 import { VR } from './vr';
 
 abstract class DicomParseStep extends ParseStep {
-    constructor(public readonly state: any, public readonly flow: ParseFlow) {
+    constructor(
+        public readonly state: any,
+        public readonly flow: ParseFlow,
+    ) {
         super();
     }
 }
@@ -67,7 +70,10 @@ class ValueState {
 }
 
 class FragmentsState {
-    constructor(public readonly bigEndian: boolean, public readonly explicitVR: boolean) {}
+    constructor(
+        public readonly bigEndian: boolean,
+        public readonly explicitVR: boolean,
+    ) {}
 }
 
 class AtBeginning extends DicomParseStep {
@@ -160,7 +166,7 @@ class InFmiHeader extends DicomParseStep {
                 const remainingBytes = reader.remainingData();
 
                 reader.setInput(valueBytes);
-                this.flow.setDetourFlow((inflater as unknown) as Transform);
+                this.flow.setDetourFlow(inflater as unknown as Transform);
                 this.flow.setDetour(true, remainingBytes);
             } else {
                 return new InDeflatedData(this.state, this.flow);

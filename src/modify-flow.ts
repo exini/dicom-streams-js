@@ -30,7 +30,10 @@ export class TagModification {
 }
 
 export class TagInsertion {
-    constructor(public readonly tagPath: TagPath, public readonly insertion: (b: Buffer) => Buffer) {
+    constructor(
+        public readonly tagPath: TagPath,
+        public readonly insertion: (b: Buffer) => Buffer,
+    ) {
         this.tagPath = tagPath;
         this.insertion = insertion;
     }

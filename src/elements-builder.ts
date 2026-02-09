@@ -1,4 +1,4 @@
-import { ZoneId } from 'js-joda';
+import { ZoneId } from '@js-joda/core';
 import { defaultCharacterSet, systemZone } from './base';
 import { CharacterSets } from './character-sets';
 import {
@@ -25,7 +25,10 @@ class DatasetBuilder {
     private data = new Array<ElementSet>(64);
     private pos = 0;
 
-    constructor(public characterSets: CharacterSets, public zoneOffset: ZoneId) {}
+    constructor(
+        public characterSets: CharacterSets,
+        public zoneOffset: ZoneId,
+    ) {}
 
     public addElementSet(elementSet: ElementSet): DatasetBuilder {
         if (elementSet instanceof ValueElement && elementSet.tag === Tag.SpecificCharacterSet) {

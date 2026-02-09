@@ -8,7 +8,7 @@ import {
     ZonedDateTime,
     ZoneId,
     ZoneOffset,
-} from 'js-joda';
+} from '@js-joda/core';
 import {
     bytesToDouble,
     bytesToFloat,

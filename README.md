@@ -1,6 +1,6 @@
 # dicom-streams-js
 
-[![Build Status](https://travis-ci.org/exini/dicom-streams-js.svg?branch=develop)](https://travis-ci.org/exini/dicom-streams-js)
+[![Build Status](https://github.com/exini/dicom-streams-js/actions/workflows/test.yml/badge.svg?branch=develop)](https://github.com/exini/dicom-streams-js/actions/workflows/test.yml)
 [![Coverage Status](https://coveralls.io/repos/exini/dicom-streams-js/badge.svg)](https://coveralls.io/r/exini/dicom-streams-js)
 
 The purpose of this project is to create a streaming API for reading and processing DICOM data using [node-streams](https://nodejs.org/api/stream.html). It can be used both on the backend using Node, as well as on the frontend. Advantages of streaming DICOM data include better control over resource allocation such as memory via strict bounds on DICOM data chunk size and network utilization using back-pressure.
@@ -9,7 +9,7 @@ This project is a port of the [dicom-streams](https://github.com/exini/dicom-str
 
 ### Setup
 
-The dicom-streams-js library is deployed to NPM. Install it using `npm install -s @exini/dicom-streams-js`. Time and date handling using `js-joda` is marked as an external dependency in dicom-streams-js. If you want to read and modify times and dates, install this using `npm install -s js-joda`.
+The dicom-streams-js library is deployed to NPM. Install it using `npm install -s @exini/dicom-streams-js`. Time and date handling using `@js-joda/core` is marked as an external dependency in dicom-streams-js. If you want to read and modify times and dates, install this using `npm install -s @js-joda/core`.
 
 ### Data Model
 
@@ -22,12 +22,12 @@ The `Element` interface provides a set of higher level data classes, each roughl
 A flow of `Element`s can be materialized into a representation of a dataset called an `Elements` using the `elementSink` sink. For processing of large sets of data, one should strive for a fully streaming DICOM pipeline, however, in some cases it can be convenient to work with a plain dataset; `Elements` serves this purpose. Internally, the sink aggregates
 `Element`s into `ElementSet`s, each with an asssociated tag number (value elements, sequences and fragments). `Elements` implements a straight-forward data hierarchy:
 
--   An `Elements` holds a list of `ElementSet`s (`ValueElement`, `Sequence` and `Fragments`)
--   A `ValueElement` is a standard attribute with tag number and binary value
--   A `Sequence` holds a list of `Item`s
-    -   An `Item` contains zero or one `Elements` (note the recursion)
--   A `Fragments` holds a list of `Fragment`s
-    -   A `Fragment` holds a binary value.
+- An `Elements` holds a list of `ElementSet`s (`ValueElement`, `Sequence` and `Fragments`)
+- A `ValueElement` is a standard attribute with tag number and binary value
+- A `Sequence` holds a list of `Item`s
+    - An `Item` contains zero or one `Elements` (note the recursion)
+- A `Fragments` holds a list of `Fragment`s
+    - A `Fragment` holds a binary value.
 
 The following diagram shows an overview of the data model at the `DicomPart`, `Element` and `ElementSet` levels.
 

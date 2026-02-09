@@ -26,7 +26,10 @@ class FinishedParser extends ParseStep {
 export const finishedParser = new FinishedParser();
 
 export class ParseResult {
-    constructor(public result: any, public nextStep: ParseStep) {}
+    constructor(
+        public result: any,
+        public nextStep: ParseStep,
+    ) {}
 }
 
 export class ByteReader {
@@ -167,9 +170,7 @@ export class ByteParser {
 
     private doParse(remainingRecursions: number): void {
         if (remainingRecursions === 0) {
-            this.fail(
-                new Error("Parsing logic didn't produce result. Aborting processing to avoid infinite cycles."),
-            );
+            this.fail(new Error("Parsing logic didn't produce result. Aborting processing to avoid infinite cycles."));
         } else {
             const doRecurse = this.doParseInner();
             if (doRecurse) {

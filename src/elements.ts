@@ -1,4 +1,4 @@
-import { LocalDate, LocalTime, ZonedDateTime, ZoneId, ZoneOffset } from 'js-joda';
+import { LocalDate, LocalTime, ZonedDateTime, ZoneId, ZoneOffset } from '@js-joda/core';
 import { Element, ElementSet, ValueElement, Sequence, Item, Fragments, preambleElement } from './dicom-elements';
 import {
     concat,
@@ -635,10 +635,10 @@ export class Elements {
         return typeof tag === 'number'
             ? this.data.map((e) => e.tag).includes(tag)
             : tag instanceof TagPathTag
-            ? this.elementByPath(tag) !== undefined
-            : tag instanceof TagPathItem
-            ? this.nestedByPath(tag) !== undefined
-            : false;
+              ? this.elementByPath(tag) !== undefined
+              : tag instanceof TagPathItem
+                ? this.nestedByPath(tag) !== undefined
+                : false;
     }
 
     public sorted(): Elements {

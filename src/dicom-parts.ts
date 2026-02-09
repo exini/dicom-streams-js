@@ -13,7 +13,10 @@ import { Elements } from './elements';
 import { VR } from './vr';
 
 export class DicomPart {
-    constructor(public readonly bigEndian: boolean, public readonly bytes: Buffer) {}
+    constructor(
+        public readonly bigEndian: boolean,
+        public readonly bytes: Buffer,
+    ) {}
 }
 
 export class MetaPart extends DicomPart {
@@ -118,7 +121,11 @@ export class HeaderPart extends DicomPart {
 }
 
 export class ValueChunk extends DicomPart {
-    constructor(bigEndian: boolean, bytes: Buffer, public readonly last: boolean) {
+    constructor(
+        bigEndian: boolean,
+        bytes: Buffer,
+        public readonly last: boolean,
+    ) {
         super(bigEndian, bytes);
     }
 
@@ -149,7 +156,11 @@ export class DeflatedChunk extends DicomPart {
 export class ItemPart extends DicomPart {
     public indeterminate = false;
 
-    constructor(public readonly length: number, bigEndian: boolean, bytes: Buffer) {
+    constructor(
+        public readonly length: number,
+        bigEndian: boolean,
+        bytes: Buffer,
+    ) {
         super(bigEndian, bytes);
         this.indeterminate = length === indeterminateLength;
     }
@@ -228,7 +239,10 @@ export class UnknownPart extends DicomPart {
 }
 
 export class ElementsPart extends MetaPart {
-    constructor(public readonly label: string, public readonly elements: Elements) {
+    constructor(
+        public readonly label: string,
+        public readonly elements: Elements,
+    ) {
         super();
     }
 }

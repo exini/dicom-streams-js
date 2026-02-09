@@ -3,7 +3,10 @@ import { Transform, TransformOptions } from 'stream';
 export abstract class Detour extends Transform {
     private detour = false;
 
-    constructor(private readonly options: TransformOptions, private detourFlow?: Transform) {
+    constructor(
+        private readonly options: TransformOptions,
+        private detourFlow?: Transform,
+    ) {
         super(options);
         if (detourFlow) {
             this.setDetourFlow(detourFlow);

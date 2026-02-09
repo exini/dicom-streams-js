@@ -79,7 +79,13 @@ export const preambleElement = new PreambleElement();
 export class ValueElement extends ElementSet {
     public length: number;
 
-    constructor(tag: number, vr: VR, public readonly value: Value, bigEndian?: boolean, explicitVR?: boolean) {
+    constructor(
+        tag: number,
+        vr: VR,
+        public readonly value: Value,
+        bigEndian?: boolean,
+        explicitVR?: boolean,
+    ) {
         super(tag, vr, bigEndian, explicitVR);
         this.length = value.length;
     }
@@ -188,7 +194,10 @@ export class FragmentsElement extends Element {
 export class ItemElement extends Element {
     public indeterminate: boolean;
 
-    constructor(public readonly length = indeterminateLength, bigEndian?: boolean) {
+    constructor(
+        public readonly length = indeterminateLength,
+        bigEndian?: boolean,
+    ) {
         super(bigEndian);
         this.indeterminate = this.length === indeterminateLength;
     }
@@ -205,7 +214,11 @@ export class ItemElement extends Element {
 }
 
 export class FragmentElement extends Element {
-    constructor(public readonly length: number, public readonly value: Value, bigEndian?: boolean) {
+    constructor(
+        public readonly length: number,
+        public readonly value: Value,
+        bigEndian?: boolean,
+    ) {
         super(bigEndian);
     }
 
@@ -395,8 +408,8 @@ export class Fragments extends ElementSet {
         return this.offsets === undefined && this.fragments.length === 0
             ? 0
             : this.offsets === undefined
-            ? 1
-            : this.offsets.length;
+              ? 1
+              : this.offsets.length;
     }
     public addFragment(fragment: Fragment): Fragments {
         if (this.size === 0 && this.offsets === undefined) {
