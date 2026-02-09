@@ -16,7 +16,8 @@
         "build-dev": "webpack --config config/webpack.config-dev.js",
         "build-prod": "webpack --config config/webpack.config-prod.js",
         "build-copy-files": "shx cp package.json LICENSE README.md dist",
-        "build": "npm run clean && npm run lint && npm run test && npm run build-lib && npm run build-dev && npm run build-prod && npm run build-copy-files"
+        "build": "npm run clean && npm run lint && npm run test && npm run build-lib && npm run build-dev && npm run build-prod && npm run build-copy-files",
+        "prepare": "husky"
     },
     "nyc": {
         "extension": [
@@ -35,11 +36,6 @@
             "ts-node/register",
             "source-map-support/register"
         ]
-    },
-    "husky": {
-        "hooks": {
-            "pre-commit": "pretty-quick --staged"
-        }
     },
     "keywords": [
         "dicom",
