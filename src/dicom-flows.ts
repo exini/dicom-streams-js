@@ -174,7 +174,10 @@ export function headerFilter(keepCondition: (p: HeaderPart) => boolean, logGroup
 }
 
 export class ValidationContext {
-    constructor(public readonly sopClassUID: string, public readonly transferSyntaxUID: string) {}
+    constructor(
+        public readonly sopClassUID: string,
+        public readonly transferSyntaxUID: string,
+    ) {}
 }
 
 export function validateContextFlow(contexts: ValidationContext[]): any {

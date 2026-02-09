@@ -2,7 +2,11 @@ import { parsePersonName } from './value';
 import { multiValueDelimiter, trim } from './base';
 
 export class ComponentGroup {
-    constructor(public alphabetic: string, public ideographic: string = '', public phonetic: string = '') {}
+    constructor(
+        public alphabetic: string,
+        public ideographic: string = '',
+        public phonetic: string = '',
+    ) {}
 }
 
 export class PersonName {

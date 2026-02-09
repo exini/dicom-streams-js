@@ -327,7 +327,11 @@ export class TagTree extends TagPathLike<TagTree> {
         };
         const toTagTreeString = (tree: TagTree, tail: string): string => {
             const itemIndexSuffix =
-                tree instanceof TagTreeAnyItem ? '[*]' : 'item' in tree ? '[' + (tree as unknown as ItemPath).item + ']' : '';
+                tree instanceof TagTreeAnyItem
+                    ? '[*]'
+                    : 'item' in tree
+                      ? '[' + (tree as unknown as ItemPath).item + ']'
+                      : '';
             const head = toTagString(tree.tag()) + itemIndexSuffix;
             const part = head + tail;
             return tree.isRoot() ? part : toTagTreeString(tree.previous(), '.' + part);
@@ -371,7 +375,11 @@ export class TagTreeAnyItem extends TagTreeTrunk {
 }
 
 export class TagTreeItem extends TagTreeTrunk {
-    constructor(tag: number, public readonly item: number, previous: TagTreeTrunk) {
+    constructor(
+        tag: number,
+        public readonly item: number,
+        previous: TagTreeTrunk,
+    ) {
         super(tag, previous);
     }
 }

@@ -635,10 +635,10 @@ export class Elements {
         return typeof tag === 'number'
             ? this.data.map((e) => e.tag).includes(tag)
             : tag instanceof TagPathTag
-            ? this.elementByPath(tag) !== undefined
-            : tag instanceof TagPathItem
-            ? this.nestedByPath(tag) !== undefined
-            : false;
+              ? this.elementByPath(tag) !== undefined
+              : tag instanceof TagPathItem
+                ? this.nestedByPath(tag) !== undefined
+                : false;
     }
 
     public sorted(): Elements {

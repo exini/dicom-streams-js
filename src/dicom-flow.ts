@@ -272,7 +272,9 @@ export const GuaranteedDelimitationEvents = (Super: any): any =>
                 this.partStack.shift();
             }
             return this.subtractAndEmit(part, (p) =>
-                super.onSequenceDelimitation(p).filter((d: DicomPart) => !(d instanceof SequenceDelimitationPartMarker)),
+                super
+                    .onSequenceDelimitation(p)
+                    .filter((d: DicomPart) => !(d instanceof SequenceDelimitationPartMarker)),
             );
         }
         public onItemDelimitation(part: ItemDelimitationPart): DicomPart[] {

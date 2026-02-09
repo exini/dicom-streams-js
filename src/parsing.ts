@@ -63,7 +63,10 @@ export function isPreamble(data: Buffer): boolean {
 }
 
 export class TagVr {
-    constructor(public readonly tag: number, public readonly vr: VR) {}
+    constructor(
+        public readonly tag: number,
+        public readonly vr: VR,
+    ) {}
 }
 
 export function isSpecial(tag: number): boolean {

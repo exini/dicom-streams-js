@@ -289,13 +289,21 @@ export class TagPathSequenceEnd extends TagPath {
 }
 
 export class TagPathItem extends TagPathTrunk implements ItemIndex {
-    constructor(tag: number, public readonly item: number, previous: TagPathTrunk) {
+    constructor(
+        tag: number,
+        public readonly item: number,
+        previous: TagPathTrunk,
+    ) {
         super(tag, previous);
     }
 }
 
 export class TagPathItemEnd extends TagPathTrunk implements ItemIndex {
-    constructor(tag: number, public readonly item: number, previous: TagPathTrunk) {
+    constructor(
+        tag: number,
+        public readonly item: number,
+        previous: TagPathTrunk,
+    ) {
         super(tag, previous);
     }
 }

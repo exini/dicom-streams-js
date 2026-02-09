@@ -68,7 +68,10 @@ class FragmentsState {
 }
 
 abstract class DicomParseStep extends ParseStep {
-    constructor(public readonly state: any, public readonly stop: (attributeInfo: AttributeInfo) => boolean) {
+    constructor(
+        public readonly state: any,
+        public readonly stop: (attributeInfo: AttributeInfo) => boolean,
+    ) {
         super();
     }
 }
@@ -188,7 +191,7 @@ class InFmiAttribute extends DicomParseStep {
 class InDeflated extends DicomParseStep {
     private bufferedData = emptyBuffer;
     constructor(state: AttributeState, stop: (attributeInfo: AttributeInfo) => boolean) {
-        state.inflater
+        state.inflater;
         super(state, stop);
     }
 
@@ -201,7 +204,7 @@ class InDeflated extends DicomParseStep {
     }
 
     public parse(reader: ByteReader): ParseResult {
-        const done = !reader.hasRemaining()
+        const done = !reader.hasRemaining();
         this.bufferedData = concat(this.bufferedData, reader.take(reader.remainingSize()));
         if (done) {
             reader.setInput(this.state.inflater.inflate(this.bufferedData));
@@ -211,7 +214,6 @@ class InDeflated extends DicomParseStep {
         }
     }
 }
-
 
 class InAttribute extends DicomParseStep {
     constructor(state: AttributeState, stop: (attributeInfo: AttributeInfo) => boolean) {
@@ -376,7 +378,7 @@ export class Parser {
      */
     public result(): Elements {
         if (this.byteParser.current instanceof InDeflated) {
-            const inDeflatedStep = (this.byteParser.current as InDeflated)
+            const inDeflatedStep = this.byteParser.current as InDeflated;
             this.byteParser.startWith(new InAttribute(inDeflatedStep.state, inDeflatedStep.stop));
             const buff = inDeflatedStep.inflate();
             this.byteParser.parse(buff);
