@@ -17,7 +17,8 @@
         "build-prod": "webpack --config config/webpack.config-prod.js",
         "build-copy-files": "shx cp package.json LICENSE README.md dist",
         "build": "npm run clean && npm run lint && npm run test && npm run build-lib && npm run build-dev && npm run build-prod && npm run build-copy-files",
-        "prepare": "husky"
+        "prepare": "husky",
+        "prepublishOnly": "if [ ! -d web ] || [ ! -d node ]; then echo '\\033[31mError: web/ and node/ directories not found. You must publish from the dist/ directory.\\033[0m' && exit 1; fi"
     },
     "nyc": {
         "extension": [
