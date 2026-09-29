@@ -18,6 +18,9 @@ export function concat(a: Buffer, b: Buffer): Buffer {
 export function concatv(...buffers: Buffer[]): Buffer {
     return Buffer.concat(buffers);
 }
+export function concatArr(buffers: Buffer[]): Buffer {
+    return Buffer.concat(buffers);
+}
 export function flatten<T>(array: T[][]): T[] {
     return [].concat(...array);
 }
