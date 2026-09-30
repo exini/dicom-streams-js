@@ -2,6 +2,7 @@ import {
     appendToArray,
     bytesToUInt,
     concat,
+    concatArr,
     defaultCharacterSet,
     emptyBuffer,
     indeterminateLength,
@@ -94,9 +95,7 @@ export class ValueElement extends ElementSet {
         return new ValueElement(this.tag, this.vr, value.ensurePadding(this.vr), this.bigEndian, this.explicitVR);
     }
     public toBytes(): Buffer {
-        return this.toParts()
-            .map((p) => p.bytes)
-            .reduce(concat);
+        return concatArr(this.toParts().map((p) => p.bytes));
     }
     public toParts(): DicomPart[] {
         const headerPart = HeaderPart.create(this.tag, this.vr, this.length, this.bigEndian, this.explicitVR);
@@ -223,9 +222,7 @@ export class FragmentElement extends Element {
     }
 
     public toBytes(): Buffer {
-        return this.toParts()
-            .map((p) => p.bytes)
-            .reduce(concat);
+        return concatArr(this.toParts().map((p) => p.bytes));
     }
     public toParts(): DicomPart[] {
         const itemParts: DicomPart[] = new ItemElement(this.value.length, this.bigEndian).toParts();
@@ -302,9 +299,7 @@ export class Sequence extends ElementSet {
         return new Sequence(this.tag, newLength, newItems, this.bigEndian, this.explicitVR);
     }
     public toBytes(): Buffer {
-        return this.toElements()
-            .map((e) => e.toBytes())
-            .reduce(concat, emptyBuffer);
+        return concatArr(this.toElements().map((e) => e.toBytes()));
     }
     public toElements(): Element[] {
         const elements = [];
@@ -358,9 +353,7 @@ export class Item {
         return elements;
     }
     public toBytes(): Buffer {
-        return this.toElements()
-            .map((e) => e.toBytes())
-            .reduce(concat);
+        return concatArr(this.toElements().map((e) => e.toBytes()));
     }
     public setElements(elements: Elements): Item {
         const newLength = this.indeterminate ? indeterminateLength : elements.toBytes(false).length;
@@ -431,9 +424,7 @@ export class Fragments extends ElementSet {
         }
     }
     public toBytes(): Buffer {
-        return this.toElements()
-            .map((e) => e.toBytes())
-            .reduce(concat);
+        return concatArr(this.toElements().map((e) => e.toBytes()));
     }
 
     public toElements(): Element[] {
@@ -444,9 +435,7 @@ export class Fragments extends ElementSet {
                 new FragmentElement(
                     4 * this.offsets.length,
                     new Value(
-                        this.offsets
-                            .map((offset) => intToBytes(offset, this.bigEndian), this.bigEndian)
-                            .reduce(concat, emptyBuffer),
+                        concatArr(this.offsets.map((offset) => intToBytes(offset, this.bigEndian), this.bigEndian)),
                     ),
                     this.bigEndian,
                 ),
