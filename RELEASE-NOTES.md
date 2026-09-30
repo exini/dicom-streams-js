@@ -1,6 +1,6 @@
 # Dicom Streams JS RELEASE NOTES
 
-## Unreleased
+## Release 4.0.1
 
 - Improved performance of parsing long sequences.
 
